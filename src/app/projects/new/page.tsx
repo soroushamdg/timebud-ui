@@ -57,12 +57,14 @@ export default function NewProjectPage() {
       const projectData: ProjectCreate = {
         name: projectName,
         description: formData.description,
-        deadline: formData.deadline || null,
+        deadline: formData.deadline ? new Date(formData.deadline).toISOString() : null,
         priority: formData.priority || "medium",
         knows_steps: formData.knowsSteps ?? false,
         status: "active",
         is_active: true,
       };
+
+      console.log("Creating project with data:", projectData);
 
       const response = await createProjectProjectsPost({
         client: apiClient,
@@ -72,14 +74,35 @@ export default function NewProjectPage() {
         body: projectData,
       });
 
+      console.log("Project creation response:", response);
+
       if (response.data) {
         router.push("/home");
       } else {
-        throw new Error("Failed to create project");
+        console.error("No data in response:", response);
+        throw new Error("Failed to create project: No data returned");
       }
     } catch (err) {
       console.error("Error creating project:", err);
-      setError(err instanceof Error ? err.message : "Failed to create project");
+      
+      // Try to extract validation error details
+      let errorMessage = "Failed to create project";
+      if (err instanceof Error) {
+        errorMessage = err.message;
+      } else if (typeof err === "object" && err !== null) {
+        // Check if it's a 422 validation error
+        if ('response' in err && err.response) {
+          const response = err.response as any;
+          if (response.status === 422 && response.data) {
+            console.error("Validation error details:", response.data);
+            errorMessage = `Validation error: ${JSON.stringify(response.data)}`;
+          }
+        } else {
+          errorMessage = JSON.stringify(err);
+        }
+      }
+      
+      setError(errorMessage);
       setIsSubmitting(false);
     }
   };
