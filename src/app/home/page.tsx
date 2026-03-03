@@ -6,10 +6,11 @@ import { getCurrentUserProfileUsersMeGet } from "@/client";
 import { apiClient } from "@/lib/api-client";
 
 interface UserProfile {
-  id?: string;
-  email?: string;
-  name?: string;
-  clerk_user_id?: string;
+  email: string;
+  first_name?: string | null;
+  last_name?: string | null;
+  created_at: string;
+  updated_at?: string | null;
 }
 
 export default function HomePage() {
@@ -33,7 +34,12 @@ export default function HomePage() {
           },
         });
 
-        setUserData(response.data || null);
+        console.log("API Response:", response);
+        console.log("Response data:", response.data);
+        // Try different possible response structures
+        const userData = (response.data as any)?.data || response.data || response;
+        console.log("Extracted user data:", userData);
+        setUserData(userData);
         setLoading(false);
       } catch (err) {
         console.error("Error fetching user data:", err);
@@ -107,38 +113,43 @@ export default function HomePage() {
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {userData.id && (
+                <div className="bg-white rounded-lg p-4 border border-gray-200">
+                  <div className="text-sm text-gray-500 mb-1">Email</div>
+                  <div className="text-lg font-medium text-gray-900">
+                    {userData.email}
+                  </div>
+                </div>
+                
+                {userData.first_name && (
                   <div className="bg-white rounded-lg p-4 border border-gray-200">
-                    <div className="text-sm text-gray-500 mb-1">User ID</div>
+                    <div className="text-sm text-gray-500 mb-1">First Name</div>
                     <div className="text-lg font-medium text-gray-900">
-                      {userData.id}
+                      {userData.first_name}
                     </div>
                   </div>
                 )}
                 
-                {userData.email && (
+                {userData.last_name && (
                   <div className="bg-white rounded-lg p-4 border border-gray-200">
-                    <div className="text-sm text-gray-500 mb-1">Email</div>
+                    <div className="text-sm text-gray-500 mb-1">Last Name</div>
                     <div className="text-lg font-medium text-gray-900">
-                      {userData.email}
+                      {userData.last_name}
                     </div>
                   </div>
                 )}
                 
-                {userData.name && (
-                  <div className="bg-white rounded-lg p-4 border border-gray-200">
-                    <div className="text-sm text-gray-500 mb-1">Name</div>
-                    <div className="text-lg font-medium text-gray-900">
-                      {userData.name}
-                    </div>
+                <div className="bg-white rounded-lg p-4 border border-gray-200">
+                  <div className="text-sm text-gray-500 mb-1">Created At</div>
+                  <div className="text-lg font-medium text-gray-900">
+                    {new Date(userData.created_at).toLocaleDateString()}
                   </div>
-                )}
+                </div>
                 
-                {userData.clerk_user_id && (
+                {userData.updated_at && (
                   <div className="bg-white rounded-lg p-4 border border-gray-200">
-                    <div className="text-sm text-gray-500 mb-1">Clerk User ID</div>
+                    <div className="text-sm text-gray-500 mb-1">Updated At</div>
                     <div className="text-lg font-medium text-gray-900">
-                      {userData.clerk_user_id}
+                      {new Date(userData.updated_at).toLocaleDateString()}
                     </div>
                   </div>
                 )}
