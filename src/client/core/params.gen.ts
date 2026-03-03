@@ -114,7 +114,8 @@ export const buildClientParams = (args: ReadonlyArray<unknown>, fields: FieldsCo
 
   let config: FieldsConfig[number] | undefined;
 
-  for (const [index, arg] of args.entries()) {
+  for (let index = 0; index < args.length; index++) {
+    const arg = args[index];
     if (fields[index]) {
       config = fields[index];
     }
