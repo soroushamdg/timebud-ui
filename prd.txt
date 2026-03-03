@@ -1,0 +1,514 @@
+
+TimeBud
+AI-Powered Project Task Engine for ADHD Students
+PRD  ú  Build Plan  ú  MVP Checklist  ú  v6.0
+FieldValueVersion6.0 ? Supabase + Clerk + openapi-ts + WindsurfDate2026BackendPython FastAPI (async)  +  Supabase (PostgreSQL)  ?  RailwayFrontendNextJS 14 App Router  ?  Vercel (free)AuthClerk  ú  drop-in UI  ú  JWT verified in FastAPI via JWKSAPI Clientopenapi-ts  (auto-generated from FastAPI /openapi.json)Main LLMClaude API (Anthropic)Research LLMPerplexity APIEditor / AI agentWindsurf  (with .windsurfrules context files)Planning methodGetting Things Done (GTD)Mobile (later)Flutter  ú  same FastAPI backend  ú  no rewrite
+PART A ? PRODUCT REQUIREMENTS
+
+1. What TimeBud Is
+TimeBud is an AI task engine for students with ADHD. The user says how many hours they have to work. TimeBud tells them exactly what to do in that time ? across all their active projects, broken into small achievable steps.
+
+Core value proposition: You tell TimeBud how long you have. It tells you exactly what to do.
+TimeBud does not manage calendars, habits, sleep, or meetings. It owns exactly one thing: the inside of a work block the user has already carved out. It is not a scheduler. It is not a habit tracker. It is a session-level brain for people who know they have time to work but freeze when deciding what to do with it.
+
+When a user adds a project they do not know how to approach ? for example, "build a mobile app for my class" ? TimeBud researches the best approach using Perplexity, generates a structured milestone plan using Claude, and breaks it into 10?25 minute tasks. The user never stares at a blank screen wondering where to start.
+
+
+2. Problem Statement
+Students with ADHD face two consistent failure modes when managing multiple projects:
+? Task initiation paralysis ? they know a deadline exists but freeze when sitting down because they do not know what specific thing to do first.
+? Project neglect ? they hyperfocus on one project and ignore others until multiple deadlines collide at once.
+
+Existing tools fail this audience for two reasons. Tools like Motion and Reclaim manage the entire day ? meetings, habits, calendar ? which creates cognitive overload. Tools like Todoist and Notion require the user to already know what tasks need to be done, which is precisely the gap. Nobody builds the bridge between "I have a project due" and "here are your next 25 minutes of concrete work."
+
+TimeBud closes this gap by owning only the inside of a work block, not the whole day.
+
+
+3. Architecture
+NextJS (Vercel)  ??  FastAPI (Railway)  ??  Supabase (PostgreSQL)  +  Claude API  +  Perplexity API
+The system is two fully independent services communicating over HTTPS:
+? FastAPI (backend): all business logic, AI integrations, the session planning algorithm, and the Supabase-hosted PostgreSQL database. Deployed on Railway. Exposes a clean REST API. Auto-generates a Swagger UI at /docs for manual testing during development.
+? NextJS (frontend): all UI, routing, and auth via Clerk. Deployed on Vercel. Contains zero business logic. Every user action calls a FastAPI endpoint. The TypeScript API client is auto-generated from FastAPI's /openapi.json schema using openapi-ts.
+
+This separation means a Flutter mobile app in Phase 2 calls the same FastAPI endpoints with no backend changes. Frontend and backend are developed, tested, and deployed independently.
+
+3.1 Authentication Flow (Clerk)
+Authentication is handled entirely by Clerk. The frontend uses Clerk's drop-in React components. FastAPI verifies Clerk JWTs by fetching Clerk's public JWKS endpoint at startup ? no secrets are shared between services.
+
+StepWhereWhat Happens1NextJS + ClerkUser sees Clerk's drop-in <SignIn /> component wrapped in <ClerkProvider>. Clerk handles the Google OAuth flow, UI, and session management.2Clerk SDKOn successful sign-in, Clerk issues a short-lived JWT (session token) containing the user's Clerk user_id, email, and metadata.3NextJS ? FastAPIEvery API request from NextJS attaches the Clerk JWT as a Bearer token in the Authorization header. Obtained via Clerk's useAuth() hook or getToken() server-side.4FastAPI middlewareOn startup, FastAPI fetches Clerk's JWKS public keys. On every request, the auth middleware decodes and verifies the JWT signature using PyJWT + the cached JWKS. Fully stateless ? no session table needed.5FastAPI DBOn the first verified request for a user, FastAPI upserts a user row in Supabase keyed on the Clerk user_id.Clerk's free tier covers unlimited Monthly Active Users (MAUs) for personal/hobby projects, making it $0 at MVP scale.
+
+3.2 TypeScript Client Generation (openapi-ts)
+Instead of manually writing and maintaining lib/api.ts, the TypeScript API client for FastAPI is auto-generated using openapi-ts. FastAPI natively exposes its full schema at /openapi.json. openapi-ts reads this schema and outputs a fully-typed client with one command:
+npx openapi-ts --input https://your-api.railway.app/openapi.json --output src/client
+
+This means every time a FastAPI endpoint changes ? a new field, a new route, a renamed parameter ? the frontend client is regenerated in seconds. Type errors surface immediately at compile time rather than at runtime. No manual API wrapper code to write or maintain.
+Re-run the generation command whenever the FastAPI schema changes during development.
+
+3.3 Hosting ? Both Free
+HostRunsWhyVercel (free)NextJS frontendZero-config NextJS hosting. Auto-deploys on git push. Custom domain free. Always-on.Railway (free)FastAPINo longer needs a persistent disk ? the database lives in Supabase. $5 free credit/month easily covers MVP API traffic.Supabase (free)PostgreSQL databaseManaged Postgres. Free tier includes 500MB storage and unlimited API calls. Accessible via SQLAlchemy connection string.Clerk (free)AuthenticationManaged auth and user management. Free tier has no MAU limit for development. Drop-in React UI components.
+
+4. Tech Stack
+LayerTechnologyRationaleFrontendNextJS 14 App RouterFile-based routing, server components, Vercel-native deploymentStylingTailwind CSSFast iteration, consistent spacing and sizing, no design system neededAuthClerkDrop-in <SignIn /> and <ClerkProvider>. Handles Google OAuth, session management, and JWT issuance. Zero auth code to write.API Clientopenapi-ts (auto-generated)Generates a fully-typed TypeScript client from FastAPI's /openapi.json. No manual wrapper code. Regenerate on schema change.State / fetchingTanStack QueryCaching, loading states, and optimistic UI updates when tasks are completedBackendPython FastAPI (async)Async endpoints, auto /docs Swagger UI, same language for all AI service callsORMSQLAlchemy (async)Async ORM connecting FastAPI to Supabase PostgreSQL. Clean model definitions.DatabaseSupabase (PostgreSQL)Managed Postgres on Day 1. No SQLite to migrate later. Free tier sufficient for MVP.JWT verificationPyJWT + JWKSFastAPI verifies Clerk JWTs by fetching Clerk's public JWKS endpoint. Stateless, no shared secret.Main LLMClaude API (Anthropic)GTD clarification, task breakdown, session planning, task explanationResearch LLMPerplexity APILive web search for Research Mode ? when user does not know their project stepsEditor / AI AgentWindsurf + .windsurfrulesAI-assisted coding. .windsurfrules files lock Windsurf to the correct stack and patterns per repo.Mobile ? Phase 2FlutteriOS and Android. Calls same FastAPI endpoints. No backend rewrite needed.
+
+5. Feature Specifications
+All product features, the GTD flow, ADHD UX rules, and core value proposition are unchanged from v5.0. Only the underlying technical implementation has changed.
+
+5.1 Project Setup ? GTD-Guided Form
+The new project flow at /projects/new shows one question per screen. ADHD users are overwhelmed by long forms. Each screen has a single input, a progress indicator (dots at the top), and a Next button.
+
+GTD StepScreenWhat Happens1 ? CaptureFree text areaUser describes the project freely. Claude reads the response and pre-fills answers to later screens wherever possible.2 ? Clarify4 sequential screensDeadline (date picker), priority (3 large buttons), blocked? (yes/no), knows steps? (yes/no). Screens are skipped if Claude already extracted the answer.3 ? OrganizeAuto-routingProject saved as active or blocked. 2-minute rule advisory shown non-blockingly if task sounds trivial.4 ? ReflectTask breakdownManual mode: user enters milestones, Claude suggests sub-tasks. Research mode: Perplexity + Claude generate full milestone plan, user reviews and confirms.5 ? EngageWork sessionCovered in Section 5.2.
+5.2 Work Session ? The Core Feature
+The session screen is the heart of TimeBud. It is stripped of everything except the current task.
+
+Session Setup
+User navigates to /session/new. One large input: "How long can you work right now?" Optional toggle to exclude specific projects. Tapping Start calls POST /sessions on the FastAPI backend.
+
+Planning Algorithm
+The backend computes a time allocation across all active projects using a weighted priority formula:
+weight = priority_score  x  urgency_multiplier  x  remaining_work_factor
+priority_score:       High = 3  |  Medium = 2  |  Low = 1
+urgency_multiplier:   exponential -- doubles as days_to_deadline halves
+remaining_work:       estimated_minutes_remaining / total_estimated_minutes
+
+Output: a flat ordered list of micro-tasks (10?25 minutes each) filling the user's time budget. Tasks from multiple projects are interleaved by weight ? the user works through one list without thinking about project switching.
+
+Session UI
+? Full-screen task card: task title, estimated duration, subtle project label in the corner
+? Optional countdown timer: user can toggle on or off
+? Three buttons only: Done  /  Skip  /  How?
+? Done: marks task complete, brief animation, next task slides in
+? Skip: queues task for next session, advances immediately
+? How?: bottom drawer with Claude's step-by-step explanation. Does not navigate away from the session screen.
+? Thin progress bar at top: tasks completed / total tasks in session
+? Remaining time shown small in the corner ? present but not dominant
+
+Re-planning
+TriggerTimeBud ResponseAll tasks completed earlyCalls POST /sessions/{id}/replan. Offers bonus tasks or ends session with a celebration.Session time runs outGentle prompt: "Time's up ? keep going or wrap up?" Calls POST /sessions/{id}/end if wrapped.Task skippedPATCH /tasks/{id}/skip queues task for next session and updates its priority weight.Deadline is tomorrowRed urgency tint on project card on /home. Browser notification if permission granted.
+5.3 UI Design Rules
+? One primary action per screen: no equal-weight option menus. The dominant next action is always obvious.
+? Progressive disclosure: project cards show only name and deadline. Tasks only appear during a session.
+? Generous whitespace: no dense lists. Items breathe. Large tap targets (minimum 44px height).
+? No dashboards in v1: no charts, streaks, heatmaps, or statistics.
+? Session mode is fullscreen: when a session is running, the nav bar and all other UI disappears. One task. Three buttons.
+? Colour is functional: colour signals urgency (red = deadline close) or completion (green). Never used decoratively.
+
+5.4 Page Map
+RoutePrimary ActionWhat the User Sees/Sign inLogo, one-line value prop, Clerk <SignIn /> component. Nothing else./homeStart session or add projectActive project cards (name, deadline, priority chip). Two buttons: Start Session, Add Project./projects/newAnswer GTD questionsOne question per screen with progress dots at top./projects/[id]View / edit milestonesMilestone list with task counts. Edit and archive buttons./session/newSet time budgetLarge time input. Optional project exclusions. Start button./session/[id]Work through tasksFull-screen. Task card, optional timer, Done / Skip / How. Progress bar./session/[id]/doneReview sessionTasks completed, time used. Return home button.
+
+6. REST API Design
+All endpoints live in FastAPI. The NextJS frontend attaches a Clerk Bearer JWT on every request. Flutter will call the same endpoints in Phase 2 with no changes to the backend.
+The TypeScript client for these endpoints is auto-generated by openapi-ts from /openapi.json ? not written by hand.
+
+6.1 Users
+MethodPathBodyDescriptionPOST/users/registerclerk_user_id, email, nameUpsert user on first login. Returns user object.GET/users/me? (JWT only)Return current authenticated user.
+6.2 Projects
+MethodPathBodyDescriptionGET/projects?List active projects for user, sorted by deadline.POST/projectsname, description, deadline, priority, knows_stepsCreate project. Returns project with id.GET/projects/{id}?Get project with milestones and tasks.PATCH/projects/{id}Any project fieldUpdate name, deadline, priority, or status.DELETE/projects/{id}?Soft-delete (archive) a project.POST/projects/{id}/research?Trigger Perplexity + Claude pipeline. Returns proposed milestone plan.POST/projects/{id}/confirm-planmilestones[]Save confirmed milestone plan after user reviews research output.POST/projects/{id}/suggest-tasksmilestone_idClaude suggests sub-tasks for a milestone.
+6.3 Milestones & Tasks
+MethodPathBodyDescriptionGET/projects/{id}/milestones?List milestones with task counts.POST/projects/{id}/milestonestitle, est_hoursAdd milestone manually.GET/milestones/{id}/tasks?List tasks under a milestone.POST/milestones/{id}/taskstitle, est_minutesAdd task manually.PATCH/tasks/{id}/complete?Mark task complete.PATCH/tasks/{id}/skip?Skip ? queue for next session.POST/tasks/{id}/explain?Claude explains how to do this specific task.
+6.4 Sessions
+MethodPathBodyDescriptionPOST/sessionsbudget_minutes, excluded_project_ids[]Create session. Run planner. Return ordered task list.GET/sessions/{id}/tasks?Get ordered task list for the session.GET/sessions/{id}/progress?Current task, tasks done, remaining time.POST/sessions/{id}/end?End session. Mark remaining tasks pending. Update priority weights.POST/sessions/{id}/replanremaining_minutesRe-plan remaining time ? early finish or overtime extension.
+
+7. Data Model (Supabase / PostgreSQL)
+The schema is hosted in Supabase PostgreSQL from Day 1. No migration from SQLite is ever needed. SQLAlchemy async ORM connects FastAPI to Supabase using the connection string from the Supabase project dashboard.
+Connection string format: postgresql+asyncpg://postgres:[password]@db.[project-ref].supabase.co:5432/postgres
+
+users
+id               SERIAL      PRIMARY KEY
+clerk_user_id    TEXT        UNIQUE NOT NULL   -- Clerk identity key (replaces google_sub)
+email            TEXT        NOT NULL
+name             TEXT
+created_at       TIMESTAMPTZ DEFAULT NOW()
+
+projects
+id               SERIAL      PRIMARY KEY
+user_id          INTEGER     REFERENCES users(id) ON DELETE CASCADE
+name             TEXT        NOT NULL
+description      TEXT
+deadline         TIMESTAMPTZ
+priority         TEXT        CHECK(priority IN ('high','medium','low'))  DEFAULT 'medium'
+knows_steps      BOOLEAN     DEFAULT FALSE
+status           TEXT        DEFAULT 'active'   -- active | archived
+created_at       TIMESTAMPTZ DEFAULT NOW()
+
+milestones
+id               SERIAL      PRIMARY KEY
+project_id       INTEGER     REFERENCES projects(id) ON DELETE CASCADE
+title            TEXT        NOT NULL
+description      TEXT
+display_order    INTEGER     NOT NULL
+status           TEXT        DEFAULT 'pending'  -- pending | done
+estimated_hours  NUMERIC(6,2)
+
+tasks
+id               SERIAL      PRIMARY KEY
+milestone_id     INTEGER     REFERENCES milestones(id) ON DELETE CASCADE
+title            TEXT        NOT NULL
+estimated_minutes INTEGER
+status           TEXT        DEFAULT 'pending'  -- pending | done | skipped
+completed_at     TIMESTAMPTZ
+
+sessions
+id               SERIAL      PRIMARY KEY
+user_id          INTEGER     REFERENCES users(id) ON DELETE CASCADE
+date             DATE        NOT NULL
+budget_minutes   INTEGER     NOT NULL
+actual_minutes   INTEGER
+status           TEXT        DEFAULT 'active'   -- active | complete
+created_at       TIMESTAMPTZ DEFAULT NOW()
+
+session_tasks
+id               SERIAL      PRIMARY KEY
+session_id       INTEGER     REFERENCES sessions(id) ON DELETE CASCADE
+task_id          INTEGER     REFERENCES tasks(id)
+display_order    INTEGER     NOT NULL
+status           TEXT        DEFAULT 'planned'  -- planned | done | skipped
+
+
+8. Project Structure
+Two separate Git repositories. Each has its own .windsurfrules file to keep Windsurf's AI agent locked to the correct stack and patterns.
+
+8.1 FastAPI Backend  (repo: timebud-api)
+main.py                       # FastAPI app, CORS, lifespan, router registration
+database.py                   # Async SQLAlchemy engine + Supabase connection
+auth.py                       # Clerk JWT verification via PyJWT + JWKS endpoint
+.windsurfrules                # Windsurf context: enforce async FastAPI + SQLAlchemy patterns
+models/
+  db.py                       # SQLAlchemy async ORM models (all 6 tables)
+  schemas.py                  # Pydantic v2 request / response schemas
+api/routes/
+  users.py                    # /users/register  /users/me
+  projects.py                 # CRUD + /research + /confirm-plan + /suggest-tasks
+  tasks.py                    # /complete  /skip  /explain
+  sessions.py                 # /create  /tasks  /progress  /end  /replan
+services/
+  planner.py                  # Session allocation algorithm
+  claude_service.py           # All Claude API calls (async)
+  perplexity_service.py       # All Perplexity API calls (async)
+requirements.txt
+Procfile                      # web: uvicorn main:app --host 0.0.0.0 --port $PORT
+railway.toml
+.env                          # DATABASE_URL  CLERK_JWKS_URL  ANTHROPIC_API_KEY  PERPLEXITY_API_KEY
+
+8.2 NextJS Frontend  (repo: timebud-web)
+app/
+  page.tsx                    # Landing -- Clerk <SignIn /> component
+  home/page.tsx               # Project list + Start Session button
+  projects/new/page.tsx       # GTD step-by-step form
+  projects/[id]/page.tsx      # Project detail -- milestones and tasks
+  session/new/page.tsx        # Time budget input
+  session/[id]/page.tsx       # Full-screen session mode
+  session/[id]/done/page.tsx  # Session summary
+src/client/                   # AUTO-GENERATED by openapi-ts from FastAPI /openapi.json
+  index.ts                    # Do not edit manually -- regenerate on schema change
+components/
+  ProjectCard.tsx  TaskCard.tsx  MilestoneList.tsx
+  SessionTimer.tsx  HowDrawer.tsx
+lib/
+  auth.ts                     # Clerk token helper -- getToken() for server / useAuth() for client
+middleware.ts                 # Clerk middleware -- protects all /home and /project routes
+tailwind.config.ts
+.windsurfrules                # Windsurf context: enforce NextJS App Router + Tailwind patterns
+.env.local                    # NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY  CLERK_SECRET_KEY  NEXT_PUBLIC_API_BASE_URL
+
+
+9. Non-Functional Requirements
+CategoryRequirementAPI responseAll non-AI endpoints under 300ms. Show loading state for anything taking longer.AI responseClaude calls under 8s. Research mode (Perplexity + Claude) under 20s. Show clear loading state immediately.Auth securityClerk JWT verified on every FastAPI request via JWKS. HTTPS enforced on Vercel and Railway. Tokens are short-lived (Clerk default).CORSFastAPI allows requests only from the Vercel production domain and localhost:3000 in development.AccessibilityWCAG 2.1 AA minimum. 44px tap targets. Visible focus rings. Screen reader labels on all interactive elements.PrivacyProject content sent to Perplexity only in Research Mode with user awareness. Claude receives task context only.Cost ceiling$0 for all hosting and auth at MVP scale. Claude and Perplexity are pay-per-use.
+
+10. Future Phases
+PhaseFocusWhat Gets Added2 ? MobileFlutter appiOS and Android. Same FastAPI endpoints, zero backend changes. Offline-first local cache. Push notifications for deadline warnings.3 ? GrowthProduct depthSomeday/Maybe bucket, energy level input per session, session history, simple progress view.4 ? ScaleInfrastructureSupabase already on Postgres ? upgrade Supabase plan as needed. Add rate limiting, freemium pricing, Stripe integration.The 'Migrate to Postgres' step from previous versions is removed ? Supabase PostgreSQL is the database from Day 1.
+
+
+PART B ? BUILD TASK LIST
+
+Work through phases in order. Each phase produces something real and testable before you move on. Do not read ahead.
+Rule: finish the current phase before opening the next one. The overwhelm comes from seeing everything at once.
+
+Phase 0  ú  Workspace Setup  ú  Day 0
+Goal: Two clean repos wired to Windsurf with the right context before a single line of product code is written
+??  Repositories
+? Create a new GitHub organisation or personal namespace for the project (e.g. github.com/you/timebud-api and github.com/you/timebud-web)
+? Create repo timebud-api ? initialise with Python .gitignore, no template
+? Create repo timebud-web ? initialise with Node .gitignore, no template
+? Clone both repos locally into a parent folder, e.g. ~/projects/timebud/
+
+??  Windsurf Context Files
+Create a .windsurfrules file in each repo. These files are read by Windsurf's Cascade AI agent at the start of every session to lock it to the correct patterns and prevent it from suggesting incompatible libraries or styles.
+
+? Create timebud-api/.windsurfrules with the following content:
+# TimeBud API -- Windsurf context
+
+## Stack
+- Python 3.12+
+- FastAPI with async/await throughout -- never use synchronous route handlers
+- SQLAlchemy 2.x async ORM with asyncpg driver
+- Pydantic v2 for all request/response schemas
+- Database: Supabase PostgreSQL (never SQLite)
+- Auth: verify Clerk JWTs via PyJWT + JWKS endpoint in auth.py
+
+## Patterns
+- All DB sessions via async context manager from database.py
+- All route handlers must be async def
+- Services in services/ contain all business logic -- routes only call services
+- Never put business logic directly in route handlers
+- All AI calls are async (use httpx.AsyncClient, not requests)
+- Pydantic models live in models/schemas.py, ORM models in models/db.py
+
+## Do not suggest
+- SQLite, databases library, or sync SQLAlchemy
+- Flask, Django, or any non-FastAPI framework
+- NextAuth or any frontend auth library (auth is Clerk, frontend-managed)
+
+? Create timebud-web/.windsurfrules with the following content:
+# TimeBud Web -- Windsurf context
+
+## Stack
+- NextJS 14 App Router (never Pages Router)
+- TypeScript strict mode throughout
+- Tailwind CSS for all styling -- no CSS modules, no styled-components, no inline styles
+- Clerk for auth: use <ClerkProvider>, <SignIn />, useAuth(), currentUser()
+- TanStack Query for all server state and data fetching
+- API client in src/client/ is AUTO-GENERATED by openapi-ts -- never edit it manually
+
+## Patterns
+- Server components by default; add 'use client' only when hooks or interactivity needed
+- All FastAPI calls go through the generated client in src/client/
+- Attach Clerk JWT as Bearer token on every API request via lib/auth.ts helper
+- All pages protected by Clerk middleware in middleware.ts except / (landing)
+- One primary action per page -- ADHD UX rule, do not add secondary CTAs
+
+## Do not suggest
+- NextAuth, Auth.js, or any non-Clerk auth library
+- CSS modules, styled-components, or Emotion
+- Pages Router or getServerSideProps
+- Manually written fetch wrappers (use the openapi-ts generated client)
+
+?  Verify Setup
+? Open timebud-api in Windsurf -- confirm Cascade reads the .windsurfrules file (it will acknowledge the context)
+? Open timebud-web in Windsurf -- confirm Cascade reads the .windsurfrules file
+? Both repos pushed to GitHub with the .windsurfrules files committed
+
+Phase 1  ú  FastAPI + Supabase Foundation  ú  Days 1?3
+Goal: A running async API connected to a real PostgreSQL database you can test in your browser
+???  Supabase Setup
+? Create a Supabase account at supabase.com
+? Create a new Supabase project (choose a region close to you)
+? Go to Project Settings > Database and copy the connection string (URI format with pooler on port 6543 for serverless, direct on 5432 for persistent apps)
+? Store the connection string as DATABASE_URL in timebud-api/.env
+? Go to the Supabase SQL Editor and run the full schema (all 6 tables from Section 7) to create tables in Supabase directly
+
+??  FastAPI Setup
+? Create a Python virtual environment in timebud-api: python -m venv venv && source venv/bin/activate
+? pip install fastapi uvicorn sqlalchemy[asyncio] asyncpg pyjwt httpx python-dotenv pydantic
+? Create database.py with async SQLAlchemy engine pointing to DATABASE_URL from .env
+? Create models/db.py with SQLAlchemy async ORM models for all 6 tables
+? Create models/schemas.py with Pydantic v2 schemas for request/response
+? Create main.py with a /health endpoint returning {"status": "ok", "db": "connected"}
+? Run uvicorn main:app --reload and confirm localhost:8000/docs is live
+? Confirm the /health endpoint successfully connects to Supabase (no connection errors in terminal)
+
+Phase 2  ú  Core API Endpoints  ú  Days 4?7
+Goal: Every endpoint testable via /docs ? no AI, no frontend yet
+? Create auth.py: fetch Clerk JWKS on startup, verify JWT on every request, extract clerk_user_id
+? POST /users/register and GET /users/me
+? GET /projects and POST /projects
+? GET /projects/{id}, PATCH /projects/{id}, DELETE /projects/{id}
+? POST /projects/{id}/milestones and GET /projects/{id}/milestones
+? POST /milestones/{id}/tasks and GET /milestones/{id}/tasks
+? PATCH /tasks/{id}/complete and PATCH /tasks/{id}/skip
+? POST /sessions (stub ? create a session row, return an empty task list for now)
+? GET /sessions/{id}/tasks and POST /sessions/{id}/end
+? Add CORS middleware allowing localhost:3000 and your future Vercel URL
+? Test every endpoint manually in /docs with a test user before moving on
+
+Phase 3  ú  Deploy Backend  ú  Day 8
+Goal: Your API is live on the internet with a real URL
+? Push timebud-api to GitHub
+? Create a Railway account at railway.app
+? Connect Railway to the timebud-api GitHub repo
+? Add all environment variables in Railway: DATABASE_URL, CLERK_JWKS_URL, ANTHROPIC_API_KEY, PERPLEXITY_API_KEY
+? Confirm Procfile is present: web: uvicorn main:app --host 0.0.0.0 --port $PORT
+? Deploy and confirm https://your-app.railway.app/docs is live and all endpoints are reachable
+? Update CORS in main.py to also allow your Vercel production domain (you can add it after Phase 4)
+
+Phase 4  ú  NextJS + Clerk Auth  ú  Days 9?12
+Goal: You can sign in on a real deployed Vercel URL with a real Google account
+??  Clerk Setup
+? Create a Clerk account at clerk.com
+? Create a new Clerk application -- enable Google as a social login provider
+? Copy NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY and CLERK_SECRET_KEY from the Clerk dashboard
+? Add CLERK_JWKS_URL to Railway env vars (format: https://[your-clerk-frontend-api]/.well-known/jwks.json)
+
+???  NextJS Setup
+? npx create-next-app timebud-web (App Router, TypeScript, Tailwind, src/ directory)
+? npm install @clerk/nextjs @tanstack/react-query
+? Wrap the app in <ClerkProvider> in app/layout.tsx
+? Create middleware.ts using Clerk's clerkMiddleware() to protect all routes except /
+? Create the landing page / with Clerk's <SignIn /> component centered on screen
+? Confirm Google sign-in works locally -- user is redirected to /home after sign-in
+
+??  Connect Frontend to Backend
+? npm install openapi-ts
+? Run: npx openapi-ts --input https://your-app.railway.app/openapi.json --output src/client
+? Inspect src/client/index.ts -- confirm all FastAPI endpoints are present as typed functions
+? Create lib/auth.ts with a helper that retrieves the Clerk JWT (using useAuth().getToken() on client, auth().getToken() on server)
+? Create a small test: call GET /users/me from the /home page with the Clerk JWT -- confirm FastAPI returns the user object
+? Push timebud-web to GitHub and deploy to Vercel
+? Add Clerk keys and NEXT_PUBLIC_API_BASE_URL to Vercel environment variables
+? Confirm Google sign-in works end-to-end on the production Vercel URL
+
+Phase 5  ú  Project Creation UI  ú  Days 13?17
+Goal: A user can add a project and see it on the home screen
+? Build home page /home -- project cards (name + deadline + priority chip) + Add Project button
+? Build GTD form /projects/new -- screen 1: free text description of the project
+? GTD form screen 2: deadline date picker
+? GTD form screen 3: priority selector -- three large buttons: High / Medium / Low
+? GTD form screen 4: Do you know the steps? Yes / No
+? Wire completed form to POST /projects using the openapi-ts generated client
+? Confirm new project appears on /home after creation
+? Build project detail page /projects/[id] -- milestone list with task counts
+? Add manual milestone entry wired to POST /projects/{id}/milestones
+? Add manual task entry under each milestone
+? Re-run openapi-ts generation if any endpoint schemas changed during this phase
+
+Phase 6  ú  Session UI  ú  Days 18?22
+Goal: A user can run a complete work session end to end
+? Build session setup /session/new -- large time input and Start button
+? Wire Start to POST /sessions (still using stub planner -- returns first N pending tasks)
+? Build full-screen session page /session/[id] -- task card with title and estimated time
+? Add Done button wired to PATCH /tasks/{id}/complete -- animate and show next task
+? Add Skip button wired to PATCH /tasks/{id}/skip -- show next task
+? Add progress bar showing tasks completed / total
+? Add remaining session time displayed small in corner
+? Build session summary /session/[id]/done -- tasks completed, time used, Return Home
+? Test a full end-to-end session: create project, add tasks, start session, complete all tasks
+
+Phase 7  ú  Planning Algorithm  ú  Days 23?25
+Goal: The session distributes time intelligently across multiple projects
+? Create services/planner.py
+? Implement priority_score: High=3, Medium=2, Low=1
+? Implement urgency_multiplier: exponential curve based on days_until_deadline
+? Implement remaining_work_factor: estimated_minutes_remaining / total_estimated
+? Compute final weight per project: priority_score x urgency_multiplier x remaining_work_factor
+? Allocate session budget proportionally across projects by weight
+? Select next pending tasks from each project to fill its time allocation with 10-25 min micro-tasks
+? Replace the stub in POST /sessions with the real algorithm
+? Test with 3 projects at different deadlines and priorities -- confirm task list distribution makes sense
+
+Phase 8  ú  Claude Integration  ú  Days 26?29
+Goal: AI helps break down tasks and explains how to do them
+? pip install anthropic
+? Create services/claude_service.py with an async base Claude API call function
+? GTD clarify pre-fill: Claude extracts deadline, priority, and knows_steps from the user's initial description
+? Implement POST /projects/{id}/suggest-tasks -- Claude suggests sub-tasks for a given milestone
+? Wire suggest-tasks to the milestone UI: Add AI Suggestions button appears after a milestone is added
+? Implement POST /tasks/{id}/explain -- Claude returns step-by-step guidance for a specific task
+? Build HowDrawer.tsx -- bottom sheet that shows Claude's explanation without leaving session mode
+? Wire How? button in session UI to the explain endpoint and HowDrawer
+? Re-run openapi-ts generation to pick up the two new endpoints
+? Test all three Claude features with real project content
+
+Phase 9  ú  Research Mode  ú  Days 30?34
+Goal: User can add a project they know nothing about and get a full AI-generated plan
+? Sign up for Perplexity API at perplexity.ai and add PERPLEXITY_API_KEY to Railway
+? Create services/perplexity_service.py with an async search function
+? Implement POST /projects/{id}/research: call Perplexity with project description, pass results to Claude, return structured milestone plan
+? Implement POST /projects/{id}/confirm-plan: save confirmed milestones and sub-tasks to Supabase
+? Build research loading screen in /projects/new -- full screen, 'Researching best approach...' message
+? Build plan review screen -- show proposed milestones, allow user to edit titles before confirming
+? Wire confirm button to POST /projects/{id}/confirm-plan and navigate to /projects/[id]
+? Re-run openapi-ts generation to pick up the research and confirm-plan endpoints
+? Test Research Mode end-to-end with a real novel project (e.g. build a React Native app)
+
+Phase 10  ú  Polish & Beta  ú  Days 35?40
+Goal: Real people can use it on the live URL without it breaking
+? Add deadline urgency: red tint on project cards when deadline is within 48 hours
+? Add 2-minute rule advisory in GTD form -- non-blocking prompt when task sounds trivial
+? Implement POST /sessions/{id}/replan -- offer bonus tasks when session finished early
+? Handle all empty states: no projects, no tasks in session, no milestones on project page
+? Add loading skeletons for all data-fetching screens
+? Implement project archive from /projects/[id]
+? Run final openapi-ts generation to ensure generated client matches all production endpoints
+? Test full flow with 5 real ADHD students on the production Vercel URL
+? Fix the top 5 bugs reported
+? Write README.md for both repos with setup instructions and env var reference
+
+PART C ? MVP FEATURE CHECKLIST
+
+Use this checklist to verify the finished MVP. Every item must pass on the live production Vercel URL with a real Google account ? not on localhost.
+
+??  Authentication (Clerk)
+? User can sign in with Google via Clerk's <SignIn /> on the production Vercel URL
+? After sign-in, user lands on /home
+? Unauthenticated user visiting any protected route is redirected to /
+? Clerk JWT is verified correctly in FastAPI (user row upserted in Supabase on first login)
+? Signing out works and redirects to the landing page
+
+??  Project Management
+? User can create a project by going through the 4-screen GTD form
+? Claude pre-fills answers from the initial description where possible
+? 2-minute rule advisory appears (non-blocking) when task sounds trivial
+? Created project appears on /home with correct name, deadline, and priority
+? User can view project detail at /projects/[id] with milestone list
+? User can edit a project's name, deadline, and priority
+? User can archive a project -- it disappears from /home
+? Deadline urgency tint appears red on project cards within 48 hours of deadline
+
+??  Task Breakdown ? Manual Mode
+? User can add milestones manually to a project
+? User can add tasks manually under each milestone
+? AI Suggest button on each milestone calls Claude and shows suggested sub-tasks
+? User can accept or dismiss individual AI-suggested tasks
+
+??  Task Breakdown ? Research Mode
+? When user selects 'No' to knows steps, Research Mode triggers automatically
+? Loading screen appears immediately with 'Researching best approach...' message
+? Perplexity + Claude pipeline returns a structured milestone plan
+? User can review and edit milestone titles before confirming
+? Confirmed plan is saved to Supabase and visible on /projects/[id]
+? Research Mode works correctly for at least 3 different project types
+
+??  Work Session
+? User can start a session from /home by entering a time budget
+? User can optionally exclude specific projects from the session
+? Session generates a flat ordered task list that fills the time budget
+? Tasks are distributed across multiple projects (not all from one project)
+? Projects closer to deadline receive proportionally more tasks
+? Session screen is full-screen -- nav bar hidden during active session
+? Current task shown with title, estimated time, and project label
+? Done button marks task complete and shows next task with smooth transition
+? Skip button queues task for next session and shows next task
+? How? button opens bottom drawer with Claude's explanation -- does not exit session
+? Progress bar updates correctly after each task
+? When all tasks are done early, user is offered bonus tasks or session completion
+? When time runs out, gentle prompt appears to continue or wrap up
+? Session summary page shows tasks completed and time used
+
+?  ADHD UX Requirements
+? Every screen has one dominant action -- no equal-weight option menus
+? GTD form shows exactly one question per screen with progress dots
+? No charts, streaks, heatmaps, or statistics visible anywhere in the app
+? Session mode is truly fullscreen -- only task card and three buttons visible
+? All interactive tap targets are at least 44px in height
+? All AI calls show a loading state -- no frozen screens
+? All empty states are handled gracefully -- no blank white screens
+
+??  Technical Requirements
+? FastAPI deployed on Railway and connected to Supabase PostgreSQL
+? NextJS deployed on Vercel with auto-deploy from GitHub
+? HTTPS enforced on both production URLs
+? CORS configured -- FastAPI only accepts requests from the Vercel production domain
+? Clerk JWT auth working end-to-end in production (not just localhost)
+? openapi-ts generated client is in sync with the production FastAPI schema
+? Non-AI API endpoints respond in under 300ms
+? Claude calls complete in under 8 seconds
+? Research Mode (Perplexity + Claude) completes in under 20 seconds
+? App layout is responsive and usable on a mobile browser
+? README.md written for both repos with setup and env var instructions
+
+When every box above is checked on the live production URL -- that is your MVP. Ship it.
+
+Phase 2: Flutter mobile  ú  Phase 3: Someday/Maybe + energy levels  ú  Phase 4: Upgrade Supabase plan + pricing
+TimeBud  ú  PRD + Build Plan + MVP Checklist  ú  v6.0
+
+TimeBud  ú  Confidential  ú  v6.0     1 of 2
+
