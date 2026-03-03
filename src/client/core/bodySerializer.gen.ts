@@ -4,7 +4,7 @@ import type { ArrayStyle, ObjectStyle, SerializerOptions } from './pathSerialize
 
 export type QuerySerializer = (query: Record<string, unknown>) => string;
 
-export type BodySerializer = (body: any) => any;
+export type BodySerializer = (body: unknown) => unknown;
 
 type QuerySerializerOptionsObject = {
   allowReserved?: boolean;
@@ -39,7 +39,7 @@ const serializeUrlSearchParamsPair = (data: URLSearchParams, key: string, value:
 };
 
 export const formDataBodySerializer = {
-  bodySerializer: <T extends Record<string, any> | Array<Record<string, any>>>(
+  bodySerializer: <T extends Record<string, unknown> | Array<Record<string, unknown>>>(
     body: T,
   ): FormData => {
     const data = new FormData();
@@ -65,7 +65,7 @@ export const jsonBodySerializer = {
 };
 
 export const urlSearchParamsBodySerializer = {
-  bodySerializer: <T extends Record<string, any> | Array<Record<string, any>>>(body: T): string => {
+  bodySerializer: <T extends Record<string, unknown> | Array<Record<string, unknown>>>(body: T): string => {
     const data = new URLSearchParams();
 
     Object.entries(body).forEach(([key, value]) => {

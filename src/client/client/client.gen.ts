@@ -52,7 +52,7 @@ export const createClient = (config: Config = {}): Client => {
     }
 
     if (opts.body !== undefined && opts.bodySerializer) {
-      opts.serializedBody = opts.bodySerializer(opts.body);
+      opts.serializedBody = opts.bodySerializer(opts.body) as any;
     }
 
     // remove Content-Type header if body is empty to avoid sending invalid requests
@@ -66,7 +66,7 @@ export const createClient = (config: Config = {}): Client => {
   };
 
   const request: Client['request'] = async (options) => {
-    // @ts-expect-error
+    // @ts-expect-error Type assertion needed for dynamic error handling
     const { opts, url } = await beforeRequest(options);
     const requestInit: ReqInit = {
       redirect: 'follow',

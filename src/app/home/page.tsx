@@ -5,9 +5,16 @@ import { useAuth, SignOutButton } from "@clerk/nextjs";
 import { getCurrentUserProfileUsersMeGet } from "@/client";
 import { apiClient } from "@/lib/api-client";
 
+interface UserProfile {
+  id?: string;
+  email?: string;
+  name?: string;
+  clerk_user_id?: string;
+}
+
 export default function HomePage() {
   const { getToken } = useAuth();
-  const [userData, setUserData] = useState<any>(null);
+  const [userData, setUserData] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -26,7 +33,7 @@ export default function HomePage() {
           },
         });
 
-        setUserData(response.data);
+        setUserData(response.data || null);
         setLoading(false);
       } catch (err) {
         console.error("Error fetching user data:", err);
@@ -150,7 +157,7 @@ export default function HomePage() {
           </h3>
           <p className="text-green-700">
             The frontend is successfully authenticated with Clerk and has made a 
-            successful API call to the FastAPI backend's GET /users/me endpoint.
+            successful API call to the FastAPI backend&apos;s GET /users/me endpoint.
           </p>
         </div>
       </div>
