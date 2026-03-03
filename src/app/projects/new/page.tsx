@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { createProjectProjectsPost, ProjectCreate } from "@/client";
@@ -98,6 +98,30 @@ export default function NewProjectPage() {
         return false;
     }
   };
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+        e.preventDefault();
+        if (canProceed() && !isSubmitting) {
+          if (currentStep < totalSteps) {
+            handleNext();
+          } else {
+            handleSubmit();
+          }
+        }
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key === "Backspace") {
+        e.preventDefault();
+        if (currentStep > 1 && !isSubmitting) {
+          handleBack();
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [currentStep, formData, isSubmitting]);
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-6 py-12">
@@ -245,26 +269,37 @@ export default function NewProjectPage() {
               <button
                 onClick={handleBack}
                 disabled={isSubmitting}
-                className="min-h-[56px] px-8 py-3 border-2 border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors disabled:opacity-50"
+                className="min-h-[56px] px-8 py-3 border-2 border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors disabled:opacity-50 flex items-center gap-2"
               >
-                Back
+                <span>Back</span>
+                <kbd className="hidden sm:inline-block px-2 py-1 text-xs font-mono bg-gray-100 border border-gray-300 rounded">
+                  ⌘⌫
+                </kbd>
               </button>
             )}
             {currentStep < totalSteps ? (
               <button
                 onClick={handleNext}
                 disabled={!canProceed() || isSubmitting}
-                className="flex-1 min-h-[56px] px-8 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+                className="flex-1 min-h-[56px] px-8 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                Next
+                <span>Next</span>
+                <kbd className="hidden sm:inline-block px-2 py-1 text-xs font-mono bg-blue-700 border border-blue-800 rounded">
+                  ⌘↵
+                </kbd>
               </button>
             ) : (
               <button
                 onClick={handleSubmit}
                 disabled={!canProceed() || isSubmitting}
-                className="flex-1 min-h-[56px] px-8 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+                className="flex-1 min-h-[56px] px-8 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                {isSubmitting ? "Creating..." : "Create Project"}
+                <span>{isSubmitting ? "Creating..." : "Create Project"}</span>
+                {!isSubmitting && (
+                  <kbd className="hidden sm:inline-block px-2 py-1 text-xs font-mono bg-blue-700 border border-blue-800 rounded">
+                    ⌘↵
+                  </kbd>
+                )}
               </button>
             )}
           </div>
