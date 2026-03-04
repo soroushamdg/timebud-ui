@@ -1,9 +1,9 @@
 "use client";
 
 import { useRouter, useParams } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@clerk/nextjs";
-import { getSessionTasksSessionsSessionIdTasksGet } from "@/client";
+import { getSessionTasksSessionsSessionIdTasksGet, endSessionSessionsSessionIdEndPost } from "@/client";
 
 export default function SessionDonePage() {
   const router = useRouter();
@@ -32,6 +32,33 @@ export default function SessionDonePage() {
     },
     enabled: !!sessionId,
   });
+
+  const endSessionMutation = useMutation({
+    mutationFn: async () => {
+      const token = await getToken();
+      if (!token) throw new Error("Not authenticated");
+
+      const response = await endSessionSessionsSessionIdEndPost({
+        path: { session_id: sessionId },
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.error) {
+        throw new Error("Failed to end session");
+      }
+
+      return response.data;
+    },
+    onSuccess: () => {
+      router.push("/home");
+    },
+  });
+
+  const handleReturnHome = async () => {
+    await endSessionMutation.mutateAsync();
+  };
 
   if (isLoading) {
     return (
@@ -103,10 +130,11 @@ export default function SessionDonePage() {
         </div>
 
         <button
-          onClick={() => router.push("/home")}
-          className="w-full h-14 bg-blue-600 text-white text-lg font-semibold rounded-lg hover:bg-blue-700 active:bg-blue-800 transition-colors"
+          onClick={handleReturnHome}
+          disabled={endSessionMutation.isPending}
+          className="w-full h-14 bg-blue-600 text-white text-lg font-semibold rounded-lg hover:bg-blue-700 active:bg-blue-800 disabled:opacity-50 transition-colors"
         >
-          Return Home
+          {endSessionMutation.isPending ? "Ending Session..." : "Return Home"}
         </button>
       </div>
     </div>

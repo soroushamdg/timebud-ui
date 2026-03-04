@@ -16,6 +16,8 @@ export default function NewSessionPage() {
       const token = await getToken();
       if (!token) throw new Error("Not authenticated");
 
+      console.log("Creating session with budget:", minutes);
+
       const response = await createSessionSessionsPost({
         body: {},
         headers: {
@@ -23,13 +25,17 @@ export default function NewSessionPage() {
         },
       });
 
+      console.log("Session creation response:", response);
+
       if (response.error) {
+        console.error("Session creation error:", response.error);
         throw new Error("Failed to create session");
       }
 
       return response.data;
     },
     onSuccess: (session) => {
+      console.log("Session created successfully:", session);
       if (session?.id) {
         router.push(`/session/${session.id}`);
       }

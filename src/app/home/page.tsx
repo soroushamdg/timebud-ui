@@ -1,10 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useAuth } from "@clerk/nextjs";
+import { useAuth, SignOutButton } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { listProjectsProjectsGet, ProjectResponse } from "@/client";
-import { apiClient } from "@/lib/api-client";
 import { ProjectCard } from "@/components/ProjectCard";
 
 export default function HomePage() {
@@ -23,11 +22,14 @@ export default function HomePage() {
         }
 
         const response = await listProjectsProjectsGet({
-          client: apiClient,
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
+
+        console.log("API Response:", response);
+        console.log("Response data:", response.data);
+        console.log("Response error:", response.error);
 
         if (response.data) {
           setProjects(Array.isArray(response.data) ? response.data : []);
@@ -67,7 +69,14 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-4xl mx-auto px-6 py-12">
-        <h1 className="text-4xl font-bold text-gray-900 mb-12">TimeBud</h1>
+        <div className="flex items-center justify-between mb-12">
+          <h1 className="text-4xl font-bold text-gray-900">TimeBud</h1>
+          <SignOutButton>
+            <button className="min-h-[44px] px-6 py-2 text-gray-600 hover:text-gray-900 font-medium transition-colors">
+              Sign Out
+            </button>
+          </SignOutButton>
+        </div>
 
         <div className="space-y-8">
           <button

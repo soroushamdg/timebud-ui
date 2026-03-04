@@ -8,6 +8,7 @@ import {
   getSessionTasksSessionsSessionIdTasksGet,
   completeTaskTasksTaskIdCompletePatch,
   skipTaskTasksTaskIdSkipPatch,
+  endSessionSessionsSessionIdEndPost,
   type SessionTaskResponse,
   type TaskResponse,
 } from "@/client";
@@ -23,12 +24,27 @@ export default function SessionPage() {
   const [currentTaskIndex, setCurrentTaskIndex] = useState(0);
   const [completedCount, setCompletedCount] = useState(0);
   const [showTransition, setShowTransition] = useState(false);
+  const [elapsedMinutes, setElapsedMinutes] = useState(0);
+  const [startTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const now = new Date();
+      const diffMs = now.getTime() - startTime.getTime();
+      const diffMins = Math.floor(diffMs / 60000);
+      setElapsedMinutes(diffMins);
+    }, 60000);
+
+    return () => clearInterval(timer);
+  }, [startTime]);
 
   const { data: sessionTasks, isLoading } = useQuery({
     queryKey: ["session-tasks", sessionId],
     queryFn: async () => {
       const token = await getToken();
       if (!token) throw new Error("Not authenticated");
+
+      console.log("Fetching tasks for session:", sessionId);
 
       const response = await getSessionTasksSessionsSessionIdTasksGet({
         path: { session_id: sessionId },
@@ -37,7 +53,11 @@ export default function SessionPage() {
         },
       });
 
+      console.log("Session tasks response:", response);
+      console.log("Tasks data:", response.data);
+
       if (response.error) {
+        console.error("Failed to load session tasks:", response.error);
         throw new Error("Failed to load session tasks");
       }
 
@@ -45,6 +65,33 @@ export default function SessionPage() {
     },
     enabled: !!sessionId,
   });
+
+  const endSessionMutation = useMutation({
+    mutationFn: async () => {
+      const token = await getToken();
+      if (!token) throw new Error("Not authenticated");
+
+      const response = await endSessionSessionsSessionIdEndPost({
+        path: { session_id: sessionId },
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.error) {
+        throw new Error("Failed to end session");
+      }
+
+      return response.data;
+    },
+    onSuccess: () => {
+      router.push("/home");
+    },
+  });
+
+  const handleReturnHome = async () => {
+    await endSessionMutation.mutateAsync();
+  };
 
   const completeTaskMutation = useMutation({
     mutationFn: async (taskId: string) => {
@@ -120,10 +167,11 @@ export default function SessionPage() {
         <div className="text-center space-y-4">
           <p className="text-xl text-gray-600">No tasks in this session</p>
           <button
-            onClick={() => router.push("/home")}
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            onClick={handleReturnHome}
+            disabled={endSessionMutation.isPending}
+            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
           >
-            Return Home
+            {endSessionMutation.isPending ? "Ending..." : "Return Home"}
           </button>
         </div>
       </div>
@@ -136,6 +184,12 @@ export default function SessionPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
+      <div className="text-center py-6 bg-white border-b border-gray-200">
+        <div className="text-4xl font-bold text-gray-900">
+          {elapsedMinutes} min
+        </div>
+      </div>
+
       <div 
         className="h-1 bg-green-500 transition-all duration-300"
         style={{ width: `${progressPercent}%` }}
