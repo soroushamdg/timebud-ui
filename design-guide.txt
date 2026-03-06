@@ -1,0 +1,24 @@
+romToken |	Value |	Usage
+bg-primary |	#000000 |	Page backgrounds
+bg-card |	#1C1C1C |	Task cards, project cards
+bg-card-done |	#1A3A2A |	Completed task card background
+bg-card-locked |	#111111 |	Locked/disabled task cards
+accent-yellow |	#F5C518 |	CTA buttons, active borders, Swap pill
+accent-pink |	#E8004D |	Log button, Stop button, close X
+accent-green |	#2ECC71 |	Checkmark icons on completed tasks
+text-primary |	#FFFFFF |	Headings, task titles
+text-secondary |	#888888 |	Project name, % done labels
+text-yellow |	#F5C518 |	Done/Cancel labels
+border-active |	#F5C518 |	Active project card border
+border-card |	#333333 |	Default card separator
+tab-bg |	#1A1A1A |	Bottom tab bar background
+---------------------------------------------------
+Component |	Font |	Size |	Weight
+Page title |	Inter |	28px |	Bold
+Section header |	Inter |	20px |	Bold
+Task title |	Inter |	16px |	SemiBold
+Sub-label |	Inter |	13px |	Regular
+Button label |	Inter |	18px |	Bold
+Stopwatch digits |	Inter |	52px |	Bold
+Percentage |	Inter |	36px |	Bold
+---------------------------------------------------
