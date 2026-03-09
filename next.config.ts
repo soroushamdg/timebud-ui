@@ -1,7 +1,14 @@
 import type { NextConfig } from "next";
+import withSerwistInit from "@serwist/next";
+
+const withSerwist = withSerwistInit({
+  swSrc: "src/app/sw.ts", // Where you will write your service worker
+  swDest: "public/sw.js", // Where the compiled service worker will output
+  disable: process.env.NODE_ENV !== "production", // Only enable in production
+});
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  turbopack: {}, // Add turbopack config to silence the warning
 };
 
-export default nextConfig;
+export default withSerwist(nextConfig);

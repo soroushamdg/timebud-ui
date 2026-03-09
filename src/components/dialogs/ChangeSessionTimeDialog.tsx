@@ -75,11 +75,16 @@ export function ChangeSessionTimeDialog({ isOpen, onClose }: ChangeSessionTimeDi
         budgetMinutes: minutes,
       })
       
-      // Convert PlannedTaskResult to PlannedTask (add done: false)
-      const plannedTasks = newPlan.tasks.map(task => ({
-        ...task,
-        done: false,
-      }))
+      // Convert PlannedTaskResult to PlannedTask (add done: false and project info)
+      const plannedTasks = newPlan.tasks.map(task => {
+        const project = projects.find(p => p.id === task.projectId);
+        return {
+          ...task,
+          done: false,
+          projectName: project?.name,
+          projectColor: project?.color || undefined,
+        };
+      })
       
       // Update session in database
       await updateSession.mutateAsync({

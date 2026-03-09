@@ -76,12 +76,12 @@ export default function ProfilePage() {
           {/* Profile Header */}
           <div className="flex items-center gap-4 mb-8">
             <img
-              src={getDiceBearUrl(user?.id || 'default', user?.avatar_color || undefined)}
+              src={getDiceBearUrl(user?.id || 'default', (user as any)?.avatar_color || undefined)}
               alt="Profile"
               className="w-20 h-20 rounded-none border-4 border-black"
             />
             <div>
-              <h1 className="text-white text-2xl font-bold">{user?.full_name || 'User'}</h1>
+              <h1 className="text-white text-2xl font-bold">{(user as any)?.full_name || 'User'}</h1>
               <p className="text-text-sec">{user?.email || 'user@example.com'}</p>
             </div>
           </div>
