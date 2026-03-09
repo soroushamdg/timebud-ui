@@ -6,9 +6,10 @@ import { useUIStore } from '@/stores/uiStore'
 
 interface ChangeSessionTimeDialogProps {
   onClose: () => void
+  onTimeChanged?: () => void
 }
 
-export function ChangeSessionTimeDialog({ onClose }: ChangeSessionTimeDialogProps) {
+export function ChangeSessionTimeDialog({ onClose, onTimeChanged }: ChangeSessionTimeDialogProps) {
   const { preferredBudgetMinutes, setPreferredBudgetMinutes } = useUIStore()
   const [selectedMinutes, setSelectedMinutes] = useState(preferredBudgetMinutes)
 
@@ -17,6 +18,7 @@ export function ChangeSessionTimeDialog({ onClose }: ChangeSessionTimeDialogProp
   const handleSave = () => {
     setPreferredBudgetMinutes(selectedMinutes)
     onClose()
+    onTimeChanged?.()
   }
 
   return (

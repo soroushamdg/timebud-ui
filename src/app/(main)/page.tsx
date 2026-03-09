@@ -25,6 +25,7 @@ interface PlannedTask {
   projectColor?: string;
   done?: boolean;
   percentage?: number;
+  estimatedMinutes?: number;
 }
 
 export default function Home() {
@@ -121,16 +122,19 @@ export default function Home() {
       });
 
       // Convert PlannedTaskResult to PlannedTask for TaskCard
-      const tasksWithDone = plan.tasks.map((task) => ({
-        taskId: task.taskId,
-        title: task.title,
-        projectId: task.projectId || undefined,
-        projectName: projects?.find((p) => p.id === task.projectId)?.name,
-        projectColor:
-          projects?.find((p) => p.id === task.projectId)?.color || undefined,
-        done: false,
-        estimatedMinutes: task.scheduledMinutes,
-      }));
+      const tasksWithDone = plan.tasks.map((task) => {
+        const dbTask = tasks.find((t) => t.id === task.taskId);
+        return {
+          taskId: task.taskId,
+          title: task.title,
+          projectId: task.projectId || undefined,
+          projectName: projects?.find((p) => p.id === task.projectId)?.name,
+          projectColor:
+            projects?.find((p) => p.id === task.projectId)?.color || undefined,
+          done: false,
+          estimatedMinutes: dbTask?.estimated_minutes,
+        };
+      });
       setSession(
         session.id,
         plan.tasks.map((t) => ({ ...t, done: false })) as any,
@@ -165,6 +169,7 @@ export default function Home() {
         projectColor:
           projects?.find((p) => p.id === task.project_id)?.color || undefined,
         done: false,
+        estimatedMinutes: task.estimated_minutes,
       }));
 
       // Also convert to session store format
@@ -390,7 +395,13 @@ export default function Home() {
       </div>
 
       {showTimeDialog && (
-        <ChangeSessionTimeDialog onClose={() => setShowTimeDialog(false)} />
+        <ChangeSessionTimeDialog 
+          onClose={() => setShowTimeDialog(false)}
+          onTimeChanged={() => {
+            setIsLoading(true);
+            planSessionData();
+          }}
+        />
       )}
     </AppShell>
   );
