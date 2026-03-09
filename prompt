@@ -1,0 +1,27 @@
+Run these and fix any errors before testing in browser:
+
+npx tsc --noEmit
+npm run build
+
+Then npm run dev and test this flow:
+•	1. / redirects to /auth/login
+•	2. Sign up → confirm email → sign in → lands on /
+•	3. Home shows skeletons then empty state (no projects yet)
+•	4. Create project at /projects/new — avatar preview reacts to color
+•	5. Create 2 tasks, task 2 depends on task 1
+•	6. Home replans and shows tasks
+•	7. Tap Start Work → /session/focus, stopwatch runs
+•	8. Click task checkmark → turns green
+•	9. Stop → session saved, home reloads with new plan
+•	10. /logs shows session with correct local time
+•	11. /projects/[id] shows tasks grouped by milestone, task 2 locked
+•	12. Long-press task 1 → mark done → task 2 unlocks automatically
+•	13. Open project select → toggle active/paused, Done re-plans
+•	14. Sign out → /auth/login
+
+Common fixes:
+•	'cookies() must be in request scope' — server.ts only used in Server Components and Route Handlers
+•	RLS permission denied — re-run all 5 RLS policies in Supabase SQL Editor
+•	Planner returns empty — add console.log(plan) to check tasks have status=pending and projects status=active
+•	DiceBear not loading — check network, try with a public URL in browser directly
+
