@@ -3,7 +3,7 @@
 import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useState } from 'react'
-import { HomeIcon, ChatBubbleLeftRightIcon, DocumentTextIcon, PlusIcon, XMarkIcon, FolderIcon } from '@heroicons/react/24/outline'
+import { HomeIcon, SparklesIcon, CalendarDaysIcon, PlusIcon, XMarkIcon, FolderIcon } from '@heroicons/react/24/outline'
 
 export function TabBar() {
   const pathname = usePathname()
@@ -31,12 +31,12 @@ export function TabBar() {
       href: '/' 
     },
     { 
-      icon: ChatBubbleLeftRightIcon, 
+      icon: SparklesIcon, 
       label: 'Chat', 
       href: '/chat' 
     },
     { 
-      icon: DocumentTextIcon, 
+      icon: CalendarDaysIcon, 
       label: 'Logs', 
       href: '/logs' 
     },
@@ -63,7 +63,7 @@ export function TabBar() {
                     className="relative flex items-center justify-center"
                   >
                     <div className="w-14 h-14 rounded-full bg-[#FFD233] flex items-center justify-center transition-all">
-                      <Icon className="w-6 h-6 text-[#666666]" />
+                      <Icon className="w-6 h-6 text-[#060606]" />
                     </div>
                   </button>
                 ) : (
@@ -124,7 +124,7 @@ export function TabBar() {
                   className="w-full bg-[#2A2A2A] border border-[#333333] rounded-none p-4 flex items-center gap-4 hover:bg-[#333333] transition-colors"
                 >
                   <div className="w-12 h-12 bg-[#FFD233] rounded-none flex items-center justify-center">
-                    <DocumentTextIcon className="w-6 h-6 text-black" />
+                    <CalendarDaysIcon className="w-6 h-6 text-black" />
                   </div>
                   <div className="flex-1 text-left">
                     <h3 className="text-white font-semibold">New Task</h3>

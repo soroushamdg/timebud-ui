@@ -17,6 +17,7 @@ import { useUIStore } from '@/stores/uiStore'
 import { getDiceBearUrl, isValidUuid } from '@/lib/utils'
 import { DbFocusSession, DbTask } from '@/types/database'
 import { useFocusSessionGuard } from '@/hooks/useSessionGuard'
+import { ArrowsRightLeftIcon } from '@heroicons/react/24/outline'
 
 interface PlannedTask {
   taskId: string;
@@ -264,8 +265,9 @@ export default function Home() {
               <h2 className="text-white text-xl font-bold">Target projects</h2>
               <button
                 onClick={() => router.push("/projects/select")}
-                className="bg-[#FFD233] text-black rounded-full px-5 py-1.5 text-sm font-semibold hover:bg-[#FFD233]/90 transition-colors"
+                className="bg-[#FFD233] text-black rounded-full px-5 py-1.5 text-sm font-semibold hover:bg-[#FFD233]/90 transition-colors flex items-center gap-2"
               >
+                <ArrowsRightLeftIcon className="w-4 h-4" />
                 Swap
               </button>
             </div>

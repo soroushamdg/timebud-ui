@@ -51,6 +51,16 @@ export default function ProfilePage() {
     }, 0)
   const tasksDone = completedTasks.length
 
+  // Format time display
+  const formatTimeDisplay = (minutes: number) => {
+    if (minutes > 59) {
+      const hours = Math.floor(minutes / 60)
+      const remainingMinutes = minutes % 60
+      return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`
+    }
+    return `${minutes}m`
+  }
+
   const handleSignOut = async () => {
     const supabase = createClient()
     await supabase.auth.signOut()
@@ -96,8 +106,8 @@ export default function ProfilePage() {
               <div className="text-text-sec text-xs">Sessions</div>
             </div>
             <div className="flex-1 bg-bg-card rounded-none p-3 text-center">
-              <div className="text-white font-bold text-lg">{totalMinutes}</div>
-              <div className="text-text-sec text-xs">Minutes</div>
+              <div className="text-white font-bold text-lg">{formatTimeDisplay(totalMinutes)}</div>
+              <div className="text-text-sec text-xs">Time</div>
             </div>
             <div className="flex-1 bg-bg-card rounded-none p-3 text-center">
               <div className="text-white font-bold text-lg">{tasksDone}</div>
