@@ -71,14 +71,10 @@ export function TabBar() {
                     href={href}
                     className="relative flex items-center justify-center"
                   >
-                    <div className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${
-                      isActive 
-                        ? 'bg-[#FFD233] shadow-lg' 
-                        : 'bg-[#2A2A2A]'
-                    }`}>
+                    <div className="w-14 h-14 rounded-full bg-[#2A2A2A] flex items-center justify-center transition-all">
                       <Icon 
                         className={`w-6 h-6 transition-colors ${
-                          isActive ? 'text-black' : 'text-[#666666]'
+                          isActive ? 'text-[#FFD233]' : 'text-[#666666]'
                         }`} 
                       />
                     </div>

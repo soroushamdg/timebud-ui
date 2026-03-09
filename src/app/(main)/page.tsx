@@ -235,91 +235,94 @@ export default function Home() {
 
   return (
     <AppShell>
-      <div className="flex flex-col min-h-screen">
-        {/* 2% top padding */}
-        <div className="h-[2vh]"></div>
+      <div className="flex flex-col h-[calc(100vh-5rem)] pb-5">
+        {/* Fixed Header Section */}
+        <div className="flex-shrink-0">
+          {/* 2% top padding */}
+          <div className="h-[2vh]"></div>
 
-        {/* Header */}
-        <div className="px-6 pt-4 mb-6 flex items-center justify-between">
-          <button
-            onClick={() => router.push("/profile")}
-            className="flex items-center gap-3"
-          >
-            <img
-              src={getDiceBearUrl("user-id", "#F5C518")}
-              alt="User avatar"
-              className="w-12 h-12 rounded-none border-4 border-[#ffffff]"
-            />
-            <span className="text-white text-base font-medium">
-              Your studio &gt;
-            </span>
-          </button>
-        </div>
-
-        {/* Target Projects */}
-        <div className="px-6 mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-white text-xl font-bold">Target projects</h2>
+          {/* Header */}
+          <div className="px-6 pt-4 mb-6 flex items-center justify-between">
             <button
-              onClick={() => router.push("/projects/select")}
-              className="bg-[#FFD233] text-black rounded-full px-5 py-1.5 text-sm font-semibold hover:bg-[#FFD233]/90 transition-colors"
+              onClick={() => router.push("/profile")}
+              className="flex items-center gap-3"
             >
-              Swap
+              <img
+                src={getDiceBearUrl("user-id", "#F5C518")}
+                alt="User avatar"
+                className="w-12 h-12 rounded-none border-4 border-[#ffffff]"
+              />
+              <span className="text-white text-base font-medium">
+                Your studio &gt;
+              </span>
             </button>
           </div>
-          {!projects || projects.length === 0 ? (
-            <div className="flex items-center justify-center h-20">
-              <p className="text-text-sec text-center">No projects</p>
-            </div>
-          ) : (
-            <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
-              {projects.map((project) => (
-                <button
-                  key={project.id}
-                  onClick={() => router.push(`/projects/${project.id}`)}
-                  className="flex-shrink-0 hover:scale-105 transition-transform"
-                >
-                  <img
-                    src={getDiceBearUrl(project.id, project.color || undefined)}
-                    alt={project.name}
-                    className="w-20 h-20 rounded-none border-1 border-[#ffffff]"
-                  />
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
 
-        {/* Tasks Header with Time Button */}
-        <div className="flex items-center justify-between px-6 mb-4">
-          <h3 className="text-white text-lg font-semibold">
-            {isLoading ? "..." : plannedTasks.length} Tasks
-          </h3>
-          <button
-            onClick={() => setShowTimeDialog(true)}
-            className="bg-[#2A2A2A] rounded-full px-4 py-2 flex items-center gap-2 hover:bg-[#2A2A2A]/80 transition-colors"
-          >
-            <svg
-              className="w-4 h-4 text-[#949494]"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+          {/* Target Projects */}
+          <div className="px-6 mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-white text-xl font-bold">Target projects</h2>
+              <button
+                onClick={() => router.push("/projects/select")}
+                className="bg-[#FFD233] text-black rounded-full px-5 py-1.5 text-sm font-semibold hover:bg-[#FFD233]/90 transition-colors"
+              >
+                Swap
+              </button>
+            </div>
+            {!projects || projects.length === 0 ? (
+              <div className="flex items-center justify-center h-20">
+                <p className="text-text-sec text-center">No projects</p>
+              </div>
+            ) : (
+              <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
+                {projects.map((project) => (
+                  <button
+                    key={project.id}
+                    onClick={() => router.push(`/projects/${project.id}`)}
+                    className="flex-shrink-0 hover:scale-105 transition-transform"
+                  >
+                    <img
+                      src={getDiceBearUrl(project.id, project.color || undefined)}
+                      alt={project.name}
+                      className="w-20 h-20 rounded-none border-1 border-[#ffffff]"
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Tasks Header with Time Button */}
+          <div className="flex items-center justify-between px-6 mb-4">
+            <h3 className="text-white text-lg font-semibold">
+              {isLoading ? "..." : plannedTasks.length} Tasks
+            </h3>
+            <button
+              onClick={() => setShowTimeDialog(true)}
+              className="bg-[#2A2A2A] rounded-full px-4 py-2 flex items-center gap-2 hover:bg-[#2A2A2A]/80 transition-colors"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            <span className="text-white text-sm font-medium">
-              {preferredBudgetMinutes}min
-            </span>
-          </button>
+              <svg
+                className="w-4 h-4 text-[#949494]"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              <span className="text-white text-sm font-medium">
+                {preferredBudgetMinutes}min
+              </span>
+            </button>
+          </div>
         </div>
 
-        {/* Scrollable Task List */}
-        <div className="flex-1 overflow-y-auto px-6">
+        {/* Scrollable Task List - takes remaining space */}
+        <div className="flex-1 min-h-0 overflow-y-auto px-6">
           {isLoading ? (
             <div className="flex items-center justify-center h-32">
               <p className="text-text-sec text-center">Loading tasks...</p>
@@ -345,13 +348,10 @@ export default function Home() {
           )}
         </div>
 
-        {/* Dynamic Space - this will grow/shrink based on content */}
-        <div className="flex-1"></div>
-
         {/* Fixed Bottom Section */}
-        <div className="flex flex-col">
+        <div className="flex-shrink-0">
           {/* Start Work Button */}
-          <div className="px-6 pb-4">
+          <div className="px-6 pt-4 pb-4">
             <button
               onClick={handleStartWork}
               disabled={plannedTasks.length === 0 || isLoading}
@@ -360,9 +360,6 @@ export default function Home() {
               Start work
             </button>
           </div>
-
-          {/* Bottom padding for tab bar space */}
-          <div className="h-24"></div>
         </div>
       </div>
 
