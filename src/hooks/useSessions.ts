@@ -1,16 +1,16 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { toUtcString } from '@/lib/dates'
-import { DbSession } from '@/types/database'
+import { DbFocusSession } from '@/types/database'
 
-type Session = DbSession
-type SessionInsert = Omit<DbSession, 'id' | 'user_id'>
-type SessionUpdate = Partial<Omit<DbSession, 'id' | 'user_id'>>
+type FocusSession = DbFocusSession
+type FocusSessionInsert = Omit<DbFocusSession, 'id' | 'user_id'>
+type FocusSessionUpdate = Partial<Omit<DbFocusSession, 'id' | 'user_id'>>
 
-export const useLatestUnfinished = () => {
+export const useLatestUnfinishedFocusSession = () => {
   return useQuery({
     queryKey: ['sessions', 'unfinished'],
-    queryFn: async (): Promise<Session | null> => {
+    queryFn: async (): Promise<FocusSession | null> => {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return null
@@ -29,10 +29,10 @@ export const useLatestUnfinished = () => {
   })
 }
 
-export const useSessions = () => {
+export const useFocusSessions = () => {
   return useQuery({
     queryKey: ['sessions'],
-    queryFn: async (): Promise<Session[]> => {
+    queryFn: async (): Promise<FocusSession[]> => {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return []
@@ -48,24 +48,24 @@ export const useSessions = () => {
   })
 }
 
-export const useCreateSession = () => {
+export const useCreateFocusSession = () => {
   const queryClient = useQueryClient()
   
   return useMutation({
-    mutationFn: async (session: Omit<SessionInsert, 'start_time'>) => {
+    mutationFn: async (focusSession: Omit<FocusSessionInsert, 'start_time'>) => {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('User not authenticated')
       
-      const sessionData = {
-        ...session,
+      const focusSessionData = {
+        ...focusSession,
         user_id: user.id,
         start_time: toUtcString(new Date()),
       }
       
       const { data, error } = await supabase
         .from('sessions')
-        .insert(sessionData)
+        .insert(focusSessionData)
         .select()
         .single()
       if (error) throw error
@@ -77,11 +77,11 @@ export const useCreateSession = () => {
   })
 }
 
-export const useUpdateSession = () => {
+export const useUpdateFocusSession = () => {
   const queryClient = useQueryClient()
   
   return useMutation({
-    mutationFn: async ({ id, ...fields }: SessionUpdate & { id: string }) => {
+    mutationFn: async ({ id, ...fields }: FocusSessionUpdate & { id: string }) => {
       const supabase = createClient()
       const updateData = {
         ...fields,
@@ -102,23 +102,23 @@ export const useUpdateSession = () => {
   })
 }
 
-export const useCreateCompletedSession = () => {
+export const useCreateCompletedFocusSession = () => {
   const queryClient = useQueryClient()
   
   return useMutation({
-    mutationFn: async (session: SessionInsert) => {
+    mutationFn: async (focusSession: FocusSessionInsert) => {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('User not authenticated')
       
-      const sessionData = {
-        ...session,
+      const focusSessionData = {
+        ...focusSession,
         user_id: user.id,
       }
       
       const { data, error } = await supabase
         .from('sessions')
-        .insert(sessionData)
+        .insert(focusSessionData)
         .select()
         .single()
       if (error) throw error
@@ -130,21 +130,37 @@ export const useCreateCompletedSession = () => {
   })
 }
 
-export const useDeleteSession = () => {
+export const useDeleteFocusSession = () => {
   const queryClient = useQueryClient()
   
   return useMutation({
     mutationFn: async (id: string) => {
+      console.log('useDeleteFocusSession called with id:', id)
       const supabase = createClient()
       const { error } = await supabase
         .from('sessions')
         .delete()
         .eq('id', id)
-      if (error) throw error
+      
+      if (error) {
+        console.error('Supabase delete session error:', error)
+        throw error
+      }
+      
+      console.log('Session deleted successfully:', id)
       return id
     },
     onSuccess: () => {
+      console.log('Delete session onSuccess called')
       queryClient.invalidateQueries({ queryKey: ['sessions'] })
+    },
+    onError: (error, variables) => {
+      console.error('Delete session onError called:', {
+        error: error || 'No error object',
+        errorMessage: error instanceof Error ? error.message : 'No message',
+        errorString: JSON.stringify(error, null, 2),
+        variables
+      })
     },
   })
 }

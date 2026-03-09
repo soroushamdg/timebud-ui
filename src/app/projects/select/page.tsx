@@ -6,10 +6,13 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAllProjects, useUpdateProject } from '@/hooks/useProjects'
 import { useTasks } from '@/hooks/useTasks'
 import { useMilestones } from '@/hooks/useMilestones'
-import { useSessionStore } from '@/stores/sessionStore'
-import { useUpdateSession, useDeleteSession } from '@/hooks/useSessions'
+import { useFocusSessionStore } from '@/stores/sessionStore'
+import { useUpdateFocusSession, useDeleteFocusSession } from '@/hooks/useSessions'
 import { planSession } from '@/lib/planner'
+import { createClient } from '@/lib/supabase/client'
+import { isValidUuid } from '@/lib/utils'
 import { ProjectCardSkeleton } from '@/components/ui/Skeleton'
+import { AutoSizeText } from '@/components/ui/AutoSizeText'
 import { Check, MoreVertical } from 'lucide-react'
 import { DbProject, ProjectStatus } from '@/types/database'
 
@@ -23,12 +26,16 @@ interface ContextMenuState {
   y: number
 }
 
+interface AvatarHeights {
+  [projectId: string]: number
+}
+
 export default function SelectProjectsPage() {
   const router = useRouter()
   const queryClient = useQueryClient()
-  const { sessionId, setSession, clearSession } = useSessionStore()
-  const updateSession = useUpdateSession()
-  const deleteSession = useDeleteSession()
+  const { focusSessionId, setFocusSession, clearFocusSession } = useFocusSessionStore()
+  const updateFocusSession = useUpdateFocusSession()
+  const deleteFocusSession = useDeleteFocusSession()
   const updateProject = useUpdateProject()
   
   const { data: projects = [], isLoading } = useAllProjects()
@@ -42,6 +49,7 @@ export default function SelectProjectsPage() {
     y: 0,
   })
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+  const [avatarHeights, setAvatarHeights] = useState<AvatarHeights>({})
   
   const longPressTimer = useRef<NodeJS.Timeout | null>(null)
   const contextMenuRef = useRef<HTMLDivElement>(null)
@@ -56,6 +64,17 @@ export default function SelectProjectsPage() {
 
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  // Measure avatar heights
+  const measureAvatarHeight = useCallback((projectId: string, imgElement: HTMLImageElement) => {
+    const height = imgElement.clientHeight
+    if (height > 0) {
+      setAvatarHeights(prev => ({
+        ...prev,
+        [projectId]: height
+      }))
+    }
   }, [])
 
   const handleProjectTap = useCallback((projectId: string, currentStatus: ProjectStatus) => {
@@ -130,16 +149,51 @@ export default function SelectProjectsPage() {
 
   const handleDone = useCallback(async () => {
     try {
-      // Apply all pending changes
-      const updatePromises = Object.entries(pendingChanges).map(([projectId, status]) =>
-        updateProject.mutateAsync({ id: projectId, status })
-      )
+      console.log('handleDone called with pendingChanges:', pendingChanges)
       
-      await Promise.all(updatePromises)
+      // Check authentication first
+      const supabase = createClient()
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      if (authError || !user) {
+        console.error('Authentication error:', authError)
+        throw new Error('You must be logged in to update projects')
+      }
+      console.log('User authenticated:', user.id)
       
-      // Delete current session from database if it exists
-      if (sessionId) {
-        await deleteSession.mutateAsync(sessionId)
+      // Apply all pending changes first
+      if (Object.keys(pendingChanges).length > 0) {
+        console.log('Applying', Object.keys(pendingChanges).length, 'pending changes')
+        const updatePromises = Object.entries(pendingChanges).map(([projectId, status]) => {
+          console.log('Updating project:', projectId, 'to status:', status)
+          return updateProject.mutateAsync({ id: projectId, status })
+        })
+        
+        try {
+          await Promise.all(updatePromises)
+          console.log('All project updates completed successfully')
+        } catch (updateError) {
+          console.error('Failed to update projects:', updateError)
+          throw new Error(`Failed to update projects: ${updateError}`)
+        }
+      } else {
+        console.log('No pending changes to apply')
+      }
+      
+      // Delete current session from database if it exists (after project updates)
+      if (focusSessionId) {
+        console.log('Deleting session:', focusSessionId)
+        // Only try to delete from database if it's a valid UUID (not a local session)
+        if (isValidUuid(focusSessionId)) {
+          try {
+            await deleteFocusSession.mutateAsync(focusSessionId)
+            console.log('Session deleted successfully')
+          } catch (deleteError) {
+            console.error('Failed to delete session:', deleteError)
+            // Don't throw here - session deletion shouldn't block the flow
+          }
+        } else {
+          console.log('Session ID is not a valid UUID, skipping database deletion:', focusSessionId)
+        }
       }
       
       // Invalidate all relevant queries to trigger replanning on home page
@@ -148,13 +202,31 @@ export default function SelectProjectsPage() {
       await queryClient.invalidateQueries({ queryKey: ['sessions'] })
       
       // Clear session state to force replanning when returning to home
-      clearSession()
+      console.log('Clearing session state')
+      clearFocusSession()
       
-      router.push('/')
+      console.log('Navigation to home page')
+      try {
+        router.push('/')
+      } catch (navError) {
+        console.error('Navigation error:', navError)
+        throw navError
+      }
     } catch (error) {
       console.error('Failed to update projects:', error)
+      console.error('Error details:', {
+        message: error instanceof Error ? error.message : 'No message',
+        stack: error instanceof Error ? error.stack : 'No stack',
+        stringified: JSON.stringify(error, null, 2),
+        errorType: typeof error,
+        isArray: Array.isArray(error),
+        keys: error ? Object.keys(error) : 'null error'
+      })
+      
+      // Show user-friendly error message
+      alert('Failed to update projects. Please check your connection and try again.')
     }
-  }, [pendingChanges, sessionId, updateProject, deleteSession, queryClient, clearSession, router])
+  }, [pendingChanges, focusSessionId, updateProject, deleteFocusSession, queryClient, clearFocusSession, router])
 
   const isActive = useCallback((project: DbProject) => {
     return getProjectStatus(project) === 'active'
@@ -246,6 +318,7 @@ export default function SelectProjectsPage() {
                     src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${project.id}&backgroundColor=b6e3f4,c0aede,d1d4f9`}
                     alt={project.name}
                     className="w-full aspect-square object-cover rounded-none"
+                    onLoad={(e) => measureAvatarHeight(project.id, e.currentTarget)}
                   />
                   
                   {/* Status badge */}
@@ -266,7 +339,12 @@ export default function SelectProjectsPage() {
                   
                   {/* Project name overlay */}
                   <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent p-2">
-                    <p className="text-white text-lg font-bold truncate">{project.name}</p>
+                    <AutoSizeText 
+                      text={project.name}
+                      avatarHeight={avatarHeights[project.id]}
+                      maxFontSize={18}
+                      minFontSize={8}
+                    />
                   </div>
                 </div>
               ))}
@@ -302,11 +380,17 @@ export default function SelectProjectsPage() {
                     src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${project.id}&backgroundColor=b6e3f4,c0aede,d1d4f9`}
                     alt={project.name}
                     className="w-full aspect-square object-cover rounded-none"
+                    onLoad={(e) => measureAvatarHeight(project.id, e.currentTarget)}
                   />
                   
                   {/* Project name overlay */}
                   <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent p-2">
-                    <p className="text-white text-lg font-bold truncate">{project.name}</p>
+                    <AutoSizeText 
+                      text={project.name}
+                      avatarHeight={avatarHeights[project.id]}
+                      maxFontSize={18}
+                      minFontSize={8}
+                    />
                   </div>
                 </div>
               ))}

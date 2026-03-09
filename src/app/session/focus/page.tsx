@@ -3,24 +3,24 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { X, Square } from 'lucide-react'
-import { useSessionStore } from '@/stores/sessionStore'
+import { useFocusSessionStore } from '@/stores/sessionStore'
 import { useUpdateTask } from '@/hooks/useTasks'
-import { useUpdateSession, useCreateSession, useCreateCompletedSession } from '@/hooks/useSessions'
+import { useUpdateFocusSession, useCreateFocusSession, useCreateCompletedFocusSession } from '@/hooks/useSessions'
 import { toUtcString } from '@/lib/dates'
 import { PlannedTask } from '@/stores/sessionStore'
 import { FocusTaskCard } from '@/components/tasks/FocusTaskCard'
-import { useSessionGuard } from '@/hooks/useSessionGuard'
+import { useFocusSessionGuard } from '@/hooks/useSessionGuard'
 
 export default function FocusSession() {
   const router = useRouter()
-  const sessionStore = useSessionStore()
+  const focusSessionStore = useFocusSessionStore()
   const updateTask = useUpdateTask()
-  const updateSession = useUpdateSession()
-  const createSession = useCreateSession()
-  const createCompletedSession = useCreateCompletedSession()
+  const updateFocusSession = useUpdateFocusSession()
+  const createFocusSession = useCreateFocusSession()
+  const createCompletedFocusSession = useCreateCompletedFocusSession()
   
-  // Session guard - allow this page but redirect if no active session
-  useSessionGuard(true);
+  // Focus session guard - allow this page but redirect if no active focus session
+  useFocusSessionGuard(true);
   
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
   const [showStopConfirmDialog, setShowStopConfirmDialog] = useState(false)
@@ -32,14 +32,14 @@ export default function FocusSession() {
 
   const startTimer = () => {
     // Don't set new start time if session was already running (resuming)
-    if (!sessionStore.sessionStartTime) {
+    if (!focusSessionStore.sessionStartTime) {
       timerStartRef.current = new Date()
-      sessionStore.startTimer()
+      focusSessionStore.startTimer()
     } else {
       // Use existing start time for resumed sessions (handle both Date and string)
-      const startTime = typeof sessionStore.sessionStartTime === 'string' 
-        ? new Date(sessionStore.sessionStartTime) 
-        : sessionStore.sessionStartTime;
+      const startTime = typeof focusSessionStore.sessionStartTime === 'string' 
+        ? new Date(focusSessionStore.sessionStartTime) 
+        : focusSessionStore.sessionStartTime;
       timerStartRef.current = startTime;
     }
     intervalRef.current = setInterval(() => {
@@ -72,7 +72,7 @@ export default function FocusSession() {
     
     try {
       await updateTask.mutateAsync({ id: taskId, status: 'completed' })
-      sessionStore.markTaskDone(taskId)
+      focusSessionStore.markTaskDone(taskId)
     } catch (error) {
       console.error('Failed to update task:', error)
     } finally {
@@ -104,22 +104,22 @@ export default function FocusSession() {
     const endTime = new Date()
     
     // Only save to database if session was actually started (has a real session ID)
-    if (sessionStore.sessionId && !sessionStore.sessionId.startsWith('local-')) {
+    if (focusSessionStore.focusSessionId && !focusSessionStore.focusSessionId.startsWith('local-')) {
       try {
-        await updateSession.mutateAsync({
-          id: sessionStore.sessionId,
+        await updateFocusSession.mutateAsync({
+          id: focusSessionStore.focusSessionId,
           start_time: toUtcString(timerStartRef.current),
           end_time: toUtcString(endTime)
         })
       } catch (error) {
         console.error('Failed to update session:', error)
       }
-    } else if (sessionStore.sessionId && sessionStore.sessionId.startsWith('local-')) {
+    } else if (focusSessionStore.focusSessionId && focusSessionStore.focusSessionId.startsWith('local-')) {
       // Create and save session to database only now that it's completed
       try {
-        const completedSession = await createCompletedSession.mutateAsync({
-          budget_minutes: sessionStore.budgetMinutes,
-          tasks_list: sessionStore.plannedTasks.map(t => t.taskId),
+        const completedSession = await createCompletedFocusSession.mutateAsync({
+          budget_minutes: focusSessionStore.budgetMinutes,
+          tasks_list: focusSessionStore.plannedTasks.map(t => t.taskId),
           start_time: toUtcString(timerStartRef.current),
           end_time: toUtcString(endTime)
         })
@@ -129,23 +129,23 @@ export default function FocusSession() {
       }
     }
     
-    sessionStore.clearSession()
+    focusSessionStore.clearFocusSession()
     router.push('/')
   }
 
   const handleEndWithoutSaving = () => {
     clearTimer()
-    sessionStore.clearSession()
+    focusSessionStore.clearFocusSession()
     router.push('/')
   }
 
   useEffect(() => {
     // Resume timer if session was running
-    if (sessionStore.timerRunning && sessionStore.sessionStartTime) {
+    if (focusSessionStore.timerRunning && focusSessionStore.sessionStartTime) {
       // Ensure sessionStartTime is a Date object
-      const startTime = typeof sessionStore.sessionStartTime === 'string' 
-        ? new Date(sessionStore.sessionStartTime) 
-        : sessionStore.sessionStartTime;
+      const startTime = typeof focusSessionStore.sessionStartTime === 'string' 
+        ? new Date(focusSessionStore.sessionStartTime) 
+        : focusSessionStore.sessionStartTime;
       
       // Calculate elapsed time since session started
       const elapsed = Math.floor((new Date().getTime() - startTime.getTime()) / 1000);
@@ -155,7 +155,7 @@ export default function FocusSession() {
     return () => {
       clearTimer();
     };
-  }, [sessionStore.timerRunning, sessionStore.sessionStartTime]);
+  }, [focusSessionStore.timerRunning, focusSessionStore.sessionStartTime]);
 
   return (
     <div className="min-h-screen bg-black relative">
@@ -180,7 +180,7 @@ export default function FocusSession() {
       {/* Task list */}
       <div className="px-4 mt-12 max-h-[calc(100vh-300px)] overflow-y-auto">
         <div className="space-y-3">
-          {sessionStore.plannedTasks.map((task) => (
+          {focusSessionStore.plannedTasks.map((task) => (
             <FocusTaskCard
               key={task.taskId}
               task={task}

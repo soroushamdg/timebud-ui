@@ -5,23 +5,23 @@ import { useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { AppShell } from '@/components/layout/AppShell'
 import { useCurrentUser } from '@/hooks/useAuth'
-import { useSessions } from '@/hooks/useSessions'
+import { useFocusSessions } from '@/hooks/useSessions'
 import { getDiceBearUrl } from '@/lib/avatar'
 import { ChangeSessionTimeDialog } from '@/components/dialogs/ChangeSessionTimeDialog'
 import { PartialTasksDialog } from '@/components/dialogs/PartialTasksDialog'
 import { createClient } from '@/lib/supabase/client'
 import { useQuery } from '@tanstack/react-query'
-import { useSessionGuard } from '@/hooks/useSessionGuard'
+import { useFocusSessionGuard } from '@/hooks/useSessionGuard'
 
 export default function ProfilePage() {
   const router = useRouter()
   const { data: user } = useCurrentUser()
-  const { data: sessions = [] } = useSessions()
+  const { data: focusSessions = [] } = useFocusSessions()
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isPartialDialogOpen, setIsPartialDialogOpen] = useState(false)
 
-  // Session guard - auto-redirect to running session
-  useSessionGuard();
+  // Focus session guard - auto-redirect to running focus session
+  useFocusSessionGuard();
 
   // Query for completed tasks
   const { data: completedTasks = [] } = useQuery({
@@ -42,10 +42,13 @@ export default function ProfilePage() {
   })
 
   // Calculate stats
-  const totalSessions = sessions.length
-  const totalMinutes = sessions
-    .filter(session => session.end_time)
-    .reduce((sum, session) => sum + session.budget_minutes, 0)
+  const totalSessions = focusSessions.length
+  const totalMinutes = focusSessions
+    .filter(session => session.end_time && session.start_time)
+    .reduce((sum, session) => {
+      const minutes = Math.round((new Date(session.end_time!).getTime() - new Date(session.start_time!).getTime()) / 60000)
+      return sum + minutes
+    }, 0)
   const tasksDone = completedTasks.length
 
   const handleSignOut = async () => {

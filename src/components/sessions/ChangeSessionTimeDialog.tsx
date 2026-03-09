@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useSessionStore } from '@/stores/sessionStore'
+import { useFocusSessionStore } from '@/stores/sessionStore'
 import { useUIStore } from '@/stores/uiStore'
 
 interface ChangeSessionTimeDialogProps {

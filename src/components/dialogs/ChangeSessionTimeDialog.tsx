@@ -2,8 +2,8 @@
 
 import { useState } from 'react'
 import { useUIStore } from '@/stores/uiStore'
-import { useSessionStore } from '@/stores/sessionStore'
-import { useUpdateSession } from '@/hooks/useSessions'
+import { useFocusSessionStore } from '@/stores/sessionStore'
+import { useUpdateFocusSession } from '@/hooks/useSessions'
 import { useProjects } from '@/hooks/useProjects'
 import { useTasks } from '@/hooks/useTasks'
 import { useQuery } from '@tanstack/react-query'
@@ -31,8 +31,8 @@ function formatTimeLabel(minutes: number): string {
 
 export function ChangeSessionTimeDialog({ isOpen, onClose }: ChangeSessionTimeDialogProps) {
   const { preferredBudgetMinutes, setBudget } = useUIStore()
-  const { sessionId, setSession } = useSessionStore()
-  const updateSession = useUpdateSession()
+  const { focusSessionId: sessionId, setFocusSession: setSession } = useFocusSessionStore()
+  const updateSession = useUpdateFocusSession()
   
   const { data: projects = [] } = useProjects()
   const { data: tasks = [] } = useTasks()

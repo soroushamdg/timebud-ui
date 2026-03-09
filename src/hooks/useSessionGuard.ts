@@ -1,34 +1,34 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { useSessionStore } from '@/stores/sessionStore'
+import { useFocusSessionStore } from '@/stores/sessionStore'
 
 /**
- * Hook to guard against multiple running sessions and auto-redirect to active sessions
+ * Hook to guard against multiple running focus sessions and auto-redirect to active focus sessions
  */
-export const useSessionGuard = (allowSessionPage = false) => {
+export const useFocusSessionGuard = (allowSessionPage = false) => {
   const router = useRouter()
-  const { sessionId, timerRunning, plannedTasks } = useSessionStore()
+  const { focusSessionId, timerRunning, plannedTasks } = useFocusSessionStore()
 
   useEffect(() => {
-    // Check if there's an active running session
-    const hasActiveSession = sessionId && timerRunning && plannedTasks.length > 0
+    // Check if there's an active running focus session
+    const hasActiveFocusSession = focusSessionId && timerRunning && plannedTasks.length > 0
     
-    // If we're not on the session page and there's a running session, redirect
-    if (hasActiveSession && !allowSessionPage) {
+    // If we're not on the session page and there's a running focus session, redirect
+    if (hasActiveFocusSession && !allowSessionPage) {
       router.push('/session/focus')
       return
     }
 
-    // If we're on the session page but there's no active session, redirect to home
-    if (!hasActiveSession && allowSessionPage) {
+    // If we're on the session page but there's no active focus session, redirect to home
+    if (!hasActiveFocusSession && allowSessionPage) {
       router.push('/')
       return
     }
-  }, [sessionId, timerRunning, plannedTasks.length, allowSessionPage, router])
+  }, [focusSessionId, timerRunning, plannedTasks.length, allowSessionPage, router])
 
   return {
-    hasActiveSession: sessionId && timerRunning && plannedTasks.length > 0,
-    sessionId,
+    hasActiveFocusSession: focusSessionId && timerRunning && plannedTasks.length > 0,
+    focusSessionId,
     timerRunning,
     plannedTasksCount: plannedTasks.length
   }

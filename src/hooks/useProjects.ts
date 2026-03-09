@@ -128,23 +128,40 @@ export const useUpdateProject = () => {
   
   return useMutation({
     mutationFn: async ({ id, ...fields }: ProjectUpdate & { id: string }) => {
+      console.log('useUpdateProject called with:', { id, fields })
       const supabase = createClient()
       const updateData = {
         ...fields,
       }
       
+      console.log('Updating project in database:', id, updateData)
       const { data, error } = await supabase
         .from('projects')
         .update(updateData)
         .eq('id', id)
         .select()
         .single()
-      if (error) throw error
+      
+      if (error) {
+        console.error('Supabase update error:', error)
+        throw error
+      }
+      
+      console.log('Project updated successfully:', data)
       return data
     },
     onSuccess: (_, variables) => {
+      console.log('Update onSuccess called for variables:', variables)
       queryClient.invalidateQueries({ queryKey: ['projects'] })
       queryClient.invalidateQueries({ queryKey: ['projects', variables.id] })
+    },
+    onError: (error, variables) => {
+      console.error('Update onError called:', { 
+        error: error || 'No error object',
+        errorMessage: error instanceof Error ? error.message : 'No message',
+        errorString: JSON.stringify(error, null, 2),
+        variables 
+      })
     },
   })
 }

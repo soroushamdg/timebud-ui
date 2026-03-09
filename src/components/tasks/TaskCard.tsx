@@ -15,38 +15,16 @@ interface PlannedTask {
 
 interface TaskCardProps {
   task: PlannedTask
-  onCheckmark?: () => void
   onClick?: () => void
 }
 
-export function TaskCard({ task, onCheckmark, onClick }: TaskCardProps) {
+export function TaskCard({ task, onClick }: TaskCardProps) {
   const handleCardClick = () => {
     onClick?.()
   }
 
-  const handleCheckmarkClick = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    onCheckmark?.()
-  }
-
   return (
     <div className="flex items-center gap-3">
-      {/* Checkmark - Outside the card on the leading side */}
-      <button
-        onClick={handleCheckmarkClick}
-        className="flex-shrink-0 w-6 h-6 rounded-none flex items-center justify-center transition-colors"
-      >
-        {task.done ? (
-          <div className="w-6 h-6 rounded-none bg-accent-green flex items-center justify-center">
-            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-            </svg>
-          </div>
-        ) : (
-          <div className="w-6 h-6 rounded-none border-2 border-border-card hover:border-accent-yellow transition-colors" />
-        )}
-      </button>
-
       {/* Task Card */}
       <div
         onClick={handleCardClick}

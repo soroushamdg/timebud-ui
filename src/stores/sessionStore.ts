@@ -19,25 +19,25 @@ export interface PlannedTask {
   estimatedMinutes?: number;
 }
 
-interface SessionStore {
-  sessionId: string | null;
+interface FocusSessionStore {
+  focusSessionId: string | null;
   budgetMinutes: number;
   plannedTasks: PlannedTask[];
   timerRunning: boolean;
   timerSeconds: number;
   sessionStartTime: Date | null;
-  setSession: (id: string, tasks: PlannedTask[], budget: number) => void;
+  setFocusSession: (id: string, tasks: PlannedTask[], budget: number) => void;
   startTimer: () => void;
   stopTimer: () => void;
   tickTimer: () => void;
   markTaskDone: (taskId: string) => void;
-  clearSession: () => void;
+  clearFocusSession: () => void;
   getElapsedTime: () => number;
   resumeTimer: () => void;
 }
 
 const initialState = {
-  sessionId: null,
+  focusSessionId: null,
   budgetMinutes: 0,
   plannedTasks: [],
   timerRunning: false,
@@ -45,21 +45,21 @@ const initialState = {
   sessionStartTime: null,
 };
 
-export const useSessionStore = create<SessionStore>()(
+export const useFocusSessionStore = create<FocusSessionStore>()(
   persist(
     (set, get) => ({
       ...initialState,
       
-      setSession: (id: string, tasks: PlannedTask[], budget: number) => {
+      setFocusSession: (id: string, tasks: PlannedTask[], budget: number) => {
         // Clear any existing session before setting new one
         const currentState = get();
-        if (currentState.sessionId && currentState.timerRunning) {
+        if (currentState.focusSessionId && currentState.timerRunning) {
           console.warn('Attempting to set new session while one is already running');
           return;
         }
         
         set({
-          sessionId: id,
+          focusSessionId: id,
           plannedTasks: tasks,
           budgetMinutes: budget,
         });
@@ -92,7 +92,7 @@ export const useSessionStore = create<SessionStore>()(
           ),
         })),
 
-      clearSession: () =>
+      clearFocusSession: () =>
         set({
           ...initialState,
         }),
@@ -131,7 +131,7 @@ export const useSessionStore = create<SessionStore>()(
       name: 'timebud-session',
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
-        sessionId: state.sessionId,
+        focusSessionId: state.focusSessionId,
         plannedTasks: state.plannedTasks,
         budgetMinutes: state.budgetMinutes,
         timerRunning: state.timerRunning,
@@ -147,4 +147,4 @@ export const useSessionStore = create<SessionStore>()(
   )
 );
 
-export const sessionStore = useSessionStore;
+export const focusSessionStore = useFocusSessionStore;

@@ -7,16 +7,16 @@ import { TaskCard } from "@/components/tasks/TaskCard";
 import { TaskCardSkeleton } from "@/components/tasks/TaskCardSkeleton";
 import { UnfinishedSessionModal } from "@/components/sessions/UnfinishedSessionModal";
 import { ChangeSessionTimeDialog } from "@/components/sessions/ChangeSessionTimeDialog";
-import { useLatestUnfinished } from '@/hooks/useLatestUnfinished'
+import { useLatestUnfinishedFocusSession } from '@/hooks/useSessions'
 import { useProjects } from '@/hooks/useProjects'
 import { useTasks } from '@/hooks/useTasks'
-import { useCreateSession, useDeleteSession } from '@/hooks/useSessions'
+import { useCreateFocusSession, useDeleteFocusSession } from '@/hooks/useSessions'
 import { planSession } from '@/lib/planner'
-import { useSessionStore } from '@/stores/sessionStore'
+import { useFocusSessionStore } from '@/stores/sessionStore'
 import { useUIStore } from '@/stores/uiStore'
-import { getDiceBearUrl } from '@/lib/utils'
-import { DbSession, DbTask } from '@/types/database'
-import { useSessionGuard } from '@/hooks/useSessionGuard'
+import { getDiceBearUrl, isValidUuid } from '@/lib/utils'
+import { DbFocusSession, DbTask } from '@/types/database'
+import { useFocusSessionGuard } from '@/hooks/useSessionGuard'
 
 interface PlannedTask {
   taskId: string;
@@ -33,30 +33,30 @@ interface PlannedTask {
 
 export default function Home() {
   const router = useRouter();
-  const [unfinishedSession, setUnfinishedSession] = useState<DbSession | null>(
+  const [unfinishedFocusSession, setUnfinishedFocusSession] = useState<DbFocusSession | null>(
     null,
   );
   const [plannedTasks, setPlannedTasks] = useState<PlannedTask[]>([]);
   const [showTimeDialog, setShowTimeDialog] = useState(false)
   const [isLoading, setIsLoading] = useState(true);
 
-  // Session guard - auto-redirect to running session
-  useSessionGuard();
+  // Focus session guard - auto-redirect to running focus session
+  useFocusSessionGuard();
 
-  const { data: latestUnfinished } = useLatestUnfinished();
+  const { data: latestUnfinished } = useLatestUnfinishedFocusSession();
   const { data: projects, isLoading: projectsLoading } = useProjects();
   const { data: tasks, isLoading: tasksLoading } = useTasks({
     status: "pending",
   });
-  const createSession = useCreateSession();
-  const deleteSession = useDeleteSession();
+  const createFocusSession = useCreateFocusSession();
+  const deleteFocusSession = useDeleteFocusSession();
   const { preferredBudgetMinutes, allowPartialTasks } = useUIStore();
-  const setSession = useSessionStore((state) => state.setSession);
-  const markTaskDone = useSessionStore((state) => state.markTaskDone);
+  const setFocusSession = useFocusSessionStore((state) => state.setFocusSession);
+  const markTaskDone = useFocusSessionStore((state) => state.markTaskDone);
 
   useEffect(() => {
     if (latestUnfinished) {
-      setUnfinishedSession(latestUnfinished);
+      setUnfinishedFocusSession(latestUnfinished);
       setIsLoading(false);
     } else if (projects && tasks) {
       planSessionData();
@@ -118,7 +118,7 @@ export default function Home() {
 
       // Store session locally only (no database save)
       const localSessionId = `local-${Date.now()}`;
-      setSession(
+      setFocusSession(
         localSessionId,
         plan.tasks.map((t) => ({ 
           ...t, 
@@ -138,12 +138,12 @@ export default function Home() {
   };
 
   const handleContinueSession = async () => {
-    if (!unfinishedSession) return;
+    if (!unfinishedFocusSession) return;
 
     try {
       const sessionTasks = (
         await Promise.all(
-          unfinishedSession.tasks_list.map((taskId) =>
+          unfinishedFocusSession.tasks_list.map((taskId) =>
             tasks?.find((t) => t.id === taskId),
           ),
         )
@@ -180,13 +180,13 @@ export default function Home() {
         estimatedMinutes: task.estimated_minutes,
       }));
 
-      setSession(
-        unfinishedSession.id,
+      setFocusSession(
+        unfinishedFocusSession.id,
         sessionStoreTasks,
-        unfinishedSession.budget_minutes,
+        unfinishedFocusSession.budget_minutes,
       );
       setPlannedTasks(plannedSessionTasks);
-      setUnfinishedSession(null);
+      setUnfinishedFocusSession(null);
       router.push("/session/focus");
     } catch (error) {
       console.error("Failed to continue session:", error);
@@ -194,11 +194,16 @@ export default function Home() {
   };
 
   const handleStartFresh = async () => {
-    if (!unfinishedSession) return;
+    if (!unfinishedFocusSession) return;
 
     try {
-      await deleteSession.mutateAsync(unfinishedSession.id);
-      setUnfinishedSession(null);
+      // Only try to delete from database if it's a valid UUID
+      if (isValidUuid(unfinishedFocusSession.id)) {
+        await deleteFocusSession.mutateAsync(unfinishedFocusSession.id);
+      } else {
+        console.log('Session ID is not a valid UUID, skipping database deletion:', unfinishedFocusSession.id);
+      }
+      setUnfinishedFocusSession(null);
       await planSessionData();
     } catch (error) {
       console.error("Failed to delete session:", error);
@@ -207,20 +212,20 @@ export default function Home() {
 
   const handleStartWork = () => {
     // Clear any existing session before starting new one
-    const { clearSession } = useSessionStore.getState();
-    clearSession();
+    const { clearFocusSession } = useFocusSessionStore.getState();
+    clearFocusSession();
     
     // Start timer when user clicks "Start work"
-    const { startTimer } = useSessionStore.getState();
+    const { startTimer } = useFocusSessionStore.getState();
     startTimer();
     router.push("/session/focus");
   };
 
-  if (unfinishedSession) {
+  if (unfinishedFocusSession) {
     return (
       <AppShell>
         <UnfinishedSessionModal
-          session={unfinishedSession}
+          session={unfinishedFocusSession}
           onContinue={handleContinueSession}
           onStartFresh={handleStartFresh}
         />
@@ -329,7 +334,6 @@ export default function Home() {
                 <TaskCard
                   key={task.taskId}
                   task={task}
-                  onCheckmark={() => markTaskDone(task.taskId)}
                   onClick={() => {
                     if (task.projectId) {
                       router.push(`/projects/${task.projectId}`)
