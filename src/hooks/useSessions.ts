@@ -102,6 +102,34 @@ export const useUpdateSession = () => {
   })
 }
 
+export const useCreateCompletedSession = () => {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: async (session: SessionInsert) => {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('User not authenticated')
+      
+      const sessionData = {
+        ...session,
+        user_id: user.id,
+      }
+      
+      const { data, error } = await supabase
+        .from('sessions')
+        .insert(sessionData)
+        .select()
+        .single()
+      if (error) throw error
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sessions'] })
+    },
+  })
+}
+
 export const useDeleteSession = () => {
   const queryClient = useQueryClient()
   

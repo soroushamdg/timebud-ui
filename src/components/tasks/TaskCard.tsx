@@ -9,6 +9,8 @@ interface PlannedTask {
   done?: boolean
   percentage?: number
   estimatedMinutes?: number
+  scheduledMinutes?: number
+  partial?: boolean
 }
 
 interface TaskCardProps {
@@ -32,23 +34,23 @@ export function TaskCard({ task, onCheckmark, onClick }: TaskCardProps) {
       {/* Checkmark - Outside the card on the leading side */}
       <button
         onClick={handleCheckmarkClick}
-        className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center transition-colors"
+        className="flex-shrink-0 w-6 h-6 rounded-none flex items-center justify-center transition-colors"
       >
         {task.done ? (
-          <div className="w-6 h-6 rounded-full bg-accent-green flex items-center justify-center">
+          <div className="w-6 h-6 rounded-none bg-accent-green flex items-center justify-center">
             <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
             </svg>
           </div>
         ) : (
-          <div className="w-6 h-6 rounded-full border-2 border-border-card hover:border-accent-yellow transition-colors" />
+          <div className="w-6 h-6 rounded-none border-2 border-border-card hover:border-accent-yellow transition-colors" />
         )}
       </button>
 
       {/* Task Card */}
       <div
         onClick={handleCardClick}
-        className={`flex-1 bg-bg-card rounded-2xl px-4 py-3 flex items-center gap-3 border border-border-card cursor-pointer transition-colors hover:bg-bg-card-hover ${
+        className={`flex-1 bg-bg-card rounded-none px-4 py-3 flex items-center gap-3 border border-[#ffffff] cursor-pointer transition-colors hover:bg-bg-card-hover ${
           task.done ? 'bg-bg-card-done border-accent-green/30' : ''
         }`}
       >
@@ -57,7 +59,7 @@ export function TaskCard({ task, onCheckmark, onClick }: TaskCardProps) {
           <img
             src={getDiceBearUrl(task.projectId, task.projectColor || '#F5C518')}
             alt={task.projectName || 'Project'}
-            className="w-10 h-10 rounded-xl flex-shrink-0"
+            className="w-10 h-10 rounded-none flex-shrink-0"
           />
         )}
 
@@ -77,7 +79,10 @@ export function TaskCard({ task, onCheckmark, onClick }: TaskCardProps) {
         {/* Estimated Minutes */}
         {task.estimatedMinutes !== undefined && (
           <div className="flex-shrink-0 text-text-sec text-sm font-medium px-2">
-            {task.estimatedMinutes}min
+            {task.partial && task.scheduledMinutes 
+              ? `${task.scheduledMinutes}min/${task.estimatedMinutes}min`
+              : `${task.estimatedMinutes}min`
+            }
           </div>
         )}
       </div>

@@ -8,14 +8,20 @@ import { useCurrentUser } from '@/hooks/useAuth'
 import { useSessions } from '@/hooks/useSessions'
 import { getDiceBearUrl } from '@/lib/avatar'
 import { ChangeSessionTimeDialog } from '@/components/dialogs/ChangeSessionTimeDialog'
+import { PartialTasksDialog } from '@/components/dialogs/PartialTasksDialog'
 import { createClient } from '@/lib/supabase/client'
 import { useQuery } from '@tanstack/react-query'
+import { useSessionGuard } from '@/hooks/useSessionGuard'
 
 export default function ProfilePage() {
   const router = useRouter()
   const { data: user } = useCurrentUser()
   const { data: sessions = [] } = useSessions()
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [isPartialDialogOpen, setIsPartialDialogOpen] = useState(false)
+
+  // Session guard - auto-redirect to running session
+  useSessionGuard();
 
   // Query for completed tasks
   const { data: completedTasks = [] } = useQuery({
@@ -67,39 +73,32 @@ export default function ProfilePage() {
 
         {/* Profile section */}
         <div className="flex flex-col items-center px-6">
-          {/* Avatar */}
-          {user && (
+          {/* Profile Header */}
+          <div className="flex items-center gap-4 mb-8">
             <img
-              src={getDiceBearUrl(user.id, '#F5C518')}
-              alt="Profile avatar"
-              className="w-20 h-20 rounded-full mb-4"
+              src={getDiceBearUrl(user?.id || 'default', user?.avatar_color || undefined)}
+              alt="Profile"
+              className="w-20 h-20 rounded-none border-4 border-black"
             />
-          )}
-
-          {/* Name and email */}
-          <div className="text-center mb-8">
-            <h1 className="text-xl font-bold text-white mb-1">
-              {user?.user_metadata?.first_name && user?.user_metadata?.last_name 
-                ? `${user.user_metadata.first_name} ${user.user_metadata.last_name}`
-                : user?.email?.split('@')[0] || 'User'
-              }
-            </h1>
-            <p className="text-text-sec text-sm">{user?.email}</p>
+            <div>
+              <h1 className="text-white text-2xl font-bold">{user?.full_name || 'User'}</h1>
+              <p className="text-text-sec">{user?.email || 'user@example.com'}</p>
+            </div>
           </div>
 
           {/* Stats row */}
           <div className="flex gap-3 w-full mb-8">
-            <div className="flex-1 bg-bg-card rounded-2xl p-3 text-center">
+            <div className="flex-1 bg-bg-card rounded-none p-3 text-center">
               <div className="text-white font-bold text-lg">{totalSessions}</div>
               <div className="text-text-sec text-xs">Sessions</div>
             </div>
-            <div className="flex-1 bg-bg-card rounded-2xl p-3 text-center">
+            <div className="flex-1 bg-bg-card rounded-none p-3 text-center">
               <div className="text-white font-bold text-lg">{totalMinutes}</div>
               <div className="text-text-sec text-xs">Minutes</div>
             </div>
-            <div className="flex-1 bg-bg-card rounded-2xl p-3 text-center">
+            <div className="flex-1 bg-bg-card rounded-none p-3 text-center">
               <div className="text-white font-bold text-lg">{tasksDone}</div>
-              <div className="text-text-sec text-xs">Tasks done</div>
+              <div className="text-text-sec text-xs">Tasks</div>
             </div>
           </div>
 
@@ -111,14 +110,22 @@ export default function ProfilePage() {
             <div className="px-4">
               <button
                 onClick={() => setIsDialogOpen(true)}
-                className="w-full bg-bg-card rounded-2xl px-4 py-4 mb-2 flex justify-between items-center hover:bg-bg-card/80 transition-colors"
+                className="w-full bg-bg-card rounded-none px-4 py-4 mb-2 flex justify-between items-center hover:bg-bg-card/80 transition-colors"
               >
                 <span className="text-white">Default duration</span>
                 <ChevronRight className="w-5 h-5 text-text-sec" />
               </button>
               
               <button
-                className="w-full bg-bg-card rounded-2xl px-4 py-4 mb-2 flex justify-between items-center hover:bg-bg-card/80 transition-colors"
+                onClick={() => setIsPartialDialogOpen(true)}
+                className="w-full bg-bg-card rounded-none px-4 py-4 mb-2 flex justify-between items-center hover:bg-bg-card/80 transition-colors"
+              >
+                <span className="text-white">Partial tasks</span>
+                <ChevronRight className="w-5 h-5 text-text-sec" />
+              </button>
+              
+              <button
+                className="w-full bg-bg-card rounded-none px-4 py-4 mb-2 flex justify-between items-center hover:bg-bg-card/80 transition-colors"
                 disabled
               >
                 <span className="text-white">Notifications</span>
@@ -126,7 +133,7 @@ export default function ProfilePage() {
               </button>
               
               <button
-                className="w-full bg-bg-card rounded-2xl px-4 py-4 mb-2 flex justify-between items-center hover:bg-bg-card/80 transition-colors"
+                className="w-full bg-bg-card rounded-none px-4 py-4 mb-2 flex justify-between items-center hover:bg-bg-card/80 transition-colors"
                 disabled
               >
                 <span className="text-white">About</span>
@@ -139,7 +146,7 @@ export default function ProfilePage() {
           <div className="w-full px-4 mt-8">
             <button
               onClick={handleSignOut}
-              className="w-full bg-bg-card border border-accent-pink text-accent-pink font-bold rounded-2xl h-12 hover:bg-accent-pink/10 transition-colors"
+              className="w-full bg-accent-pink text-white font-bold py-3 rounded-none hover:bg-accent-pink/90 transition-colors"
             >
               Sign out
             </button>
@@ -151,6 +158,12 @@ export default function ProfilePage() {
       <ChangeSessionTimeDialog 
         isOpen={isDialogOpen}
         onClose={() => setIsDialogOpen(false)}
+      />
+      
+      {/* Partial Tasks Dialog */}
+      <PartialTasksDialog 
+        isOpen={isPartialDialogOpen}
+        onClose={() => setIsPartialDialogOpen(false)}
       />
     </AppShell>
   )

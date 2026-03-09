@@ -5,6 +5,8 @@ export interface PlannedTask {
   position: number;
   taskId: string;
   projectId: string | null;
+  projectName: string | undefined;
+  projectColor: string | undefined;
   isSolo: boolean;
   tier1: boolean;
   milestoneTitle: string | null;
@@ -14,6 +16,7 @@ export interface PlannedTask {
   partial: boolean;
   carryOverMinutes: number;
   done: boolean;
+  estimatedMinutes?: number;
 }
 
 interface SessionStore {
@@ -29,6 +32,8 @@ interface SessionStore {
   tickTimer: () => void;
   markTaskDone: (taskId: string) => void;
   clearSession: () => void;
+  getElapsedTime: () => number;
+  resumeTimer: () => void;
 }
 
 const initialState = {
@@ -45,12 +50,20 @@ export const useSessionStore = create<SessionStore>()(
     (set, get) => ({
       ...initialState,
       
-      setSession: (id: string, tasks: PlannedTask[], budget: number) =>
+      setSession: (id: string, tasks: PlannedTask[], budget: number) => {
+        // Clear any existing session before setting new one
+        const currentState = get();
+        if (currentState.sessionId && currentState.timerRunning) {
+          console.warn('Attempting to set new session while one is already running');
+          return;
+        }
+        
         set({
           sessionId: id,
           plannedTasks: tasks,
           budgetMinutes: budget,
-        }),
+        });
+      },
 
       startTimer: () =>
         set({
@@ -83,6 +96,36 @@ export const useSessionStore = create<SessionStore>()(
         set({
           ...initialState,
         }),
+
+      getElapsedTime: () => {
+        const { timerSeconds, sessionStartTime } = get();
+        if (sessionStartTime) {
+          const startTime = typeof sessionStartTime === 'string' 
+            ? new Date(sessionStartTime) 
+            : sessionStartTime;
+          return Math.floor((new Date().getTime() - startTime.getTime()) / 1000);
+        }
+        return timerSeconds;
+      },
+
+      resumeTimer: () => {
+        const { sessionStartTime } = get();
+        if (sessionStartTime) {
+          set({
+            timerRunning: true,
+          });
+        }
+      },
+
+      // Helper to ensure sessionStartTime is always a Date object
+      _ensureDateObject: () => {
+        const { sessionStartTime } = get();
+        if (sessionStartTime && typeof sessionStartTime === 'string') {
+          set({
+            sessionStartTime: new Date(sessionStartTime),
+          });
+        }
+      },
     }),
     {
       name: 'timebud-session',
@@ -91,7 +134,15 @@ export const useSessionStore = create<SessionStore>()(
         sessionId: state.sessionId,
         plannedTasks: state.plannedTasks,
         budgetMinutes: state.budgetMinutes,
+        timerRunning: state.timerRunning,
+        sessionStartTime: state.sessionStartTime,
       }),
+      onRehydrateStorage: () => (state) => {
+        // Convert sessionStartTime back to Date object after rehydration
+        if (state?.sessionStartTime && typeof state.sessionStartTime === 'string') {
+          state.sessionStartTime = new Date(state.sessionStartTime);
+        }
+      },
     }
   )
 );

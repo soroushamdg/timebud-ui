@@ -32,6 +32,7 @@ export interface PlannerInput {
   tasks: PlannerTask[];
   budgetMinutes: number;
   today?: Date;
+  allowPartial?: boolean;
 }
 
 export interface PlannedTaskResult {
@@ -66,6 +67,7 @@ const PARTIAL_FLOOR = 15;
 const DEFAULT_EST = 25;
 const NO_DL = 30;
 const SOLO_ID = '__solo__';
+const ALLOW_PARTIAL = true;
 
 function isSolo(t: PlannerTask): boolean {
   return t.project_id === null && t.milestone_id === null;
@@ -86,7 +88,7 @@ function urgencyMult(days: number): number {
   return Math.exp(URGENCY_K / days);
 }
 
-function scheduleTier1(tasks: PlannerTask[], budget: number, today: Date): [PlannedTaskResult[], number] {
+function scheduleTier1(tasks: PlannerTask[], budget: number, today: Date, allowPartial: boolean): [PlannedTaskResult[], number] {
   const scheduled: PlannedTaskResult[] = [];
   let consumed = 0;
   
@@ -103,7 +105,7 @@ function scheduleTier1(tasks: PlannerTask[], budget: number, today: Date): [Plan
     const estimate = task.estimated_minutes || DEFAULT_EST;
     const scheduledMinutes = Math.min(estimate, remaining);
     
-    if (scheduledMinutes >= PARTIAL_FLOOR) {
+    if (ALLOW_PARTIAL && scheduledMinutes >= PARTIAL_FLOOR) {
       scheduled.push({
         position: scheduled.length + 1,
         taskId: task.id,
@@ -213,7 +215,8 @@ function selectProjectTasks(
   projectId: string,
   tasks: PlannerTask[],
   alloc: number,
-  milestones: PlannerMilestone[]
+  milestones: PlannerMilestone[],
+  allowPartial: boolean
 ): PlannedTaskResult[] {
   const scheduled: PlannedTaskResult[] = [];
   let remainingBudget = alloc;
@@ -251,7 +254,7 @@ function selectProjectTasks(
       const estimate = task.estimated_minutes || DEFAULT_EST;
       const scheduledMinutes = Math.min(estimate, remainingBudget);
       
-      if (scheduledMinutes >= PARTIAL_FLOOR) {
+      if (allowPartial && scheduledMinutes >= PARTIAL_FLOOR) {
         const milestone = milestones.find(m => m.id === task.milestone_id);
         
         scheduled.push({
@@ -277,7 +280,7 @@ function selectProjectTasks(
   return scheduled;
 }
 
-function selectSoloTasks(tasks: PlannerTask[], alloc: number, today: Date): PlannedTaskResult[] {
+function selectSoloTasks(tasks: PlannerTask[], alloc: number, today: Date, allowPartial: boolean): PlannedTaskResult[] {
   const scheduled: PlannedTaskResult[] = [];
   let remainingBudget = alloc;
   
@@ -306,7 +309,7 @@ function selectSoloTasks(tasks: PlannerTask[], alloc: number, today: Date): Plan
     const estimate = task.estimated_minutes || DEFAULT_EST;
     const scheduledMinutes = Math.min(estimate, remainingBudget);
     
-    if (scheduledMinutes >= PARTIAL_FLOOR) {
+    if (ALLOW_PARTIAL && scheduledMinutes >= PARTIAL_FLOOR) {
       scheduled.push({
         position: scheduled.length + 1,
         taskId: task.id,
@@ -386,7 +389,10 @@ function interpolate(
 export function planSession(input: PlannerInput): PlannerOutput {
   try {
     const today = input.today || new Date();
-    const { projects, milestones, tasks, budgetMinutes } = input;
+    const { projects, milestones, tasks, budgetMinutes, allowPartial } = input;
+    
+    // Use the provided allowPartial setting or default to ALLOW_PARTIAL
+    const shouldAllowPartial = allowPartial !== undefined ? allowPartial : ALLOW_PARTIAL;
     
     // Filter pending tasks
     const pendingTasks = tasks.filter(t => t.status !== 'completed');
@@ -401,7 +407,7 @@ export function planSession(input: PlannerInput): PlannerOutput {
     }
     
     // Schedule tier1 tasks first
-    const [tier1Scheduled, tier1Consumed] = scheduleTier1(pendingTasks, budgetMinutes, today);
+    const [tier1Scheduled, tier1Consumed] = scheduleTier1(pendingTasks, budgetMinutes, today, shouldAllowPartial);
     
     if (tier1Consumed >= budgetMinutes) {
       return {
@@ -423,11 +429,11 @@ export function planSession(input: PlannerInput): PlannerOutput {
     
     allocations.forEach((alloc, projectId) => {
       if (projectId === SOLO_ID) {
-        const soloTasks = selectSoloTasks(pendingTasks, alloc, today);
+        const soloTasks = selectSoloTasks(pendingTasks, alloc, today, shouldAllowPartial);
         projectTasksMap.set(projectId, soloTasks);
         totalScheduledMinutes += soloTasks.reduce((sum, t) => sum + t.scheduledMinutes, 0);
       } else {
-        const projectTasks = selectProjectTasks(projectId, pendingTasks, alloc, milestones);
+        const projectTasks = selectProjectTasks(projectId, pendingTasks, alloc, milestones, shouldAllowPartial);
         projectTasksMap.set(projectId, projectTasks);
         totalScheduledMinutes += projectTasks.reduce((sum, t) => sum + t.scheduledMinutes, 0);
       }

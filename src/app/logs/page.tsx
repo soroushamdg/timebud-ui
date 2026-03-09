@@ -1,131 +1,30 @@
 'use client'
 
 import { AppShell } from '@/components/layout/AppShell'
-import { useSessions } from '@/hooks/useSessions'
-import { createClient } from '@/lib/supabase/client'
-import { formatLocal, formatLocalTime, formatDuration } from '@/lib/dates'
-import { Skeleton } from '@/components/ui/Skeleton'
-import { Calendar } from 'lucide-react'
-import { useQuery } from '@tanstack/react-query'
-import { DbTask } from '@/types/database'
 
 export default function LogsPage() {
-  const { data: sessions, isLoading: sessionsLoading } = useSessions()
-
-  // Collect all task IDs from all sessions
-  const allTaskIds = sessions?.flatMap(session => session.tasks_list) || []
-  const uniqueTaskIds = Array.from(new Set(allTaskIds))
-
-  // Batch fetch all task titles
-  const { data: tasks } = useQuery({
-    queryKey: ['tasks', 'batch', uniqueTaskIds],
-    queryFn: async (): Promise<{ id: string; title: string }[]> => {
-      if (uniqueTaskIds.length === 0) return []
-      
-      const supabase = createClient()
-      const { data, error } = await supabase
-        .from('tasks')
-        .select('id, title')
-        .in('id', uniqueTaskIds)
-      
-      if (error) throw error
-      return data || []
-    },
-    enabled: uniqueTaskIds.length > 0,
-  })
-
-  // Build task title map
-  const taskTitleMap = new Map(
-    tasks?.map(task => [task.id, task.title]) || []
-  )
-
-  if (sessionsLoading) {
-    return (
-      <AppShell>
-        <div className="px-4 pt-6 pb-2">
-          <h1 className="text-2xl font-bold text-white">Logs</h1>
-        </div>
-        <Skeleton className="h-28 rounded-2xl mx-4 mb-3" />
-        <Skeleton className="h-28 rounded-2xl mx-4 mb-3" />
-        <Skeleton className="h-28 rounded-2xl mx-4 mb-3" />
-      </AppShell>
-    )
-  }
-
-  if (!sessions || sessions.length === 0) {
-    return (
-      <AppShell>
-        <div className="px-4 pt-6 pb-2">
-          <h1 className="text-2xl font-bold text-white">Logs</h1>
-        </div>
-        <div className="flex flex-col items-center justify-center py-20">
-          <Calendar className="w-16 h-16 text-text-sec mb-4" />
-          <p className="text-text-sec text-center">No sessions yet.</p>
-        </div>
-      </AppShell>
-    )
-  }
-
   return (
     <AppShell>
-      <div className="px-4 pt-6 pb-2">
-        <h1 className="text-2xl font-bold text-white">Logs</h1>
-      </div>
-      
-      <div className="space-y-3">
-        {sessions.map((session) => {
-          const duration = session.end_time 
-            ? formatDuration(session.start_time!, session.end_time)
-            : 'In progress'
-          
-          const timeRange = session.end_time
-            ? `${formatLocalTime(session.start_time!)} – ${formatLocalTime(session.end_time)}`
-            : `${formatLocalTime(session.start_time!)} – In progress`
+      <div className="flex-1 flex flex-col bg-black">
+        {/* Header */}
+        <div className="bg-[#1A1A1A] border-b border-[#333333] px-4 py-3">
+          <h1 className="text-white text-lg font-semibold">Logs</h1>
+        </div>
 
-          return (
-            <div
-              key={session.id}
-              className="bg-bg-card rounded-2xl p-4 mx-4 mb-3 border border-border-card"
-            >
-              {/* Top section */}
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-white font-semibold">
-                  {formatLocal(session.start_time!, 'EEE MMM d')}
-                </span>
-                <span className="text-text-sec">
-                  {duration}
-                </span>
-              </div>
-
-              {/* Time range */}
-              <div className="text-text-sec text-sm mb-1">
-                {timeRange}
-              </div>
-
-              {/* Budget */}
-              <div className="text-text-sec text-xs mb-3">
-                {session.budget_minutes} min planned
-              </div>
-
-              {/* Task tags */}
-              {session.tasks_list.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {session.tasks_list.map((taskId) => {
-                    const taskTitle = taskTitleMap.get(taskId)
-                    return taskTitle ? (
-                      <span
-                        key={taskId}
-                        className="text-text-sec text-xs bg-black border border-border-card px-2 py-1 rounded"
-                      >
-                        {taskTitle}
-                      </span>
-                    ) : null
-                  })}
-                </div>
-              )}
+        {/* Content */}
+        <div className="flex-1 flex items-center justify-center p-4">
+          <div className="text-center">
+            <div className="w-16 h-16 bg-[#2A2A2A] rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-[#666666]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
             </div>
-          )
-        })}
+            <h2 className="text-white text-xl font-semibold mb-2">Activity Logs</h2>
+            <p className="text-[#666666] text-center max-w-md">
+              Your session history and activity logs will appear here. Track your productivity and monitor your progress over time.
+            </p>
+          </div>
+        </div>
       </div>
     </AppShell>
   )
