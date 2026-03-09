@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronLeft } from 'lucide-react'
+import { ChevronDoubleUpIcon } from '@heroicons/react/24/outline'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { useProjectsForTasks } from '@/hooks/useProjects'
@@ -254,9 +255,12 @@ export default function NewTaskPage() {
         
         {/* Priority */}
         <div className="flex items-center justify-between bg-bg-card border border-border-card rounded-2xl px-5 py-4">
-          <div>
-            <span className="text-white font-medium">High Priority</span>
-            <p className="text-text-sec text-sm mt-0.5">Mark as high priority task</p>
+          <div className="flex items-center gap-2">
+            <ChevronDoubleUpIcon className="w-4 h-4 text-accent-yellow" />
+            <div>
+              <span className="text-white font-medium">High Priority</span>
+              <p className="text-text-sec text-sm mt-0.5">Mark as high priority task</p>
+            </div>
           </div>
           <button
             type="button"

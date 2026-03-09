@@ -114,6 +114,8 @@ export default function Home() {
           estimatedMinutes: dbTask?.estimated_minutes,
           scheduledMinutes: task.scheduledMinutes,
           partial: task.partial,
+          priority: dbTask?.priority,
+          deadline: dbTask?.due_date,
         };
       });
 
@@ -160,6 +162,8 @@ export default function Home() {
           projects?.find((p) => p.id === task.project_id)?.color || undefined,
         done: false,
         estimatedMinutes: task.estimated_minutes,
+        priority: task.priority,
+        deadline: task.due_date,
       }));
 
       // Also convert to session store format

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronLeft, Check } from 'lucide-react'
+import { ChevronDoubleUpIcon } from '@heroicons/react/24/outline'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { toUtcString } from '@/lib/dates'
@@ -199,9 +200,12 @@ export default function NewProjectPage() {
           onClick={() => handleInputChange('priority', !formData.priority)}
           className="w-full flex items-center justify-between bg-bg-card border border-border-card rounded-2xl px-5 py-4 hover:bg-opacity-80 transition-all cursor-pointer"
         >
-          <div className="text-left">
-            <span className="text-white font-medium">Priority Project</span>
-            <p className="text-text-sec text-sm mt-0.5">Mark as high priority</p>
+          <div className="flex items-center gap-2">
+            <ChevronDoubleUpIcon className="w-4 h-4 text-accent-yellow" />
+            <div className="text-left">
+              <span className="text-white font-medium">Priority Project</span>
+              <p className="text-text-sec text-sm mt-0.5">Mark as high priority</p>
+            </div>
           </div>
           <div
             className={`w-14 h-7 rounded-full transition-all duration-200 ${

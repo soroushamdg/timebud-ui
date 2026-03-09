@@ -4,11 +4,12 @@ import { useState, useCallback, use } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import { X, ChevronDown, Lock, Check } from 'lucide-react'
+import { ChevronDoubleUpIcon } from '@heroicons/react/24/outline'
 import { useTasks, useUpdateTask } from '@/hooks/useTasks'
 import { useMilestones } from '@/hooks/useMilestones'
 import { useProject } from '@/hooks/useProjects'
 import { getDiceBearUrl } from '@/lib/avatar'
-import { formatLocal } from '@/lib/dates'
+import { formatLocal, formatLocalSmart } from '@/lib/dates'
 import { DbTask, DbMilestone, TaskStatus } from '@/types/database'
 import { TaskCardSkeleton } from '@/components/ui/Skeleton'
 
@@ -178,7 +179,7 @@ export default function ProjectOverviewPage({ params }: { params: Promise<{ id: 
               <div className="text-right">
                 <div className="text-text-sec text-xs uppercase">DUE DATE</div>
                 <div className="text-white text-sm">
-                  {project.deadline ? formatLocal(project.deadline) : 'No deadline'}
+                  {project.deadline ? formatLocalSmart(project.deadline) : 'No deadline'}
                 </div>
               </div>
             </div>
@@ -244,11 +245,21 @@ export default function ProjectOverviewPage({ params }: { params: Promise<{ id: 
                   
                   {/* Task title */}
                   <div className="flex-1 min-w-0">
-                    <h3 className={`text-base font-semibold truncate ${
-                      locked ? 'text-text-sec' : 'text-white'
-                    }`}>
-                      {task.title}
-                    </h3>
+                    <div className="flex items-center gap-2">
+                      {task.priority && (
+                        <ChevronDoubleUpIcon className="w-4 h-4 text-accent-yellow flex-shrink-0" />
+                      )}
+                      <h3 className={`text-base font-semibold truncate ${
+                        locked ? 'text-text-sec' : 'text-white'
+                      }`}>
+                        {task.title}
+                      </h3>
+                    </div>
+                    {task.due_date && (
+                      <p className="text-text-sec text-sm mt-1">
+                        {formatLocalSmart(task.due_date)}
+                      </p>
+                    )}
                   </div>
                   
                   {/* Lock icon */}

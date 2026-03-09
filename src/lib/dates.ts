@@ -2,6 +2,19 @@ import { format, parseISO } from 'date-fns'
 export const toUtcString  = (d: Date) => d.toISOString()
 export const formatLocal  = (s: string, fmt = 'MMM d, yyyy') => format(parseISO(s), fmt)
 export const formatLocalTime = (s: string) => format(parseISO(s), 'h:mm a')
+
+export const formatLocalSmart = (s: string) => {
+  const date = parseISO(s)
+  const currentYear = new Date().getFullYear()
+  const dateYear = date.getFullYear()
+  
+  if (dateYear === currentYear) {
+    return format(date, 'MMM d')
+  } else {
+    return format(date, 'MMM d, yyyy')
+  }
+}
+
 export function formatDuration(start: string, end: string): string {
   const mins = Math.round((new Date(end).getTime() - new Date(start).getTime()) / 60000)
   const h = Math.floor(mins/60), m = mins%60

@@ -1,4 +1,6 @@
 import { getDiceBearUrl } from '@/lib/utils'
+import { ChevronDoubleUpIcon, CalendarIcon } from '@heroicons/react/24/outline'
+import { formatLocalSmart } from '@/lib/dates'
 
 interface PlannedTask {
   taskId: string
@@ -11,6 +13,8 @@ interface PlannedTask {
   estimatedMinutes?: number
   scheduledMinutes?: number
   partial?: boolean
+  priority?: boolean
+  deadline?: string
 }
 
 interface TaskCardProps {
@@ -43,15 +47,36 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
 
         {/* Center content */}
         <div className="flex-1 min-w-0">
-          <h4 className="text-white text-base font-semibold truncate">
-            {task.title}
-          </h4>
-          {task.projectName && (
-            <p className="text-text-sec text-sm truncate">
-              {task.projectName}
-              {task.percentage !== undefined && ` (${task.percentage}% done)`}
-            </p>
-          )}
+          <div className="flex items-center gap-2">
+            {task.priority && (
+              <ChevronDoubleUpIcon className="w-4 h-4 text-accent-yellow flex-shrink-0" />
+            )}
+            <h4 className="text-white text-base font-semibold truncate">
+              {task.title}
+            </h4>
+          </div>
+          <div className="flex items-center gap-2 mt-1">
+            {task.deadline && (
+              <>
+                <CalendarIcon className="w-3 h-3 text-text-sec flex-shrink-0" />
+                <span className="text-text-sec text-sm truncate">
+                  {formatLocalSmart(task.deadline)}
+                </span>
+              </>
+            )}
+            {task.projectName && !task.deadline && (
+              <p className="text-text-sec text-sm truncate">
+                {task.projectName}
+                {task.percentage !== undefined && ` (${task.percentage}% done)`}
+              </p>
+            )}
+            {task.projectName && task.deadline && (
+              <span className="text-text-sec text-sm truncate">
+                • {task.projectName}
+                {task.percentage !== undefined && ` (${task.percentage}% done)`}
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Estimated Minutes */}
