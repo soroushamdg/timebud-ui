@@ -159,12 +159,12 @@ export default function FocusSession() {
 
   return (
     <div className="min-h-screen bg-black relative">
-      {/* X button - Top left corner */}
+      {/* Floating X button - Top left corner */}
       <button
         onClick={() => setShowConfirmDialog(true)}
-        className="absolute top-6 left-6 text-accent-pink hover:opacity-80 transition-opacity z-10"
+        className="fixed top-4 left-4 w-12 h-12 bg-black/50 backdrop-blur-sm rounded-full flex items-center justify-center text-accent-pink hover:bg-black/70 hover:opacity-80 transition-all z-50 border border-accent-pink/20"
       >
-        <X size={24} />
+        <X size={20} />
       </button>
 
       {/* Timer display */}
