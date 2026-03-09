@@ -197,7 +197,7 @@ export default function FocusSession() {
         onClick={handleStopClick}
         className="fixed bottom-8 left-1/2 -translate-x-1/2 w-[72px] h-[72px] bg-accent-pink rounded-none flex items-center justify-center text-white border border-[#ffffff]"
       >
-        <Square size={32} />
+        <Square size={32} fill="currentColor" />
       </button>
 
       {/* Stop confirmation dialog */}
