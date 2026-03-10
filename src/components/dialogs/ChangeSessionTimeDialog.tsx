@@ -8,8 +8,8 @@ import { useProjects } from '@/hooks/useProjects'
 import { useTasks } from '@/hooks/useTasks'
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
-import { DbMilestone, DbProject } from '@/types/database'
-import { planSession } from '@/lib/planner'
+import { DbMilestone, DbProject, DbTask } from '@/types/database'
+import { planSession, PlannerMilestone, PlannerTask } from '@/lib/planner'
 import { X, HelpCircle } from 'lucide-react'
 
 interface ChangeSessionTimeDialogProps {
@@ -67,11 +67,27 @@ export function ChangeSessionTimeDialog({ isOpen, onClose }: ChangeSessionTimeDi
       // Update UI store
       setBudget(minutes)
       
+      // Transform DbMilestone[] to PlannerMilestone[] and DbTask[] to PlannerTask[]
+      const plannerMilestones: PlannerMilestone[] = milestones
+        .filter(milestone => milestone.project_id !== null)
+        .map(milestone => ({
+          ...milestone,
+          project_id: milestone.project_id!,
+        }));
+      
+      const plannerTasks: PlannerTask[] = tasks
+        .filter(task => task.estimated_minutes !== null)
+        .map(task => ({
+          ...task,
+          estimated_minutes: task.estimated_minutes!,
+          status: task.status || 'pending',
+        }));
+      
       // Re-plan session with new budget
       const newPlan = planSession({
         projects,
-        milestones,
-        tasks,
+        milestones: plannerMilestones,
+        tasks: plannerTasks,
         budgetMinutes: minutes,
       })
       

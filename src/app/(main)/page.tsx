@@ -11,7 +11,7 @@ import { useLatestUnfinishedFocusSession } from '@/hooks/useSessions'
 import { useProjects } from '@/hooks/useProjects'
 import { useTasks } from '@/hooks/useTasks'
 import { useCreateFocusSession, useDeleteFocusSession } from '@/hooks/useSessions'
-import { planSession } from '@/lib/planner'
+import { planSession, PlannerTask } from '@/lib/planner'
 import { useFocusSessionStore } from '@/stores/sessionStore'
 import { useUIStore } from '@/stores/uiStore'
 import { useLoading } from '@/contexts/LoadingContext'
@@ -101,10 +101,19 @@ export default function Home() {
     }
 
     try {
+      // Transform DbTask[] to PlannerTask[] for the planner
+      const plannerTasks: PlannerTask[] = tasks
+        .filter(task => task.estimated_minutes !== null)
+        .map(task => ({
+          ...task,
+          estimated_minutes: task.estimated_minutes!,
+          status: task.status || 'pending',
+        }));
+
       const plan = planSession({
         projects,
         milestones: [],
-        tasks,
+        tasks: plannerTasks,
         budgetMinutes: preferredBudgetMinutes,
         allowPartial: allowPartialTasks,
       });
@@ -125,7 +134,7 @@ export default function Home() {
           projectName: task.projectId ? projects?.find((p) => p.id === task.projectId)?.name : undefined,
           projectColor: task.projectId ? projects?.find((p) => p.id === task.projectId)?.color || undefined : undefined,
           done: false,
-          estimatedMinutes: dbTask?.estimated_minutes,
+          estimatedMinutes: dbTask?.estimated_minutes || undefined,
           scheduledMinutes: task.scheduledMinutes,
           partial: task.partial,
           priority: dbTask?.priority,
@@ -177,7 +186,7 @@ export default function Home() {
         projectColor:
           projects?.find((p) => p.id === task.project_id)?.color || undefined,
         done: false,
-        estimatedMinutes: task.estimated_minutes,
+        estimatedMinutes: task.estimated_minutes || undefined,
         priority: task.priority,
         deadline: task.due_date,
       }));
@@ -194,11 +203,11 @@ export default function Home() {
         milestoneTitle: null,
         title: task.title,
         priority: task.priority,
-        scheduledMinutes: task.estimated_minutes,
+        scheduledMinutes: task.estimated_minutes || 0,
         partial: false,
         carryOverMinutes: 0,
         done: false,
-        estimatedMinutes: task.estimated_minutes,
+        estimatedMinutes: task.estimated_minutes || 0,
       }));
 
       setFocusSession(
