@@ -26,8 +26,8 @@ export default function RootLayout({
   return (
     <html lang="en" className={`dark ${inter.variable}`}>
       <body className={`${inter.variable} antialiased`} suppressHydrationWarning>
-        <SplashScreen />
         <Providers>
+          <SplashScreen />
           {children}
         </Providers>
       </body>
