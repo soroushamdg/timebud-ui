@@ -2,7 +2,7 @@
 
 import { useState, useCallback, use, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { X, ChevronDown, Lock, Check, Plus, ArrowUpDown, Trash2, MoreVertical, Edit, CalendarIcon } from 'lucide-react'
+import { X, ChevronDown, Lock, Check, Plus, ArrowUpDown, Trash2, MoreVertical, Edit, CalendarIcon, ChevronLeft } from 'lucide-react'
 import { ChevronDoubleUpIcon } from '@heroicons/react/24/outline'
 import { useTasks, useUpdateTask } from '@/hooks/useTasks'
 import { useProject } from '@/hooks/useProjects'
@@ -897,12 +897,12 @@ export default function ProjectOverviewPage({ params }: { params: Promise<{ id: 
       
       {/* Header */}
       <div className="relative">
-        {/* X button */}
+        {/* Back button */}
         <button
           onClick={() => router.back()}
-          className="absolute top-4 left-4 z-10 p-2 text-accent-pink"
+          className="absolute top-4 left-4 z-10 w-10 h-10 rounded-xl bg-bg-card border border-border-card flex items-center justify-center text-white hover:bg-opacity-80 transition-colors"
         >
-          <X size={24} />
+          <ChevronLeft size={20} />
         </button>
         
         {/* Sort button */}

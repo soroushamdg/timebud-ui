@@ -78,9 +78,9 @@ export default function ProfilePage() {
         <div className="flex items-center p-4">
           <button 
             onClick={handleBack}
-            className="text-white hover:opacity-80 transition-opacity"
+            className="w-10 h-10 rounded-xl bg-bg-card border border-border-card flex items-center justify-center text-white hover:bg-opacity-80 transition-colors"
           >
-            <ChevronLeft className="w-6 h-6" />
+            <ChevronLeft size={20} />
           </button>
         </div>
 

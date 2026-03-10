@@ -297,6 +297,12 @@ export default function Home() {
                 Your studio &gt;
               </span>
             </button>
+            <button
+              onClick={() => router.push("/tasks/all")}
+              className="bg-[#2A2A2A] text-white rounded-full px-4 py-2 text-sm font-medium hover:text-[#d7d7d7] transition-colors"
+            >
+              All tasks
+            </button>
           </div>
 
           {/* Target Projects */}
