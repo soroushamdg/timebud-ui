@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { useLoading } from '@/contexts/LoadingContext'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -11,6 +12,11 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const { setLoadingComplete } = useLoading()
+
+  useEffect(() => {
+    setLoadingComplete()
+  }, [setLoadingComplete])
 
   const handleEmailSignIn = async (e: React.FormEvent) => {
     e.preventDefault()

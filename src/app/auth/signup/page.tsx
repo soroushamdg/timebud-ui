@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { useLoading } from '@/contexts/LoadingContext'
 
 export default function SignupPage() {
   const router = useRouter()
@@ -14,6 +15,11 @@ export default function SignupPage() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
+  const { setLoadingComplete } = useLoading()
+
+  useEffect(() => {
+    setLoadingComplete()
+  }, [setLoadingComplete])
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()
