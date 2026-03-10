@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAllProjects, useUpdateProject } from '@/hooks/useProjects'
 import { useTasks } from '@/hooks/useTasks'
-import { useMilestones } from '@/hooks/useMilestones'
 import { useFocusSessionStore } from '@/stores/sessionStore'
 import { useUpdateFocusSession, useDeleteFocusSession } from '@/hooks/useSessions'
 import { planSession } from '@/lib/planner'
@@ -40,7 +39,7 @@ export default function SelectProjectsPage() {
   
   const { data: projects = [], isLoading } = useAllProjects()
   const { data: tasks = [] } = useTasks()
-  const { data: milestones = [] } = useMilestones(undefined)
+  const { data: milestones = [] } = useTasks({ type: 'milestone' })
   
   const [pendingChanges, setPendingChanges] = useState<PendingChanges>({})
   const [contextMenu, setContextMenu] = useState<ContextMenuState>({

@@ -14,6 +14,7 @@ import { useCreateFocusSession, useDeleteFocusSession } from '@/hooks/useSession
 import { planSession } from '@/lib/planner'
 import { useFocusSessionStore } from '@/stores/sessionStore'
 import { useUIStore } from '@/stores/uiStore'
+import { useLoading } from '@/contexts/LoadingContext'
 import { getDiceBearUrl, isValidUuid } from '@/lib/utils'
 import { DbFocusSession, DbTask } from '@/types/database'
 import { useFocusSessionGuard } from '@/hooks/useSessionGuard'
@@ -40,6 +41,7 @@ export default function Home() {
   const [plannedTasks, setPlannedTasks] = useState<PlannedTask[]>([]);
   const [showTimeDialog, setShowTimeDialog] = useState(false)
   const [isLoading, setIsLoading] = useState(true);
+  const { setLoadingProgress, setLoadingComplete } = useLoading();
 
   // Focus session guard - auto-redirect to running focus session
   useFocusSessionGuard();
@@ -56,9 +58,18 @@ export default function Home() {
   const markTaskDone = useFocusSessionStore((state) => state.markTaskDone);
 
   useEffect(() => {
+    // Calculate loading progress
+    let progress = 0;
+    if (!projectsLoading) progress += 33;
+    if (!tasksLoading) progress += 33;
+    if (latestUnfinished !== undefined) progress += 34;
+    
+    setLoadingProgress(progress);
+
     if (latestUnfinished) {
       setUnfinishedFocusSession(latestUnfinished);
       setIsLoading(false);
+      setLoadingComplete();
     } else if (projects && tasks) {
       planSessionData();
     } else if (
@@ -69,12 +80,14 @@ export default function Home() {
     ) {
       // Queries finished loading but no data or planning needed
       setIsLoading(false);
+      setLoadingComplete();
     }
-  }, [latestUnfinished, projects, tasks, projectsLoading, tasksLoading]);
+  }, [latestUnfinished, projects, tasks, projectsLoading, tasksLoading, setLoadingProgress, setLoadingComplete]);
 
   const planSessionData = async () => {
     if (!projects || !tasks) {
       setIsLoading(false);
+      setLoadingComplete();
       return;
     }
 
@@ -83,6 +96,7 @@ export default function Home() {
     if (pendingTasks.length === 0) {
       setPlannedTasks([]);
       setIsLoading(false);
+      setLoadingComplete();
       return;
     }
 
@@ -134,9 +148,11 @@ export default function Home() {
       );
       setPlannedTasks(tasksWithDone);
       setIsLoading(false);
+      setLoadingComplete();
     } catch (error) {
       console.error("Failed to plan session:", error);
       setIsLoading(false);
+      setLoadingComplete();
     }
   };
 

@@ -24,6 +24,7 @@ export interface PlannerTask {
   order: number;
   priority: boolean;
   depends_on_task: string | null;
+  item_type?: 'task' | 'milestone';
 }
 
 export interface PlannerInput {
@@ -386,16 +387,63 @@ function interpolate(
   return result;
 }
 
+function inheritMilestoneDeadlines(
+  items: PlannerTask[]
+): PlannerTask[] {
+  // items are ALL project items sorted by order ASC — tasks and milestones mixed
+  // For each task with no due_date:
+  //   find the nearest upcoming milestone (higher order value, same project_id)
+  //   that has a due_date — assign that as the task's effective due_date
+  // Tasks that already have a due_date are unchanged
+  // Solo tasks (project_id null) are returned unchanged
+
+  const result: PlannerTask[] = []
+
+  // Group by project
+  const byProject = new Map<string | null, PlannerTask[]>()
+  for (const item of items) {
+    const key = item.project_id ?? null
+    if (!byProject.has(key)) byProject.set(key, [])
+    byProject.get(key)!.push(item)
+  }
+
+  for (const [projectId, projectItems] of byProject) {
+    const sorted = [...projectItems].sort((a, b) => a.order - b.order)
+
+    for (const item of sorted) {
+      if (item.item_type === 'milestone') continue // skip milestones from output
+
+      if (item.due_date) {
+        result.push(item)
+        continue
+      }
+
+      // Find next milestone after this item's order with a due_date
+      const nextMilestone = sorted.find(
+        m => m.item_type === 'milestone' && m.order > item.order && m.due_date !== null
+      )
+
+      result.push({
+        ...item,
+        due_date: nextMilestone?.due_date ?? null
+      })
+    }
+  }
+
+  return result
+}
+
 export function planSession(input: PlannerInput): PlannerOutput {
   try {
     const today = input.today || new Date();
-    const { projects, milestones, tasks, budgetMinutes, allowPartial } = input;
+    const { projects, milestones, budgetMinutes, allowPartial } = input;
+    const planTasks = inheritMilestoneDeadlines(input.tasks);
     
     // Use the provided allowPartial setting or default to ALLOW_PARTIAL
     const shouldAllowPartial = allowPartial !== undefined ? allowPartial : ALLOW_PARTIAL;
     
     // Filter pending tasks
-    const pendingTasks = tasks.filter(t => t.status !== 'completed');
+    const pendingTasks = planTasks.filter(t => t.status !== 'completed');
     if (pendingTasks.length === 0) {
       return {
         budgetMinutes,

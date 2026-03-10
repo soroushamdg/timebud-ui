@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { Providers } from "@/components/providers/Providers";
+import { SplashScreen } from "@/components/layout/SplashScreen";
 import "./globals.css";
 
 const inter = Inter({
@@ -25,6 +26,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`dark ${inter.variable}`}>
       <body className={`${inter.variable} antialiased`} suppressHydrationWarning>
+        <SplashScreen />
         <Providers>
           {children}
         </Providers>

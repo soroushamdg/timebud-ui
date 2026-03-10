@@ -3,7 +3,7 @@
 import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useState } from 'react'
-import { HomeIcon, SparklesIcon, CalendarDaysIcon, PlusIcon, XMarkIcon, FolderIcon, FlagIcon } from '@heroicons/react/24/outline'
+import { HomeIcon, SparklesIcon, CalendarDaysIcon, PlusIcon, XMarkIcon, FolderIcon } from '@heroicons/react/24/outline'
 
 export function TabBar() {
   const pathname = usePathname()
@@ -20,11 +20,7 @@ export function TabBar() {
     router.push('/tasks/new')
   }
 
-  const handleMilestoneClick = () => {
-    setShowAddMenu(false)
-    router.push('/milestones/new')
-  }
-
+  
   const handleCloseMenu = () => {
     setShowAddMenu(false)
   }
@@ -134,20 +130,6 @@ export function TabBar() {
                   <div className="flex-1 text-left">
                     <h3 className="text-white font-semibold">New Task</h3>
                     <p className="text-[#666666] text-sm">Add a new task to your workspace</p>
-                  </div>
-                </button>
-
-                {/* Milestone Option */}
-                <button
-                  onClick={handleMilestoneClick}
-                  className="w-full bg-[#2A2A2A] border border-[#333333] rounded-none p-4 flex items-center gap-4 hover:bg-[#333333] transition-colors"
-                >
-                  <div className="w-12 h-12 bg-[#FFD233] rounded-none flex items-center justify-center">
-                    <FlagIcon className="w-6 h-6 text-black" />
-                  </div>
-                  <div className="flex-1 text-left">
-                    <h3 className="text-white font-semibold">New Milestone</h3>
-                    <p className="text-[#666666] text-sm">Create a milestone and organize tasks</p>
                   </div>
                 </button>
               </div>

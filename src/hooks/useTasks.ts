@@ -9,34 +9,34 @@ type TaskUpdate = Partial<Omit<DbTask, 'id' | 'created_at' | 'user_id'>>
 
 interface TaskFilters {
   projectId?: string
-  status?: TaskStatus
-  type?: 'solo'
+  status?: TaskStatus | null
+  type?: 'task' | 'milestone' | 'all'
 }
 
 export const useTasks = (filters?: TaskFilters) => {
   return useQuery({
-    queryKey: ['tasks', JSON.stringify(filters || {})],
+    queryKey: ['tasks', filters?.projectId ?? 'all', JSON.stringify(filters)],
     queryFn: async (): Promise<Task[]> => {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('User not authenticated')
       
-      let query = supabase
-        .from('tasks')
-        .select('*')
-        .eq('user_id', user.id)
+      let query = supabase.from('tasks').select('*').eq('user_id', user.id)
       
       if (filters?.projectId) {
         query = query.eq('project_id', filters.projectId)
       }
       
-      if (filters?.status) {
+      if (filters?.status !== undefined) {
         query = query.eq('status', filters.status)
       }
       
-      if (filters?.type === 'solo') {
-        query = query.is('project_id', null).is('milestone_id', null)
+      if (filters?.type === 'task') {
+        query = query.eq('item_type', 'task')
+      } else if (filters?.type === 'milestone') {
+        query = query.eq('item_type', 'milestone')
       }
+      // If filters.type === 'all' or undefined: no item_type filter
       
       const { data, error } = await query.order('order', { ascending: true })
       if (error) throw error
@@ -94,6 +94,7 @@ export const useCreateTask = () => {
       
       const taskData = {
         ...task,
+        item_type: task.item_type || 'task',
         user_id: user.id,
         created_at: toUtcString(new Date()),
       }
