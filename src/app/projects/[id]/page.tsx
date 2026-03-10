@@ -79,17 +79,56 @@ export default function ProjectOverviewPage({ params }: { params: Promise<{ id: 
     
     return sortedEntries.map(([_, group]) => group)
   }, [tasks, milestones])
+
+  // Separate milestone tasks and individual tasks with proper ordering
+  const organizedTasks = useCallback(() => {
+    const milestoneGroups: Array<{ milestone: DbMilestone; tasks: DbTask[] }> = []
+    const individualTasks: DbTask[] = []
+    
+    // Sort milestones by order
+    const sortedMilestones = [...milestones].sort((a, b) => a.order - b.order)
+    
+    // Process each milestone
+    sortedMilestones.forEach(milestone => {
+      const milestoneTasks = tasks
+        .filter(task => task.milestone_id === milestone.id)
+        .sort((a, b) => a.order - b.order)
+      
+      if (milestoneTasks.length > 0) {
+        milestoneGroups.push({ milestone, tasks: milestoneTasks })
+      }
+    })
+    
+    // Get individual tasks (not in milestones)
+    const generalTasks = tasks
+      .filter(task => !task.milestone_id)
+      .sort((a, b) => a.order - b.order)
+    
+    individualTasks.push(...generalTasks)
+    
+    return { milestoneGroups, individualTasks }
+  }, [tasks, milestones])
+
+  // Check if all tasks in a group are completed
+  const isGroupCompleted = useCallback((tasks: DbTask[]) => {
+    if (tasks.length === 0) return false
+    return tasks.every(task => task.status === 'completed')
+  }, [])
   
   // Calculate progress
   const completedCount = tasks.filter(t => t.status === 'completed').length
   const totalCount = tasks.length
   const progressPercentage = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0
   
-  // Sequential task numbering across all milestones
+  // Sequential task numbering across all tasks
   const getTaskNumber = useCallback((task: DbTask) => {
-    const allTasks = tasksByMilestone().flatMap(group => group.tasks)
+    const { milestoneGroups, individualTasks } = organizedTasks()
+    const allTasks = [
+      ...milestoneGroups.flatMap(group => group.tasks),
+      ...individualTasks
+    ]
     return allTasks.findIndex(t => t.id === task.id) + 1
-  }, [tasksByMilestone, tasks])
+  }, [organizedTasks])
   
   // Long press handlers
   const handlePointerDown = useCallback((task: DbTask) => {
@@ -198,79 +237,204 @@ export default function ProjectOverviewPage({ params }: { params: Promise<{ id: 
       
       {/* Task list */}
       <div className="pb-20">
-        {tasksByMilestone().map((group, groupIndex) => (
-          <div key={group.milestone?.id || 'general'}>
-            {/* Milestone header */}
-            {group.milestone && (
-              <div className="text-text-sec text-sm uppercase font-semibold px-4 pt-4 pb-2">
-                {group.milestone.title}
-              </div>
-            )}
-            
-            {/* Tasks in this milestone */}
-            {group.tasks.map((task) => {
-              const taskNumber = getTaskNumber(task)
-              const locked = isLocked(task)
-              const completed = task.status === 'completed'
-              
-              return (
-                <div
-                  key={task.id}
-                  className={`
-                    mx-4 mb-3 rounded-2xl px-4 py-3 flex items-center gap-3 border transition-all
-                    ${completed 
-                      ? 'bg-bg-card-done border-accent-green/30' 
-                      : locked 
-                        ? 'bg-bg-card-locked' 
-                        : 'bg-bg-card border-border-card'
-                    }
-                    ${!locked && !completed ? 'cursor-pointer active:scale-95' : ''}
-                  `}
-                  onPointerDown={() => handlePointerDown(task)}
-                >
-                  {/* Numbered badge */}
-                  <div
-                    className={`
-                      w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0
-                      ${completed 
-                        ? 'bg-accent-green text-white' 
-                        : locked 
-                          ? 'bg-bg-card-locked text-text-sec' 
-                          : 'bg-bg-card text-white'
-                      }
-                    `}
-                  >
-                    {completed ? <Check size={16} /> : taskNumber}
-                  </div>
-                  
-                  {/* Task title */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      {task.priority && (
-                        <ChevronDoubleUpIcon className="w-4 h-4 text-accent-yellow flex-shrink-0" />
-                      )}
-                      <h3 className={`text-base font-semibold truncate ${
-                        locked ? 'text-text-sec' : 'text-white'
+        {(() => {
+          const { milestoneGroups, individualTasks } = organizedTasks()
+          
+          return (
+            <>
+              {/* Milestone Tasks */}
+              {milestoneGroups.map((group, index) => {
+                const groupCompleted = isGroupCompleted(group.tasks)
+                return (
+                <div key={group.milestone.id}>
+                  {/* Milestone header with line */}
+                  <div className="px-4 pt-4">
+                    <div className="flex items-center gap-3">
+                      <h3 className={`text-sm uppercase font-semibold whitespace-nowrap ${
+                        groupCompleted 
+                          ? 'text-accent-green opacity-60' 
+                          : 'text-text-sec'
                       }`}>
-                        {task.title}
+                        {group.milestone.title}
                       </h3>
+                      <div className={`flex-1 h-px ${
+                        groupCompleted 
+                          ? 'bg-accent-green opacity-60' 
+                          : 'bg-border-card'
+                      }`} />
                     </div>
-                    {task.due_date && (
-                      <p className="text-text-sec text-sm mt-1">
-                        {formatLocalSmart(task.due_date)}
-                      </p>
-                    )}
                   </div>
                   
-                  {/* Lock icon */}
-                  {locked && (
-                    <Lock size={16} className="text-text-sec flex-shrink-0" />
-                  )}
+                  {/* Milestone tasks */}
+                  <div className="px-4 pt-2">
+                    {group.tasks.map((task) => {
+                      const taskNumber = getTaskNumber(task)
+                      const locked = isLocked(task)
+                      const completed = task.status === 'completed'
+                      
+                      return (
+                        <div
+                          key={task.id}
+                          className={`
+                            mb-3 rounded-2xl px-4 py-3 flex items-center gap-3 border transition-all
+                            ${completed 
+                              ? 'bg-bg-card-done border-accent-green/30' 
+                              : locked 
+                                ? 'bg-bg-card-locked' 
+                                : 'bg-bg-card border-border-card'
+                            }
+                            ${!locked && !completed ? 'cursor-pointer active:scale-95' : ''}
+                          `}
+                          onPointerDown={() => handlePointerDown(task)}
+                        >
+                          {/* Numbered badge */}
+                          <div
+                            className={`
+                              w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0
+                              ${completed 
+                                ? 'bg-accent-green text-white' 
+                                : locked 
+                                  ? 'bg-bg-card-locked text-text-sec' 
+                                  : 'bg-bg-card text-white'
+                              }
+                            `}
+                          >
+                            {completed ? <Check size={16} /> : taskNumber}
+                          </div>
+                          
+                          {/* Task title */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              {task.priority && (
+                                <ChevronDoubleUpIcon className="w-4 h-4 text-accent-yellow flex-shrink-0" />
+                              )}
+                              <h3 className={`text-base font-semibold truncate ${
+                                locked ? 'text-text-sec' : 'text-white'
+                              }`}>
+                                {task.title}
+                              </h3>
+                            </div>
+                            {task.due_date && (
+                              <p className="text-text-sec text-sm mt-1">
+                                {formatLocalSmart(task.due_date)}
+                              </p>
+                            )}
+                          </div>
+                          
+                          {/* Lock icon */}
+                          {locked && (
+                            <Lock size={16} className="text-text-sec flex-shrink-0" />
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                  
+                  {/* Bottom line for milestone group */}
+                  <div className="px-4 pb-4">
+                    <div className={`h-px ${
+                      groupCompleted 
+                        ? 'bg-accent-green opacity-60' 
+                        : 'bg-border-card'
+                    }`} />
+                  </div>
                 </div>
-              )
-            })}
-          </div>
-        ))}
+                )
+              })}
+              
+              {/* Individual Tasks */}
+              {individualTasks.length > 0 && (() => {
+                const individualTasksCompleted = isGroupCompleted(individualTasks)
+                return (
+                <div>
+                  {/* Individual tasks header with line */}
+                  <div className="px-4 pt-4">
+                    <div className="flex items-center gap-3">
+                      <h3 className={`text-sm uppercase font-semibold whitespace-nowrap ${
+                        individualTasksCompleted 
+                          ? 'text-accent-green opacity-60' 
+                          : 'text-text-sec'
+                      }`}>
+                        Individual Tasks
+                      </h3>
+                      <div className={`flex-1 h-px ${
+                        individualTasksCompleted 
+                          ? 'bg-accent-green opacity-60' 
+                          : 'bg-border-card'
+                      }`} />
+                    </div>
+                  </div>
+                  
+                  {/* Individual tasks */}
+                  <div className="px-4 pt-2">
+                    {individualTasks.map((task) => {
+                      const taskNumber = getTaskNumber(task)
+                      const locked = isLocked(task)
+                      const completed = task.status === 'completed'
+                      
+                      return (
+                        <div
+                          key={task.id}
+                          className={`
+                            mb-3 rounded-2xl px-4 py-3 flex items-center gap-3 border transition-all
+                            ${completed 
+                              ? 'bg-bg-card-done border-accent-green/30' 
+                              : locked 
+                                ? 'bg-bg-card-locked' 
+                                : 'bg-bg-card border-border-card'
+                            }
+                            ${!locked && !completed ? 'cursor-pointer active:scale-95' : ''}
+                          `}
+                          onPointerDown={() => handlePointerDown(task)}
+                        >
+                          {/* Numbered badge */}
+                          <div
+                            className={`
+                              w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0
+                              ${completed 
+                                ? 'bg-accent-green text-white' 
+                                : locked 
+                                  ? 'bg-bg-card-locked text-text-sec' 
+                                  : 'bg-bg-card text-white'
+                              }
+                            `}
+                          >
+                            {completed ? <Check size={16} /> : taskNumber}
+                          </div>
+                          
+                          {/* Task title */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              {task.priority && (
+                                <ChevronDoubleUpIcon className="w-4 h-4 text-accent-yellow flex-shrink-0" />
+                              )}
+                              <h3 className={`text-base font-semibold truncate ${
+                                locked ? 'text-text-sec' : 'text-white'
+                              }`}>
+                                {task.title}
+                              </h3>
+                            </div>
+                            {task.due_date && (
+                              <p className="text-text-sec text-sm mt-1">
+                                {formatLocalSmart(task.due_date)}
+                              </p>
+                            )}
+                          </div>
+                          
+                          {/* Lock icon */}
+                          {locked && (
+                            <Lock size={16} className="text-text-sec flex-shrink-0" />
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+                )
+              })()}
+            </>
+          )
+        })()}
       </div>
       
       {/* Bottom sheet for task completion */}
