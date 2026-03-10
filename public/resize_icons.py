@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Icon Resizer Script
-Resizes icon-original.png to 512x512 and 192x192 pixels and replaces existing icon files.
+Resizes icon-original.png to 512x512, 192x192 pixels, and favicon.ico.
 Maintains image quality using high-quality resampling.
 """
 
@@ -40,12 +40,25 @@ def resize_icon(input_path, output_sizes):
             for output_filename, (width, height) in output_sizes.items():
                 output_path = os.path.join(input_dir, output_filename)
                 
-                # Resize using high-quality resampling
-                resized_img = img.resize((width, height), Image.Resampling.LANCZOS)
-                
-                # Save as PNG with high quality
-                resized_img.save(output_path, 'PNG', optimize=True)
-                print(f"✅ Created {output_filename} ({width}x{height})")
+                if output_filename.endswith('.ico'):
+                    # For favicon.ico, create multiple sizes within the ICO file
+                    favicon_sizes = [16, 32, 48, 64]
+                    favicon_images = []
+                    
+                    for size in favicon_sizes:
+                        resized = img.resize((size, size), Image.Resampling.LANCZOS)
+                        favicon_images.append(resized)
+                    
+                    # Save as ICO with multiple sizes
+                    favicon_images[0].save(output_path, format='ICO', sizes=[(size, size) for size in favicon_sizes])
+                    print(f"✅ Created {output_filename} (multi-size: {favicon_sizes}px)")
+                else:
+                    # Resize using high-quality resampling for PNG files
+                    resized_img = img.resize((width, height), Image.Resampling.LANCZOS)
+                    
+                    # Save as PNG with high quality
+                    resized_img.save(output_path, 'PNG', optimize=True)
+                    print(f"✅ Created {output_filename} ({width}x{height})")
                 
     except FileNotFoundError:
         print(f"❌ Error: Could not find {input_path}")
@@ -66,7 +79,8 @@ def main():
     # Output sizes and filenames
     output_sizes = {
         "icon-512x512.png": (512, 512),
-        "icon-192x192.png": (192, 192)
+        "icon-192x192.png": (192, 192),
+        "favicon.ico": (32, 32)  # ICO format will handle multiple sizes internally
     }
     
     print("🎨 Icon Resizer - TimeBud")
@@ -82,7 +96,10 @@ def main():
     print(f"📸 Input file: icon-original.png")
     print("🎯 Target sizes:")
     for filename, (width, height) in output_sizes.items():
-        print(f"   - {filename} ({width}x{height})")
+        if filename.endswith('.ico'):
+            print(f"   - {filename} (multi-size: 16, 32, 48, 64px)")
+        else:
+            print(f"   - {filename} ({width}x{height})")
     print()
     
     # Resize the icon
@@ -91,6 +108,7 @@ def main():
     print()
     print("✨ Icon resizing completed successfully!")
     print("🔄 Existing icon files have been replaced.")
+    print("🌐 Favicon.ico has been created/updated.")
 
 if __name__ == "__main__":
     main()

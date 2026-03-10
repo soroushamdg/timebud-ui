@@ -11,7 +11,10 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: 'TimeBud',
-  description: 'Your focus companion'
+  description: 'Your focus companion',
+  icons: {
+    icon: '/favicon.ico',
+  },
 };
 
 export default function RootLayout({
