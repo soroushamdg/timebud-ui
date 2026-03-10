@@ -165,8 +165,25 @@ function allocateBudget(
     }
     
     const priorityScore = project.priority ? PRI : DEF;
-    const days = daysUntil(project.deadline, today);
-    const weight = priorityScore * urgencyMult(days) * pendingMinutes;
+    const projectDays = daysUntil(project.deadline, today);
+    const projectUrgency = urgencyMult(projectDays);
+    
+    // Calculate average task urgency for this project
+    const taskUrgencies = projectTaskList
+      .filter(t => t.status !== 'completed')
+      .map(t => {
+        const taskDays = daysUntil(t.due_date, today);
+        return urgencyMult(taskDays);
+      });
+    
+    const avgTaskUrgency = taskUrgencies.length > 0 
+      ? taskUrgencies.reduce((sum, urgency) => sum + urgency, 0) / taskUrgencies.length
+      : 1.0;
+    
+    // Combine project urgency and average task urgency
+    // Give more weight to task urgency (70%) vs project urgency (30%)
+    const combinedUrgency = (avgTaskUrgency * 0.7) + (projectUrgency * 0.3);
+    const weight = priorityScore * combinedUrgency * pendingMinutes;
     
     weights.set(project.id, weight);
     totalWeight += weight;
@@ -223,7 +240,8 @@ function selectProjectTasks(
   tasks: PlannerTask[],
   alloc: number,
   milestones: PlannerMilestone[],
-  allowPartial: boolean
+  allowPartial: boolean,
+  today: Date
 ): PlannedTaskResult[] {
   const scheduled: PlannedTaskResult[] = [];
   let remainingBudget = alloc;
@@ -231,13 +249,32 @@ function selectProjectTasks(
   // Get tasks for this project
   const projectTasks = tasks.filter(t => t.project_id === projectId && t.status !== 'completed');
   
-  // Sort by milestone order then task order
+  // Sort by deadline urgency first, then milestone order, then task order
   projectTasks.sort((a, b) => {
+    // Primary sort: by deadline urgency (tasks with earlier deadlines first)
+    const daysA = daysUntil(a.due_date, today);
+    const daysB = daysUntil(b.due_date, today);
+    
+    // If both have deadlines, sort by urgency (earlier deadline first)
+    if (a.due_date && b.due_date) {
+      const urgencyA = urgencyMult(daysA);
+      const urgencyB = urgencyMult(daysB);
+      if (urgencyA !== urgencyB) {
+        return urgencyB - urgencyA; // Higher urgency first
+      }
+    }
+    // If only one has a deadline, prioritize the one with deadline
+    if (a.due_date && !b.due_date) return -1;
+    if (!a.due_date && b.due_date) return 1;
+    
+    // Secondary sort: by milestone order
     if (a.milestone_id && b.milestone_id && a.milestone_id !== b.milestone_id) {
       const ma = milestones.find(m => m.id === a.milestone_id);
       const mb = milestones.find(m => m.id === b.milestone_id);
       return (ma?.order || 0) - (mb?.order || 0);
     }
+    
+    // Tertiary sort: by task order
     return a.order - b.order;
   });
   
@@ -487,8 +524,53 @@ export function planSession(input: PlannerInput): PlannerOutput {
       };
     }
     
-    // Allocate remaining budget
+    // Check for tasks with identical deadlines - prioritize completing one fully
     const remainingBudget = budgetMinutes - tier1Consumed;
+    const nonTier1Tasks = pendingTasks.filter(t => !isTier1(t));
+    
+    // Group tasks by deadline
+    const tasksByDeadline = new Map<string, typeof nonTier1Tasks>();
+    nonTier1Tasks.forEach(task => {
+      if (task.due_date) {
+        const key = task.due_date;
+        if (!tasksByDeadline.has(key)) tasksByDeadline.set(key, []);
+        tasksByDeadline.get(key)!.push(task);
+      }
+    });
+    
+    // Find deadlines where we can complete a full task
+    for (const [deadline, tasks] of tasksByDeadline) {
+      const fullyCompletableTask = tasks.find(task => 
+        (task.estimated_minutes || DEFAULT_EST) <= remainingBudget
+      );
+      
+      if (fullyCompletableTask) {
+        // Schedule this task fully and skip project allocation
+        const scheduledTask: PlannedTaskResult = {
+          position: tier1Scheduled.length + 1,
+          taskId: fullyCompletableTask.id,
+          projectId: fullyCompletableTask.project_id,
+          isSolo: isSolo(fullyCompletableTask),
+          tier1: false,
+          milestoneTitle: null,
+          title: fullyCompletableTask.title,
+          priority: fullyCompletableTask.priority,
+          scheduledMinutes: fullyCompletableTask.estimated_minutes || DEFAULT_EST,
+          partial: false,
+          carryOverMinutes: 0,
+        };
+        
+        return {
+          budgetMinutes,
+          totalUsedMinutes: tier1Consumed + scheduledTask.scheduledMinutes,
+          slackMinutes: budgetMinutes - (tier1Consumed + scheduledTask.scheduledMinutes),
+          taskCount: tier1Scheduled.length + 1,
+          tasks: [...tier1Scheduled, scheduledTask],
+        };
+      }
+    }
+    
+    // If no single task can be completed, proceed with normal project allocation
     const allocations = allocateBudget(projects, pendingTasks, remainingBudget, today);
     
     // Select tasks for each allocation
@@ -501,7 +583,7 @@ export function planSession(input: PlannerInput): PlannerOutput {
         projectTasksMap.set(projectId, soloTasks);
         totalScheduledMinutes += soloTasks.reduce((sum, t) => sum + t.scheduledMinutes, 0);
       } else {
-        const projectTasks = selectProjectTasks(projectId, pendingTasks, alloc, milestones, shouldAllowPartial);
+        const projectTasks = selectProjectTasks(projectId, pendingTasks, alloc, milestones, shouldAllowPartial, today);
         projectTasksMap.set(projectId, projectTasks);
         totalScheduledMinutes += projectTasks.reduce((sum, t) => sum + t.scheduledMinutes, 0);
       }

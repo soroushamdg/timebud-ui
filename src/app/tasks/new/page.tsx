@@ -41,6 +41,7 @@ export default function NewTaskPage(props: { searchParams: Promise<{ projectId?:
   })
   const [titleError, setTitleError] = useState('')
   const [projectError, setProjectError] = useState('')
+  const [deadlineError, setDeadlineError] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
 
   const { data: projects = [] } = useProjectsForTasks()
@@ -49,6 +50,12 @@ export default function NewTaskPage(props: { searchParams: Promise<{ projectId?:
     status: 'pending',
     type: 'task'
   })
+  
+  // Helper function to format date for input
+  const formatDateForInput = (dateString: string | null): string => {
+    if (!dateString) return ''
+    return dateString.split('T')[0] // Extract YYYY-MM-DD part from ISO string
+  }
   
   // Pre-select project if projectId is in URL
   useEffect(() => {
@@ -208,6 +215,7 @@ export default function NewTaskPage(props: { searchParams: Promise<{ projectId?:
     // Clear previous errors
     setTitleError('')
     setProjectError('')
+    setDeadlineError('')
     setErrorMessage('')
     
     // Validation
@@ -221,6 +229,20 @@ export default function NewTaskPage(props: { searchParams: Promise<{ projectId?:
       return
     }
     
+    // Deadline validation: task/milestone deadline cannot be after project deadline
+    if (formData.project_id && formData.due_date) {
+      const selectedProject = projects.find(p => p.id === formData.project_id)
+      if (selectedProject && selectedProject.deadline) {
+        const taskDeadline = new Date(formData.due_date)
+        const projectDeadline = new Date(selectedProject.deadline)
+        
+        if (taskDeadline > projectDeadline) {
+          setDeadlineError(`${itemType === 'milestone' ? 'Milestone' : 'Task'} deadline cannot be after project deadline (${new Date(selectedProject.deadline).toLocaleDateString()})`)
+          return
+        }
+      }
+    }
+    
     createTask.mutate({ ...formData, itemType })
   }
   
@@ -228,6 +250,13 @@ export default function NewTaskPage(props: { searchParams: Promise<{ projectId?:
     setFormData(prev => ({ ...prev, [field]: value }))
     if (field === 'title' && titleError) {
       setTitleError('')
+    }
+    if (field === 'due_date' && deadlineError) {
+      setDeadlineError('')
+    }
+    if (field === 'project_id' && (projectError || deadlineError)) {
+      setProjectError('')
+      setDeadlineError('')
     }
   }
   
@@ -367,8 +396,13 @@ export default function NewTaskPage(props: { searchParams: Promise<{ projectId?:
             type="date"
             value={formData.due_date}
             onChange={(e) => handleInputChange('due_date', e.target.value)}
-            className="w-full bg-bg-card border border-border-card rounded-2xl px-5 py-3.5 text-white focus:outline-none focus:border-accent-yellow transition-colors [&::-webkit-calendar-picker-indicator]:filter [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-70 [&::-webkit-calendar-picker-indicator]:hover:opacity-100"
+            className={`w-full bg-bg-card border rounded-2xl px-5 py-3.5 text-white focus:outline-none transition-colors [&::-webkit-calendar-picker-indicator]:filter [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-70 [&::-webkit-calendar-picker-indicator]:hover:opacity-100 ${
+              deadlineError ? 'border-accent-pink' : 'border-border-card focus:border-accent-yellow'
+            }`}
           />
+          {deadlineError && (
+            <p className="text-accent-pink text-sm mt-2">{deadlineError}</p>
+          )}
         </div>
         
         {/* Priority - Task only */}

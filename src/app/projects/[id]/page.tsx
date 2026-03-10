@@ -61,6 +61,7 @@ export default function ProjectOverviewPage({ params }: { params: Promise<{ id: 
     depends_on_task: '',
     item_type: 'task' as 'task' | 'milestone'
   })
+  const [editFormError, setEditFormError] = useState('')
   
   // Project edit state
   const [projectFormData, setProjectFormData] = useState({
@@ -158,15 +159,15 @@ export default function ProjectOverviewPage({ params }: { params: Promise<{ id: 
   
   // Initialize project form data when project loads
   useEffect(() => {
-    if (project) {
+    if (project && !editingProject) {
       setProjectFormData({
         name: project.name,
         description: project.description || '',
-        deadline: project.deadline || '',
+        deadline: formatDateForInput(project.deadline),
         color: project.color || ''
       })
     }
-  }, [project])
+  }, [project, editingProject])
 
   // Save sort mode to localStorage when it changes
   useEffect(() => {
@@ -199,10 +200,15 @@ export default function ProjectOverviewPage({ params }: { params: Promise<{ id: 
     return acc
   }, {} as Record<string, TaskStatus>)
   
-  // Check if task is locked
+  // Check if task is locked (only for completion)
   const isLocked = useCallback((task: DbTask) => {
     return task.depends_on_task !== null && taskStatusMap[task.depends_on_task] !== 'completed'
   }, [taskStatusMap])
+
+  // Check if task can be interacted with (for editing, deleting, prioritizing)
+  const canInteract = useCallback((task: DbTask) => {
+    return task.item_type === 'task' // Only tasks can be interacted with, not milestones
+  }, [])
   
   // Calculate progress - only count tasks, not milestones
   const completedTaskCount = tasks.filter(t => t.status === 'completed').length
@@ -216,7 +222,7 @@ export default function ProjectOverviewPage({ params }: { params: Promise<{ id: 
   
   // Swipe gesture handlers (mobile only)
   const handleTouchStart = useCallback((e: React.TouchEvent, task: DbTask) => {
-    if (!isMobile || isLocked(task) || task.status === 'completed' || task.item_type === 'milestone') return
+    if (!isMobile || !canInteract(task) || task.status === 'completed') return
     
     const touch = e.touches[0]
     setStartX(touch.clientX)
@@ -224,7 +230,7 @@ export default function ProjectOverviewPage({ params }: { params: Promise<{ id: 
     setSwipedTask(task)
     setSwipeDistance(0)
     setSwipeDirection(null)
-  }, [isLocked])
+  }, [canInteract])
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
     if (!swipedTask) return
@@ -258,11 +264,13 @@ export default function ProjectOverviewPage({ params }: { params: Promise<{ id: 
       // Full swipe - instant action
       try {
         if (swipeDirection === 'right') {
-          // Complete task
-          await updateTask.mutateAsync({
-            id: swipedTask.id,
-            status: 'completed'
-          })
+          // Complete task - check if locked
+          if (!isLocked(swipedTask)) {
+            await updateTask.mutateAsync({
+              id: swipedTask.id,
+              status: 'completed'
+            })
+          }
         } else if (swipeDirection === 'left') {
           // Delete task
           const supabase = createClient()
@@ -406,6 +414,12 @@ export default function ProjectOverviewPage({ params }: { params: Promise<{ id: 
     }
   }, [handleFinishCreation])
   
+  // Helper function to format date for input
+  const formatDateForInput = (dateString: string | null): string => {
+    if (!dateString) return ''
+    return dateString.split('T')[0] // Extract YYYY-MM-DD part from ISO string
+  }
+
   // Edit handlers
   const handleStartEditItem = useCallback((item: DbTask) => {
     setEditingItem(item)
@@ -413,7 +427,7 @@ export default function ProjectOverviewPage({ params }: { params: Promise<{ id: 
       title: item.title,
       description: item.description || '',
       estimated_minutes: item.estimated_minutes?.toString() || '',
-      due_date: item.due_date || '',
+      due_date: formatDateForInput(item.due_date),
       priority: item.priority,
       depends_on_task: item.depends_on_task || '',
       item_type: item.item_type
@@ -422,6 +436,20 @@ export default function ProjectOverviewPage({ params }: { params: Promise<{ id: 
   
   const handleSaveEditItem = useCallback(async () => {
     if (!editingItem || !editFormData.title.trim()) return
+    
+    // Clear previous errors
+    setEditFormError('')
+    
+    // Deadline validation: task/milestone deadline cannot be after project deadline
+    if (project && editFormData.due_date && project.deadline) {
+      const itemDeadline = new Date(editFormData.due_date)
+      const projectDeadline = new Date(project.deadline)
+      
+      if (itemDeadline > projectDeadline) {
+        setEditFormError(`${editFormData.item_type === 'milestone' ? 'Milestone' : 'Task'} deadline cannot be after project deadline (${new Date(project.deadline).toLocaleDateString()})`)
+        return
+      }
+    }
     
     try {
       const supabase = createClient()
@@ -462,10 +490,11 @@ export default function ProjectOverviewPage({ params }: { params: Promise<{ id: 
     } catch (error) {
       console.error('Failed to update item:', error)
     }
-  }, [editingItem, editFormData, queryClient])
+  }, [editingItem, editFormData, project, queryClient])
   
   const handleCancelEditItem = useCallback(() => {
     setEditingItem(null)
+    setEditFormError('')
     setEditFormData({
       title: '',
       description: '',
@@ -483,7 +512,7 @@ export default function ProjectOverviewPage({ params }: { params: Promise<{ id: 
       setProjectFormData({
         name: project.name,
         description: project.description || '',
-        deadline: project.deadline || '',
+        deadline: formatDateForInput(project.deadline),
         color: project.color || ''
       })
       setEditingProject(true)
@@ -701,6 +730,7 @@ export default function ProjectOverviewPage({ params }: { params: Promise<{ id: 
       const taskNumber = getTaskNumber(item)
       const locked = isLocked(item)
       const completed = item.status === 'completed'
+      const canEdit = canInteract(item) && !completed
       
       return (
         <div key={item.id} className="relative">
@@ -739,7 +769,7 @@ export default function ProjectOverviewPage({ params }: { params: Promise<{ id: 
           )}
 
           <div
-            draggable={isDraggable && sortMode === 'manual' && !locked && !completed}
+            draggable={isDraggable && sortMode === 'manual' && !completed}
             onDragStart={isDraggable && sortMode === 'manual' ? (e) => handleDragStart(e, item) : undefined}
             onDragOver={isDraggable ? (e) => handleDragOver(e, index) : undefined}
             onDragLeave={isDraggable ? handleDragLeave : undefined}
@@ -751,12 +781,12 @@ export default function ProjectOverviewPage({ params }: { params: Promise<{ id: 
             onMouseEnter={() => !isMobile && setHoveredTask(item.id)}
             onMouseLeave={() => !isMobile && setHoveredTask(null)}
             onClick={() => {
-              if (!isMobile && !locked && !completed) {
+              if (!isMobile && canEdit) {
                 handleSingleClick(item)
               }
             }}
             onDoubleClick={() => {
-              if (!isMobile && !locked && !completed) {
+              if (!isMobile && canEdit) {
                 handleDoubleClick(item)
               }
             }}
@@ -769,8 +799,8 @@ export default function ProjectOverviewPage({ params }: { params: Promise<{ id: 
                   ? 'bg-bg-card-locked' 
                   : 'bg-bg-card border-border-card'
               }
-              ${!locked && !completed && !isMobile ? 'cursor-pointer' : ''}
-              ${isDraggable && sortMode === 'manual' && !locked && !completed ? 'cursor-move' : ''}
+              ${canEdit && !isMobile ? 'cursor-pointer' : ''}
+              ${isDraggable && sortMode === 'manual' && !completed ? 'cursor-move' : ''}
               ${dragOverIndex === index ? 'ring-2 ring-accent-yellow' : ''}
             `}
           >
@@ -1277,9 +1307,17 @@ export default function ProjectOverviewPage({ params }: { params: Promise<{ id: 
                   <input
                     type="date"
                     value={editFormData.due_date}
-                    onChange={(e) => setEditFormData(prev => ({ ...prev, due_date: e.target.value }))}
-                    className="w-full px-4 py-2 bg-bg-card border border-border-card rounded-lg text-white placeholder-text-sec outline-none focus:border-accent-yellow transition-colors"
+                    onChange={(e) => {
+                      setEditFormData(prev => ({ ...prev, due_date: e.target.value }))
+                      if (editFormError) setEditFormError('')
+                    }}
+                    className={`w-full px-4 py-2 bg-bg-card border rounded-lg text-white placeholder-text-sec outline-none transition-colors ${
+                      editFormError ? 'border-accent-pink' : 'border-border-card focus:border-accent-yellow'
+                    }`}
                   />
+                  {editFormError && (
+                    <p className="text-accent-pink text-sm mt-2">{editFormError}</p>
+                  )}
                 </div>
                 
                 {/* Priority */}

@@ -31,13 +31,19 @@ export function EditTaskDialog({
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Helper function to format date for input
+  const formatDateForInput = (dateString: string | null): string => {
+    if (!dateString) return ''
+    return dateString.split('T')[0] // Extract YYYY-MM-DD part from ISO string
+  }
+
   useEffect(() => {
     if (task) {
       setFormData({
         title: task.title,
         description: task.description || '',
         estimated_minutes: task.estimated_minutes?.toString() || '',
-        due_date: task.due_date || '',
+        due_date: formatDateForInput(task.due_date),
         priority: task.priority,
         project_id: task.project_id,
       });

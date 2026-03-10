@@ -9,7 +9,9 @@ import { useUpdateFocusSession, useCreateFocusSession, useCreateCompletedFocusSe
 import { toUtcString } from '@/lib/dates'
 import { PlannedTask } from '@/stores/sessionStore'
 import { FocusTaskCard } from '@/components/tasks/FocusTaskCard'
+import { PartialTaskCompletionDialog } from '@/components/dialogs/PartialTaskCompletionDialog'
 import { useFocusSessionGuard } from '@/hooks/useSessionGuard'
+import { useReplan } from '@/contexts/ReplanContext'
 
 export default function FocusSession() {
   const router = useRouter()
@@ -18,12 +20,15 @@ export default function FocusSession() {
   const updateFocusSession = useUpdateFocusSession()
   const createFocusSession = useCreateFocusSession()
   const createCompletedFocusSession = useCreateCompletedFocusSession()
+  const { triggerReplan } = useReplan()
   
   // Focus session guard - allow this page but redirect if no active focus session
   useFocusSessionGuard(true);
   
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
   const [showStopConfirmDialog, setShowStopConfirmDialog] = useState(false)
+  const [showPartialCompletionDialog, setShowPartialCompletionDialog] = useState(false)
+  const [selectedTask, setSelectedTask] = useState<PlannedTask | null>(null)
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
   const [loadingTaskIds, setLoadingTaskIds] = useState<Set<string>>(new Set())
   
@@ -68,6 +73,14 @@ export default function FocusSession() {
   }
 
   const handleTaskCheckmark = async (taskId: string) => {
+    const task = focusSessionStore.plannedTasks.find(t => t.taskId === taskId)
+    
+    if (task?.partial && !task.done) {
+      setSelectedTask(task)
+      setShowPartialCompletionDialog(true)
+      return
+    }
+    
     setLoadingTaskIds(prev => new Set(prev).add(taskId))
     
     try {
@@ -130,13 +143,57 @@ export default function FocusSession() {
     }
     
     focusSessionStore.clearFocusSession()
+    
+    // Trigger planner re-run after session ends
+    triggerReplan()
+    
     router.push('/')
   }
 
   const handleEndWithoutSaving = () => {
     clearTimer()
     focusSessionStore.clearFocusSession()
+    
+    // Trigger planner re-run after session ends without saving
+    triggerReplan()
+    
     router.push('/')
+  }
+
+  const handleUpdateEstimatedTime = async (remainingMinutes: number) => {
+    if (!selectedTask) return
+    
+    const newEstimatedMinutes = selectedTask.scheduledMinutes + remainingMinutes
+    
+    try {
+      await updateTask.mutateAsync({ 
+        id: selectedTask.taskId, 
+        estimated_minutes: newEstimatedMinutes 
+      })
+      
+      focusSessionStore.markTaskDone(selectedTask.taskId)
+    } catch (error) {
+      console.error('Failed to update task estimated time:', error)
+    }
+  }
+
+  const handleMarkTaskComplete = async () => {
+    if (!selectedTask) return
+    
+    setLoadingTaskIds(prev => new Set(prev).add(selectedTask.taskId))
+    
+    try {
+      await updateTask.mutateAsync({ id: selectedTask.taskId, status: 'completed' })
+      focusSessionStore.markTaskDone(selectedTask.taskId)
+    } catch (error) {
+      console.error('Failed to update task:', error)
+    } finally {
+      setLoadingTaskIds(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(selectedTask.taskId)
+        return newSet
+      })
+    }
   }
 
   useEffect(() => {
@@ -246,6 +303,20 @@ export default function FocusSession() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Partial task completion dialog */}
+      {selectedTask && (
+        <PartialTaskCompletionDialog
+          task={selectedTask}
+          isOpen={showPartialCompletionDialog}
+          onClose={() => {
+            setShowPartialCompletionDialog(false)
+            setSelectedTask(null)
+          }}
+          onUpdateEstimatedTime={handleUpdateEstimatedTime}
+          onMarkComplete={handleMarkTaskComplete}
+        />
       )}
     </div>
   )
