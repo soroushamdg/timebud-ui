@@ -11,6 +11,7 @@ import { createClient } from '@/lib/supabase/client'
 import { DbMilestone, DbProject, DbTask } from '@/types/database'
 import { planSession, PlannerMilestone, PlannerTask } from '@/lib/planner'
 import { X, HelpCircle } from 'lucide-react'
+import { useReplan } from '@/contexts/ReplanContext'
 
 interface ChangeSessionTimeDialogProps {
   isOpen: boolean
@@ -30,9 +31,10 @@ function formatTimeLabel(minutes: number): string {
 }
 
 export function ChangeSessionTimeDialog({ isOpen, onClose }: ChangeSessionTimeDialogProps) {
-  const { preferredBudgetMinutes, setBudget } = useUIStore()
+  const { preferredBudgetMinutes, setBudget, allowPartialTasks } = useUIStore()
   const { focusSessionId: sessionId, setFocusSession: setSession } = useFocusSessionStore()
   const updateSession = useUpdateFocusSession()
+  const { triggerReplan } = useReplan()
   
   const { data: projects = [] } = useProjects()
   const { data: tasks = [] } = useTasks()
@@ -64,53 +66,18 @@ export function ChangeSessionTimeDialog({ isOpen, onClose }: ChangeSessionTimeDi
     setIsReplanning(true)
     
     try {
-      // Update UI store
+      // Update UI store - this will trigger global re-planning
       setBudget(minutes)
-      
-      // Transform DbMilestone[] to PlannerMilestone[] and DbTask[] to PlannerTask[]
-      const plannerMilestones: PlannerMilestone[] = milestones
-        .filter(milestone => milestone.project_id !== null)
-        .map(milestone => ({
-          ...milestone,
-          project_id: milestone.project_id!,
-        }));
-      
-      const plannerTasks: PlannerTask[] = tasks
-        .filter(task => task.estimated_minutes !== null)
-        .map(task => ({
-          ...task,
-          estimated_minutes: task.estimated_minutes!,
-          status: task.status || 'pending',
-        }));
-      
-      // Re-plan session with new budget
-      const newPlan = planSession({
-        projects,
-        milestones: plannerMilestones,
-        tasks: plannerTasks,
-        budgetMinutes: minutes,
-      })
-      
-      // Convert PlannedTaskResult to PlannedTask (add done: false and project info)
-      const plannedTasks = newPlan.tasks.map(task => {
-        const project = projects.find(p => p.id === task.projectId);
-        return {
-          ...task,
-          done: false,
-          projectName: project?.name,
-          projectColor: project?.color || undefined,
-        };
-      })
       
       // Update session in database
       await updateSession.mutateAsync({
         id: sessionId,
         budget_minutes: minutes,
-        tasks_list: newPlan.tasks.map(t => t.taskId),
+        tasks_list: [], // Will be updated by the global re-planning
       })
       
-      // Update session store
-      setSession(sessionId, plannedTasks, minutes)
+      // Trigger global re-planning explicitly
+      await triggerReplan()
       
       onClose()
     } catch (error) {

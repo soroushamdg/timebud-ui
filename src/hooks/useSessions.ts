@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { toUtcString } from '@/lib/dates'
 import { DbFocusSession } from '@/types/database'
+import { useReplan } from '@/contexts/ReplanContext'
 
 type FocusSession = DbFocusSession
 type FocusSessionInsert = Omit<DbFocusSession, 'id' | 'user_id'>
@@ -132,6 +133,7 @@ export const useCreateCompletedFocusSession = () => {
 
 export const useDeleteFocusSession = () => {
   const queryClient = useQueryClient()
+  const { triggerReplan } = useReplan()
   
   return useMutation({
     mutationFn: async (id: string) => {
@@ -153,13 +155,14 @@ export const useDeleteFocusSession = () => {
     onSuccess: () => {
       console.log('Delete session onSuccess called')
       queryClient.invalidateQueries({ queryKey: ['sessions'] })
+      triggerReplan()
     },
     onError: (error, variables) => {
       console.error('Delete session onError called:', {
         error: error || 'No error object',
         errorMessage: error instanceof Error ? error.message : 'No message',
         errorString: JSON.stringify(error, null, 2),
-        variables
+        variables 
       })
     },
   })

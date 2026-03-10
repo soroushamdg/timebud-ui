@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { toUtcString } from '@/lib/dates'
 import { DbProject } from '@/types/database'
+import { useReplan } from '@/contexts/ReplanContext'
 
 type Project = DbProject
 type ProjectInsert = Omit<DbProject, 'id' | 'created_at' | 'user_id' | 'status'>
@@ -95,6 +96,7 @@ export const useProject = (id: string | undefined) => {
 
 export const useCreateProject = () => {
   const queryClient = useQueryClient()
+  const { triggerReplan } = useReplan()
   
   return useMutation({
     mutationFn: async (project: Omit<ProjectInsert, 'user_id' | 'status' | 'created_at' | 'updated_at'>) => {
@@ -119,12 +121,14 @@ export const useCreateProject = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects'] })
+      triggerReplan()
     },
   })
 }
 
 export const useUpdateProject = () => {
   const queryClient = useQueryClient()
+  const { triggerReplan } = useReplan()
   
   return useMutation({
     mutationFn: async ({ id, ...fields }: ProjectUpdate & { id: string }) => {
@@ -154,6 +158,7 @@ export const useUpdateProject = () => {
       console.log('Update onSuccess called for variables:', variables)
       queryClient.invalidateQueries({ queryKey: ['projects'] })
       queryClient.invalidateQueries({ queryKey: ['projects', variables.id] })
+      triggerReplan()
     },
     onError: (error, variables) => {
       console.error('Update onError called:', { 

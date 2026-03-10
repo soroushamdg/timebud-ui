@@ -58,6 +58,7 @@ export default function ProjectOverviewPage({ params }: { params: Promise<{ id: 
     estimated_minutes: '',
     due_date: '',
     priority: false,
+    depends_on_task: '',
     item_type: 'task' as 'task' | 'milestone'
   })
   
@@ -414,6 +415,7 @@ export default function ProjectOverviewPage({ params }: { params: Promise<{ id: 
       estimated_minutes: item.estimated_minutes?.toString() || '',
       due_date: item.due_date || '',
       priority: item.priority,
+      depends_on_task: item.depends_on_task || '',
       item_type: item.item_type
     })
   }, [])
@@ -434,10 +436,12 @@ export default function ProjectOverviewPage({ params }: { params: Promise<{ id: 
       if (editFormData.item_type === 'task') {
         updateData.status = editingItem.status || 'pending'
         updateData.estimated_minutes = editFormData.estimated_minutes ? parseInt(editFormData.estimated_minutes) : null
+        updateData.depends_on_task = editFormData.depends_on_task || null
       } else {
         // Milestone-specific
         updateData.status = null
         updateData.estimated_minutes = null
+        updateData.depends_on_task = null
       }
       
       // Add due date if provided
@@ -468,6 +472,7 @@ export default function ProjectOverviewPage({ params }: { params: Promise<{ id: 
       estimated_minutes: '',
       due_date: '',
       priority: false,
+      depends_on_task: '',
       item_type: 'task'
     })
   }, [])
@@ -1244,6 +1249,24 @@ export default function ProjectOverviewPage({ params }: { params: Promise<{ id: 
                         placeholder="Enter estimated minutes..."
                         min="1"
                       />
+                    </div>
+                    
+                    <div>
+                      <label className="text-text-sec text-sm mb-2 block">Depends on task (optional)</label>
+                      <select
+                        value={editFormData.depends_on_task}
+                        onChange={(e) => setEditFormData(prev => ({ ...prev, depends_on_task: e.target.value }))}
+                        className="w-full px-4 py-2 bg-bg-card border border-border-card rounded-lg text-white outline-none focus:border-accent-yellow transition-colors"
+                      >
+                        <option value="">No dependency</option>
+                        {tasks
+                          .filter(task => task.id !== editingItem?.id) // Don't allow self-dependency
+                          .map((task) => (
+                            <option key={task.id} value={task.id}>
+                              {task.title}
+                            </option>
+                          ))}
+                      </select>
                     </div>
                   </>
                 )}

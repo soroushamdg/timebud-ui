@@ -106,7 +106,13 @@ function scheduleTier1(tasks: PlannerTask[], budget: number, today: Date, allowP
     const estimate = task.estimated_minutes || DEFAULT_EST;
     const scheduledMinutes = Math.min(estimate, remaining);
     
-    if (ALLOW_PARTIAL && scheduledMinutes >= PARTIAL_FLOOR) {
+    // If partial tasks allowed, schedule if we have minimum allocation
+    // If partial tasks disabled, only schedule if full task fits
+    const canSchedule = allowPartial 
+      ? scheduledMinutes >= PARTIAL_FLOOR 
+      : scheduledMinutes >= estimate;
+    
+    if (canSchedule) {
       scheduled.push({
         position: scheduled.length + 1,
         taskId: task.id,
@@ -240,7 +246,9 @@ function selectProjectTasks(
   // Multiple passes: priority tasks first
   for (const pass of [true, false]) {
     for (const task of projectTasks) {
-      if (remainingBudget < PARTIAL_FLOOR) break;
+      const estimate = task.estimated_minutes || DEFAULT_EST;
+      const minRequired = allowPartial ? PARTIAL_FLOOR : estimate;
+      if (remainingBudget < minRequired) continue; // Changed from break to continue to check other tasks
       if (scheduledTaskIds.has(task.id)) continue;
       if (pass !== task.priority) continue;
       
@@ -252,10 +260,15 @@ function selectProjectTasks(
         }
       }
       
-      const estimate = task.estimated_minutes || DEFAULT_EST;
       const scheduledMinutes = Math.min(estimate, remainingBudget);
       
-      if (allowPartial && scheduledMinutes >= PARTIAL_FLOOR) {
+      // If partial tasks allowed, schedule if we have minimum allocation
+      // If partial tasks disabled, only schedule if full task fits
+      const canSchedule = allowPartial 
+        ? scheduledMinutes >= PARTIAL_FLOOR 
+        : scheduledMinutes >= estimate;
+      
+      if (canSchedule) {
         const milestone = milestones.find(m => m.id === task.milestone_id);
         
         scheduled.push({
@@ -305,12 +318,19 @@ function selectSoloTasks(tasks: PlannerTask[], alloc: number, today: Date, allow
   });
   
   for (const task of soloTasks) {
-    if (remainingBudget < PARTIAL_FLOOR) break;
-    
     const estimate = task.estimated_minutes || DEFAULT_EST;
+    const minRequired = allowPartial ? PARTIAL_FLOOR : estimate;
+    if (remainingBudget < minRequired) continue; // Changed from break to continue to check other tasks
+    
     const scheduledMinutes = Math.min(estimate, remainingBudget);
     
-    if (ALLOW_PARTIAL && scheduledMinutes >= PARTIAL_FLOOR) {
+    // If partial tasks allowed, schedule if we have minimum allocation
+    // If partial tasks disabled, only schedule if full task fits
+    const canSchedule = allowPartial 
+      ? scheduledMinutes >= PARTIAL_FLOOR 
+      : scheduledMinutes >= estimate;
+    
+    if (canSchedule) {
       scheduled.push({
         position: scheduled.length + 1,
         taskId: task.id,

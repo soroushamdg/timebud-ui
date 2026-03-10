@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { toUtcString } from '@/lib/dates'
 import { DbTask, TaskStatus } from '@/types/database'
+import { useReplan } from '@/contexts/ReplanContext'
 
 type Task = DbTask
 type TaskInsert = Omit<DbTask, 'id' | 'created_at' | 'user_id'>
@@ -64,6 +65,7 @@ export const useTask = (id: string | undefined) => {
 
 export const useUpdateTask = () => {
   const queryClient = useQueryClient()
+  const { triggerReplan } = useReplan()
   
   return useMutation({
     mutationFn: async ({ id, ...fields }: TaskUpdate & { id: string }) => {
@@ -79,12 +81,14 @@ export const useUpdateTask = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] })
+      triggerReplan()
     },
   })
 }
 
 export const useCreateTask = () => {
   const queryClient = useQueryClient()
+  const { triggerReplan } = useReplan()
   
   return useMutation({
     mutationFn: async (task: Omit<TaskInsert, 'created_at'>) => {
@@ -109,6 +113,28 @@ export const useCreateTask = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] })
+      triggerReplan()
+    },
+  })
+}
+
+export const useDeleteTask = () => {
+  const queryClient = useQueryClient()
+  const { triggerReplan } = useReplan()
+  
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const supabase = createClient()
+      const { error } = await supabase
+        .from('tasks')
+        .delete()
+        .eq('id', id)
+      if (error) throw error
+      return id
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] })
+      triggerReplan()
     },
   })
 }

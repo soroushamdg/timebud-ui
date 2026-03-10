@@ -15,6 +15,8 @@ import { planSession, PlannerTask } from '@/lib/planner'
 import { useFocusSessionStore } from '@/stores/sessionStore'
 import { useUIStore } from '@/stores/uiStore'
 import { useLoading } from '@/contexts/LoadingContext'
+import { useReplan } from '@/contexts/ReplanContext'
+import { useReplanOnUIChange } from '@/hooks/useReplanOnUIChange'
 import { getDiceBearUrl, isValidUuid } from '@/lib/utils'
 import { DbFocusSession, DbTask } from '@/types/database'
 import { useFocusSessionGuard } from '@/hooks/useSessionGuard'
@@ -46,6 +48,9 @@ export default function Home() {
   // Focus session guard - auto-redirect to running focus session
   useFocusSessionGuard();
 
+  // Trigger re-planning when UI settings change
+  useReplanOnUIChange();
+
   const { data: latestUnfinished } = useLatestUnfinishedFocusSession();
   const { data: projects, isLoading: projectsLoading } = useProjects();
   const { data: tasks, isLoading: tasksLoading } = useTasks({
@@ -54,6 +59,7 @@ export default function Home() {
   const createFocusSession = useCreateFocusSession();
   const deleteFocusSession = useDeleteFocusSession();
   const { preferredBudgetMinutes, allowPartialTasks } = useUIStore();
+  const { registerReplanFunction } = useReplan();
   const setFocusSession = useFocusSessionStore((state) => state.setFocusSession);
   const markTaskDone = useFocusSessionStore((state) => state.markTaskDone);
 
@@ -83,6 +89,11 @@ export default function Home() {
       setLoadingComplete();
     }
   }, [latestUnfinished, projects, tasks, projectsLoading, tasksLoading, setLoadingProgress, setLoadingComplete]);
+
+  // Register the re-planning function with the context
+  useEffect(() => {
+    registerReplanFunction(planSessionData);
+  }, [registerReplanFunction]);
 
   const planSessionData = async () => {
     if (!projects || !tasks) {
