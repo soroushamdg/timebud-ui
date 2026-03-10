@@ -806,17 +806,19 @@ export default function ProjectOverviewPage({ params }: { params: Promise<{ id: 
                   {item.title}
                 </h3>
               </div>
-              {item.due_date && (
-                <p className="text-text-sec text-sm mt-1">
-                  {formatLocalSmart(item.due_date)}
-                </p>
-              )}
               {item.estimated_minutes && (
                 <p className="text-text-sec text-sm mt-1">
                   Estimated: {item.estimated_minutes} min
                 </p>
               )}
             </div>
+            
+            {/* Deadline in trailing position */}
+            {item.due_date && (
+              <div className="flex-shrink-0 text-text-sec text-sm font-medium ml-3">
+                {formatLocalSmart(item.due_date)}
+              </div>
+            )}
             
             {/* Desktop hover actions */}
             {!isMobile && !locked && !completed && isHovered && (
