@@ -33,6 +33,9 @@ interface PlannedTask {
   estimatedMinutes?: number;
   scheduledMinutes?: number;
   partial?: boolean;
+  priority?: boolean;
+  deadline?: string;
+  description?: string;
 }
 
 export default function Home() {
@@ -149,7 +152,8 @@ export default function Home() {
           scheduledMinutes: task.scheduledMinutes,
           partial: task.partial,
           priority: dbTask?.priority,
-          deadline: dbTask?.due_date,
+          deadline: dbTask?.due_date || undefined,
+          description: dbTask?.description || undefined,
         };
       });
 
@@ -199,7 +203,8 @@ export default function Home() {
         done: false,
         estimatedMinutes: task.estimated_minutes || undefined,
         priority: task.priority,
-        deadline: task.due_date,
+        deadline: task.due_date || undefined,
+        description: task.description || undefined,
       }));
 
       // Also convert to session store format
@@ -260,6 +265,13 @@ export default function Home() {
     const { startTimer } = useFocusSessionStore.getState();
     startTimer();
     router.push("/session/focus");
+  };
+
+  const handleTaskClick = (task: PlannedTask) => {
+    if (task.projectId) {
+      // Navigate to project page with task ID for highlighting
+      router.push(`/projects/${task.projectId}?taskId=${task.taskId}`);
+    }
   };
 
   if (unfinishedFocusSession) {
@@ -385,11 +397,7 @@ export default function Home() {
                 <TaskCard
                   key={task.taskId}
                   task={task}
-                  onClick={() => {
-                    if (task.projectId) {
-                      router.push(`/projects/${task.projectId}`)
-                    }
-                  }}
+                  onClick={() => handleTaskClick(task)}
                 />
               ))}
             </div>

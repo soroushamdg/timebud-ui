@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback, use, useEffect, useRef } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { X, ChevronDown, Lock, Check, Plus, ArrowUpDown, Trash2, MoreVertical, Edit, CalendarIcon, ChevronLeft } from 'lucide-react'
 import { ChevronDoubleUpIcon } from '@heroicons/react/24/outline'
 import { useTasks, useUpdateTask } from '@/hooks/useTasks'
@@ -80,6 +80,14 @@ export default function ProjectOverviewPage({ params }: { params: Promise<{ id: 
   // Platform detection
   const [isMobile, setIsMobile] = useState(false)
   
+  // Task highlighting
+  const searchParams = useSearchParams()
+  const highlightedTaskId = searchParams?.get('taskId')
+  const [shouldScrollToTask, setShouldScrollToTask] = useState(false)
+  const taskRefs = useRef<Record<string, HTMLDivElement | null>>({})
+  const animationTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const glowStylesAddedRef = useRef(false)
+  
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = () => setShowTaskMenu(null)
@@ -123,6 +131,71 @@ export default function ProjectOverviewPage({ params }: { params: Promise<{ id: 
       inputRef.current.focus()
     }
   }, [creatingTask, creatingMilestone])
+  
+  // Scroll to highlighted task when component mounts or taskId changes
+  useEffect(() => {
+    if (highlightedTaskId && !shouldScrollToTask) {
+      // Small delay to ensure DOM is rendered
+      const timer = setTimeout(() => {
+        setShouldScrollToTask(true)
+      }, 100)
+      return () => clearTimeout(timer)
+    }
+  }, [highlightedTaskId, shouldScrollToTask])
+  
+  // Inject glow keyframes once
+  const ensureGlowStyles = () => {
+    if (glowStylesAddedRef.current) return
+    const style = document.createElement('style')
+    style.textContent = `@keyframes taskGlowPulse {
+      0% { box-shadow: 0 0 0 0 rgba(245, 197, 24, 0); opacity: 1; }
+      16% { box-shadow: 0 0 12px 4px rgba(245, 197, 24, 0.55); opacity: 0.5; }
+      33% { box-shadow: 0 0 18px 6px rgba(245, 197, 24, 0.9); opacity: 1; }
+      50% { box-shadow: 0 0 12px 4px rgba(245, 197, 24, 0.55); opacity: 0.5; }
+      66% { box-shadow: 0 0 18px 6px rgba(245, 197, 24, 0.9); opacity: 1; }
+      83% { box-shadow: 0 0 12px 4px rgba(245, 197, 24, 0.55); opacity: 0.5; }
+      100% { box-shadow: 0 0 0 0 rgba(245, 197, 24, 0); opacity: 1; }
+    }`
+    document.head.appendChild(style)
+    glowStylesAddedRef.current = true
+  }
+  
+  // Perform scroll and highlighting
+  useEffect(() => {
+    // Clean up any existing animation timeout
+    if (animationTimeoutRef.current) {
+      clearTimeout(animationTimeoutRef.current)
+      animationTimeoutRef.current = null
+    }
+    
+    if (shouldScrollToTask && highlightedTaskId && taskRefs.current[highlightedTaskId]) {
+      ensureGlowStyles()
+      const element = taskRefs.current[highlightedTaskId]
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        
+        element.style.animation = 'taskGlowPulse 2s ease-in-out forwards'
+        
+        // Cleanup after animation completes
+        animationTimeoutRef.current = setTimeout(() => {
+          element.style.animation = ''
+          element.style.boxShadow = ''
+          element.style.opacity = ''
+          element.style.transition = ''
+          animationTimeoutRef.current = null
+        }, 2000)
+        
+        setShouldScrollToTask(false)
+      }
+    }
+    
+    return () => {
+      if (animationTimeoutRef.current) {
+        clearTimeout(animationTimeoutRef.current)
+        animationTimeoutRef.current = null
+      }
+    }
+  }, [shouldScrollToTask, highlightedTaskId])
   
   // Handle click outside to finish creation
   useEffect(() => {
@@ -769,6 +842,7 @@ export default function ProjectOverviewPage({ params }: { params: Promise<{ id: 
           )}
 
           <div
+            ref={(el) => { taskRefs.current[item.id] = el }}
             draggable={isDraggable && sortMode === 'manual' && !completed}
             onDragStart={isDraggable && sortMode === 'manual' ? (e) => handleDragStart(e, item) : undefined}
             onDragOver={isDraggable ? (e) => handleDragOver(e, index) : undefined}
@@ -792,7 +866,7 @@ export default function ProjectOverviewPage({ params }: { params: Promise<{ id: 
             }}
             style={{ transform: swipeTransform }}
             className={`
-              mb-3 rounded-2xl px-4 py-3 flex items-center gap-3 border transition-all relative z-10
+              mb-3 rounded-none px-4 py-3 flex items-center gap-3 border transition-all relative z-10
               ${completed 
                 ? 'bg-bg-card-done border-accent-green/30' 
                 : locked 

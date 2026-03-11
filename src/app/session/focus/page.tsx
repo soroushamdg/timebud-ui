@@ -10,6 +10,7 @@ import { toUtcString } from '@/lib/dates'
 import { PlannedTask } from '@/stores/sessionStore'
 import { FocusTaskCard } from '@/components/tasks/FocusTaskCard'
 import { PartialTaskCompletionDialog } from '@/components/dialogs/PartialTaskCompletionDialog'
+import { TaskOverviewDialog } from '@/components/dialogs/TaskOverviewDialog'
 import { useFocusSessionGuard } from '@/hooks/useSessionGuard'
 import { useReplan } from '@/contexts/ReplanContext'
 
@@ -28,6 +29,7 @@ export default function FocusSession() {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
   const [showStopConfirmDialog, setShowStopConfirmDialog] = useState(false)
   const [showPartialCompletionDialog, setShowPartialCompletionDialog] = useState(false)
+  const [showTaskOverview, setShowTaskOverview] = useState(false)
   const [selectedTask, setSelectedTask] = useState<PlannedTask | null>(null)
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
   const [loadingTaskIds, setLoadingTaskIds] = useState<Set<string>>(new Set())
@@ -97,11 +99,10 @@ export default function FocusSession() {
     }
   }
 
-  const handleTaskClick = (projectId: string | null) => {
-    if (projectId) {
-      router.push('/projects/' + projectId)
-    }
-  }
+  const handleTaskClick = (task: PlannedTask) => {
+    setSelectedTask(task);
+    setShowTaskOverview(true);
+  };
 
   const handleStopClick = () => {
     setShowStopConfirmDialog(true)
@@ -242,7 +243,7 @@ export default function FocusSession() {
               key={task.taskId}
               task={task}
               onCheckmark={() => handleTaskCheckmark(task.taskId)}
-              onClick={() => handleTaskClick(task.projectId)}
+              onClick={() => handleTaskClick(task)}
               isLoading={loadingTaskIds.has(task.taskId)}
             />
           ))}
@@ -316,6 +317,15 @@ export default function FocusSession() {
           }}
           onUpdateEstimatedTime={handleUpdateEstimatedTime}
           onMarkComplete={handleMarkTaskComplete}
+        />
+      )}
+
+      {/* Task overview dialog */}
+      {showTaskOverview && selectedTask && (
+        <TaskOverviewDialog 
+          isOpen={showTaskOverview}
+          onClose={() => setShowTaskOverview(false)}
+          task={selectedTask}
         />
       )}
     </div>
