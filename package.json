@@ -9,8 +9,10 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.78.0",
     "@dicebear/collection": "^9.4.0",
     "@dicebear/core": "^9.4.0",
+    "@google/generative-ai": "^0.24.1",
     "@heroicons/react": "^2.2.0",
     "@serwist/next": "^9.5.6",
     "@supabase/ssr": "^0.9.0",
@@ -21,8 +23,11 @@
     "date-fns": "^4.1.0",
     "lucide-react": "^0.577.0",
     "next": "16.1.6",
+    "openai": "^6.27.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
     "tailwind-merge": "^3.5.0",
     "zustand": "^5.0.11"
   },

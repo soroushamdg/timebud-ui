@@ -12,6 +12,8 @@ import { DbTask, TaskStatus } from '@/types/database'
 import { TaskCardSkeleton } from '@/components/ui/Skeleton'
 import { createClient } from '@/lib/supabase/client'
 import { useQueryClient } from '@tanstack/react-query'
+import { useMemories, useDeleteMemory } from '@/hooks/useMemories'
+import { formatDistanceToNow } from 'date-fns'
 
 // Mobile device detection
 const isMobileDevice = () => {
@@ -214,10 +216,12 @@ export default function ProjectOverviewPage({ params }: { params: Promise<{ id: 
   }, [creatingTask, creatingMilestone, newItemTitle])
   
   const resolvedParams = use(params)
-  const projectId = resolvedParams.id
-  
+  const { id: projectId } = use(params)
   const { data: project, isLoading: projectLoading } = useProject(projectId)
-  const { data: allItems = [], isLoading: itemsLoading } = useTasks({ projectId, type: 'all' })
+  const { data: tasks = [], isLoading: tasksLoading } = useTasks({ projectId })
+  const { data: memories = [] } = useMemories(projectId)
+  const deleteMemory = useDeleteMemory()
+  const [deletingMemoryId, setDeletingMemoryId] = useState<string | null>(null)
   const updateTask = useUpdateTask()
 
   // Load sort mode from localStorage on mount
@@ -251,18 +255,18 @@ export default function ProjectOverviewPage({ params }: { params: Promise<{ id: 
   const sortedItems = useCallback(() => {
     if (sortMode === 'deadline') {
       // Sort by deadline: items with deadlines first (by due_date), then items without deadlines (by order)
-      const withDeadlines = allItems.filter(item => item.due_date).sort((a, b) => 
+      const withDeadlines = tasks.filter((item: DbTask) => item.due_date).sort((a: DbTask, b: DbTask) => 
         new Date(a.due_date!).getTime() - new Date(b.due_date!).getTime()
       )
-      const withoutDeadlines = allItems.filter(item => !item.due_date).sort((a, b) => a.order - b.order)
+      const withoutDeadlines = tasks.filter((item: DbTask) => !item.due_date).sort((a: DbTask, b: DbTask) => a.order - b.order)
       return [...withDeadlines, ...withoutDeadlines]
     } else {
       // Sort by manual (order field)
-      return [...allItems].sort((a, b) => a.order - b.order)
+      return [...tasks].sort((a: DbTask, b: DbTask) => a.order - b.order)
     }
-  }, [allItems, sortMode])()
+  }, [tasks, sortMode])()
 
-  const tasks = sortedItems.filter(item => item.item_type === 'task')
+  const taskItems = sortedItems.filter(item => item.item_type === 'task')
   const milestones = sortedItems.filter(item => item.item_type === 'milestone')
   
   // Create task status map for lock logic
@@ -974,7 +978,7 @@ export default function ProjectOverviewPage({ params }: { params: Promise<{ id: 
     }
   }
   
-  if (projectLoading || itemsLoading || !project) {
+  if (projectLoading || tasksLoading || !project) {
     return (
       <div className="min-h-screen bg-bg-primary">
         {/* Hero skeleton */}
@@ -1257,6 +1261,65 @@ export default function ProjectOverviewPage({ params }: { params: Promise<{ id: 
                     <span className="text-base">Add new milestone</span>
                   </button>
                 </>
+              )}
+            </div>
+
+            {/* Memories Section */}
+            <div className="mt-8 px-6 pb-6">
+              <div className="flex items-center gap-2 mb-4">
+                <h3 className="text-lg font-bold text-white">Memories</h3>
+              </div>
+              
+              {memories.length === 0 ? (
+                <div className="bg-bg-card border border-border-card rounded-lg p-4 text-center">
+                  <p className="text-text-sec text-sm">
+                    AI will save important context here automatically
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {memories.map(memory => (
+                    <div
+                      key={memory.id}
+                      className="bg-bg-card border border-border-card rounded-lg p-4"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1">
+                          <p className="text-white text-sm mb-2">{memory.content}</p>
+                          <p className="text-text-sec text-xs">
+                            {formatDistanceToNow(new Date(memory.created_at), { addSuffix: true })}
+                          </p>
+                        </div>
+                        {deletingMemoryId === memory.id ? (
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => {
+                                deleteMemory.mutate(memory.id)
+                                setDeletingMemoryId(null)
+                              }}
+                              className="text-accent-pink text-xs font-semibold hover:opacity-80 transition-opacity"
+                            >
+                              Confirm
+                            </button>
+                            <button
+                              onClick={() => setDeletingMemoryId(null)}
+                              className="text-text-sec text-xs font-semibold hover:text-white transition-colors"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setDeletingMemoryId(memory.id)}
+                            className="text-text-sec hover:text-accent-pink transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
           </div>

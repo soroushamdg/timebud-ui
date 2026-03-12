@@ -31,3 +31,21 @@ export interface DbMilestone {
   created_at: string
 }
 export interface DbFocusSession   { id: string; user_id: string; budget_minutes: number; start_time: string | null; end_time: string | null; tasks_list: string[] }
+
+export type AIProvider = 'anthropic' | 'openai' | 'google'
+
+export interface DbAIMemory {
+  id: string
+  user_id: string
+  project_id: string
+  content: string
+  created_at: string
+}
+
+export interface DbUserAISettings {
+  user_id: string
+  provider: AIProvider
+  model: string
+  api_key: string
+  thinking_mode: boolean
+}
