@@ -25,6 +25,7 @@ export default function ChatPage() {
     pinMessage,
     unpinMessage,
     clearHistory,
+    clearConfirmationPayload,
   } = useChatStore()
 
   const [error, setError] = useState<{ code: string; message: string } | null>(null)
@@ -113,6 +114,7 @@ export default function ChatPage() {
       }
 
       const aiResponse = data.response!
+      console.log('AI Response:', aiResponse)
       
       if (aiResponse.action === 'respond') {
         addAssistantMessage(
@@ -161,10 +163,15 @@ export default function ChatPage() {
   }
 
   const handleConfirm = async (tools: any[]) => {
+    // Find the message with confirmation payload to clear it later
+    const confirmationMessage = messages.find(m => m.confirmationPayload)
+    
     setLoading(true)
     setLoadingMessage('Executing...')
 
     try {
+      console.log('Confirming tools:', tools)
+      
       const response = await fetch('/api/chat/confirm', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -172,14 +179,30 @@ export default function ChatPage() {
       })
 
       const data = await response.json()
+      console.log('Confirm response:', data)
 
-      if (data.success && data.toolsExecuted) {
+      if (!data.success) {
+        console.error('Confirmation failed:', data.error)
+        setError(data.error || { code: 'unknown', message: 'Failed to execute action' })
+        setLoading(false)
+        return
+      }
+
+      if (data.toolsExecuted) {
+        // Clear the confirmation payload from the message
+        if (confirmationMessage) {
+          clearConfirmationPayload(confirmationMessage.id)
+        }
+
+        // Add status messages for each executed tool
         for (const tool of data.toolsExecuted) {
           addStatusMessage(
             tool.success ? `✓ ${tool.summary}` : `✗ ${tool.summary}`,
             tool.success ? 'success' : 'error'
           )
         }
+      } else {
+        console.warn('No tools executed in response')
       }
 
       setLoading(false)

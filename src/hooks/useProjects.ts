@@ -48,7 +48,6 @@ export const useAllProjects = () => {
       const { data, error } = await supabase
         .from('projects')
         .select('*')
-        .neq('status', 'deleted')
         .order('created_at', { ascending: false })
       if (error) throw error
       return data
@@ -118,6 +117,56 @@ export const useCreateProject = () => {
         .single()
       if (error) throw error
       return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['projects'] })
+      triggerReplan()
+    },
+  })
+}
+
+export const useDeleteProject = () => {
+  const queryClient = useQueryClient()
+  const { triggerReplan } = useReplan()
+  
+  return useMutation({
+    mutationFn: async (projectId: string) => {
+      const supabase = createClient()
+      
+      // First delete all tasks associated with this project
+      const { error: tasksError } = await supabase
+        .from('tasks')
+        .delete()
+        .eq('project_id', projectId)
+      
+      if (tasksError) {
+        console.error('Error deleting tasks:', tasksError)
+        throw tasksError
+      }
+      
+      // Then delete all memories associated with this project
+      const { error: memoriesError } = await supabase
+        .from('ai_memory')
+        .delete()
+        .eq('project_id', projectId)
+      
+      if (memoriesError) {
+        console.error('Error deleting memories:', memoriesError)
+        throw memoriesError
+      }
+      
+      // Finally delete the project
+      const { error: projectError } = await supabase
+        .from('projects')
+        .delete()
+        .eq('id', projectId)
+      
+      if (projectError) {
+        console.error('Error deleting project:', projectError)
+        throw projectError
+      }
+      
+      return projectId
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects'] })

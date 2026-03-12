@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { X, ChevronDown, Lock, Check, Plus, ArrowUpDown, Trash2, MoreVertical, Edit, CalendarIcon, ChevronLeft } from 'lucide-react'
 import { ChevronDoubleUpIcon } from '@heroicons/react/24/outline'
 import { useTasks, useUpdateTask } from '@/hooks/useTasks'
-import { useProject } from '@/hooks/useProjects'
+import { useProject, useDeleteProject } from '@/hooks/useProjects'
 import { getDiceBearUrl } from '@/lib/avatar'
 import { formatLocal, formatLocalSmart } from '@/lib/dates'
 import { DbTask, TaskStatus } from '@/types/database'
@@ -221,8 +221,10 @@ export default function ProjectOverviewPage({ params }: { params: Promise<{ id: 
   const { data: tasks = [], isLoading: tasksLoading } = useTasks({ projectId })
   const { data: memories = [] } = useMemories(projectId)
   const deleteMemory = useDeleteMemory()
+  const deleteProject = useDeleteProject()
   const [deletingMemoryId, setDeletingMemoryId] = useState<string | null>(null)
   const updateTask = useUpdateTask()
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   // Load sort mode from localStorage on mount
   useEffect(() => {
@@ -672,6 +674,17 @@ export default function ProjectOverviewPage({ params }: { params: Promise<{ id: 
     handleStartEditItem(item)
   }, [handleStartEditItem])
   
+  const handleDeleteProject = useCallback(async () => {
+    if (!project) return
+    
+    try {
+      await deleteProject.mutateAsync(project.id)
+      router.push('/')
+    } catch (error) {
+      console.error('Failed to delete project:', error)
+    }
+  }, [project, deleteProject, router])
+
   const handleAddTask = () => {
     router.push(`/tasks/new?projectId=${projectId}`)
   }
@@ -1582,6 +1595,12 @@ export default function ProjectOverviewPage({ params }: { params: Promise<{ id: 
                   Cancel
                 </button>
                 <button
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="px-4 py-2 bg-accent-pink text-white font-semibold rounded-lg hover:bg-red-600 transition-colors"
+                >
+                  Delete Project
+                </button>
+                <button
                   onClick={handleSaveEditProject}
                   disabled={!projectFormData.name.trim()}
                   className="flex-1 px-4 py-2 bg-accent-yellow text-black font-semibold rounded-lg hover:bg-yellow-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -1589,6 +1608,32 @@ export default function ProjectOverviewPage({ params }: { params: Promise<{ id: 
                   Save
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Delete Confirmation Dialog */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center">
+          <div className="bg-bg-card rounded-none p-6 max-w-sm mx-4">
+            <h3 className="text-white font-bold text-lg mb-4">Delete Project</h3>
+            <p className="text-text-sec mb-6">
+              Are you sure you want to delete this project? This will permanently delete all tasks and memories associated with it. This action cannot be undone.
+            </p>
+            <div className="flex gap-4">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="flex-1 py-2 border border-border-card rounded-none text-white"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteProject}
+                className="flex-1 py-2 bg-accent-pink rounded-none text-white"
+              >
+                Delete
+              </button>
             </div>
           </div>
         </div>

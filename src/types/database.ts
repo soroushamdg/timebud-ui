@@ -1,4 +1,4 @@
-export type ProjectStatus = 'active' | 'paused' | 'archived' | 'deleted'
+export type ProjectStatus = 'active' | 'paused' | 'archived'
 export type TaskStatus    = 'pending' | 'completed'
 export type ItemType = 'task' | 'milestone'
 export interface DbUser      { id: string; email: string; first_name: string; last_name: string; created_at: string }

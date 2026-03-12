@@ -3,7 +3,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useAllProjects, useUpdateProject } from '@/hooks/useProjects'
+import { useAllProjects, useUpdateProject, useDeleteProject } from '@/hooks/useProjects'
 import { useTasks } from '@/hooks/useTasks'
 import { useFocusSessionStore } from '@/stores/sessionStore'
 import { useUpdateFocusSession, useDeleteFocusSession } from '@/hooks/useSessions'
@@ -36,6 +36,7 @@ export default function SelectProjectsPage() {
   const updateFocusSession = useUpdateFocusSession()
   const deleteFocusSession = useDeleteFocusSession()
   const updateProject = useUpdateProject()
+  const deleteProject = useDeleteProject()
   
   const { data: projects = [], isLoading } = useAllProjects()
   const { data: tasks = [] } = useTasks()
@@ -78,7 +79,7 @@ export default function SelectProjectsPage() {
 
   const handleProjectTap = useCallback((projectId: string, currentStatus: ProjectStatus) => {
     // Toggle project status between active and paused
-    if (currentStatus === 'deleted' || currentStatus === 'archived') return
+    if (currentStatus === 'archived') return
     
     const newStatus = currentStatus === 'active' ? 'paused' : 'active'
     setPendingChanges(prev => ({
@@ -128,15 +129,16 @@ export default function SelectProjectsPage() {
     setContextMenu({ projectId: null, x: 0, y: 0 })
   }, [])
 
-  const confirmDelete = useCallback(() => {
+  const confirmDelete = useCallback(async () => {
     if (deleteConfirm) {
-      setPendingChanges(prev => ({
-        ...prev,
-        [deleteConfirm]: 'deleted',
-      }))
-      setDeleteConfirm(null)
+      try {
+        await deleteProject.mutateAsync(deleteConfirm)
+        setDeleteConfirm(null)
+      } catch (error) {
+        console.error('Failed to delete project:', error)
+      }
     }
-  }, [deleteConfirm])
+  }, [deleteConfirm, deleteProject])
 
   const handleCancel = useCallback(() => {
     router.back()

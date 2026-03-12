@@ -119,7 +119,9 @@ Four response types:
   "action": "preview_creation",
   "message": "Found 8 tasks in document",
   "preview": {"name": "Project", "tasks": [...]},
-  "confirmPrompt": "Create everything"
+  "tools": [{"name": "create_project", "input": {...}}],
+  "requiresConfirmation": true,
+  "confirmationSummary": "Create this project?"
 }
 
 AVAILABLE TOOLS:

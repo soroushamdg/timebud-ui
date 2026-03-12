@@ -19,6 +19,7 @@ interface ChatStore {
   pinMessage: (id: string) => void
   unpinMessage: (id: string) => void
   updateMessageOptimistic: (id: string, isOptimistic: boolean) => void
+  clearConfirmationPayload: (id: string) => void
   searchMessages: (query: string) => ChatMessage[]
 }
 
@@ -96,6 +97,14 @@ export const useChatStore = create<ChatStore>()(
         set((state) => ({
           messages: state.messages.map((msg) =>
             msg.id === id ? { ...msg, isOptimistic } : msg
+          ),
+        }))
+      },
+
+      clearConfirmationPayload: (id: string) => {
+        set((state) => ({
+          messages: state.messages.map((msg) =>
+            msg.id === id ? { ...msg, confirmationPayload: undefined } : msg
           ),
         }))
       },

@@ -145,19 +145,21 @@ export function MessageBubble({
                       <p className="font-semibold text-white mb-2">
                         {message.confirmationPayload.preview.name}
                       </p>
-                      <div className="space-y-1">
-                        {message.confirmationPayload.preview.tasks.slice(0, 6).map((task, idx) => (
-                          <div key={idx} className="text-sm text-text-sec flex items-start gap-2">
-                            <span className="text-accent-yellow">•</span>
-                            <span>{task.title}</span>
-                          </div>
-                        ))}
-                        {message.confirmationPayload.preview.tasks.length > 6 && (
-                          <p className="text-xs text-text-sec pl-4">
-                            +{message.confirmationPayload.preview.tasks.length - 6} more tasks
-                          </p>
-                        )}
-                      </div>
+                      {message.confirmationPayload.preview.tasks && message.confirmationPayload.preview.tasks.length > 0 && (
+                        <div className="space-y-1">
+                          {message.confirmationPayload.preview.tasks.slice(0, 6).map((task, idx) => (
+                            <div key={idx} className="text-sm text-text-sec flex items-start gap-2">
+                              <span className="text-accent-yellow">•</span>
+                              <span>{task.title}</span>
+                            </div>
+                          ))}
+                          {message.confirmationPayload.preview.tasks.length > 6 && (
+                            <p className="text-xs text-text-sec pl-4">
+                              +{message.confirmationPayload.preview.tasks.length - 6} more tasks
+                            </p>
+                          )}
+                        </div>
+                      )}
                     </div>
                   )}
                   <div className="flex gap-2">
