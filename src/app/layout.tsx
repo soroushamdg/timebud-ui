@@ -2,19 +2,20 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { Providers } from "@/components/providers/Providers";
 import { createClient } from "@/lib/supabase/server";
+import { Analytics } from "@vercel/analytics/react";
 import "./globals.css";
 
 const inter = Inter({
-  subsets: ['latin'],
-  variable: '--font-inter',
-  display: 'swap'
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: 'TimeBud',
-  description: 'Your focus companion',
+  title: "TimeBud",
+  description: "Your focus companion",
   icons: {
-    icon: '/favicon.ico',
+    icon: "/favicon.ico",
   },
 };
 
@@ -23,15 +24,21 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const supabase = await createClient()
-  const { data: { session } } = await supabase.auth.getSession()
-  
+  const supabase = await createClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
   return (
     <html lang="en" className={`dark ${inter.variable}`}>
-      <body className={`${inter.variable} antialiased`} suppressHydrationWarning>
+      <body
+        className={`${inter.variable} antialiased`}
+        suppressHydrationWarning
+      >
         <Providers initialSession={session}>
           {children}
         </Providers>
+        <Analytics />
       </body>
     </html>
   );
