@@ -2,11 +2,12 @@
 
 import { useState, useCallback, use, useEffect, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { X, ChevronDown, Lock, Check, Plus, ArrowUpDown, Trash2, MoreVertical, Edit, CalendarIcon, ChevronLeft } from 'lucide-react'
+import { X, ChevronDown, Lock, Check, Plus, ArrowUpDown, Trash2, MoreVertical, Edit, CalendarIcon, ChevronLeft, Camera } from 'lucide-react'
 import { ChevronDoubleUpIcon } from '@heroicons/react/24/outline'
 import { useTasks, useUpdateTask } from '@/hooks/useTasks'
 import { useProject, useDeleteProject } from '@/hooks/useProjects'
-import { getDiceBearUrl } from '@/lib/avatar'
+import { AvatarImage } from '@/components/ui/AvatarImage'
+import { ProjectAvatarPicker } from '@/components/avatars/ProjectAvatarPicker'
 import { formatLocal, formatLocalSmart } from '@/lib/dates'
 import { DbTask, TaskStatus } from '@/types/database'
 import { TaskCardSkeleton } from '@/components/ui/Skeleton'
@@ -54,6 +55,7 @@ export default function ProjectOverviewPage({ params }: { params: Promise<{ id: 
   // Edit states
   const [editingProject, setEditingProject] = useState(false)
   const [editingItem, setEditingItem] = useState<DbTask | null>(null)
+  const [showAvatarPicker, setShowAvatarPicker] = useState(false)
   const [editFormData, setEditFormData] = useState({
     title: '',
     description: '',
@@ -1046,11 +1048,22 @@ export default function ProjectOverviewPage({ params }: { params: Promise<{ id: 
         
         {/* Hero */}
         <div className="relative h-48">
-          <img
-            src={getDiceBearUrl(project.id, project.color)}
-            alt={project.name}
-            className="w-full h-full object-cover"
-          />
+          <div className="relative w-full h-full">
+            <AvatarImage
+              src={project.project_avatar_url}
+              fallbackType="project"
+              fallbackLabel={project.name}
+              fallbackColor={project.color || undefined}
+              size={192}
+              className="w-full h-full object-cover rounded-none"
+            />
+            <button
+              onClick={() => setShowAvatarPicker(true)}
+              className="absolute top-4 right-4 w-10 h-10 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/70 transition-colors"
+            >
+              <Camera size={20} />
+            </button>
+          </div>
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
           
           {/* Hero content */}
@@ -1639,6 +1652,17 @@ export default function ProjectOverviewPage({ params }: { params: Promise<{ id: 
         </div>
       )}
       
+      {/* Project Avatar Picker */}
+      {showAvatarPicker && (
+        <ProjectAvatarPicker
+          projectId={project.id}
+          currentAvatarUrl={project.project_avatar_url}
+          onClose={() => setShowAvatarPicker(false)}
+          onAvatarChanged={() => {
+            queryClient.invalidateQueries({ queryKey: ['project', project.id] })
+          }}
+        />
+      )}
     </div>
   )
 }

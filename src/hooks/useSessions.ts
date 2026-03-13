@@ -23,8 +23,8 @@ export const useLatestUnfinishedFocusSession = () => {
         .is('end_time', null)
         .order('start_time', { ascending: false })
         .limit(1)
-        .single()
-      if (error && error.code !== 'PGRST116') throw error
+        .maybeSingle()
+      if (error) throw error
       return data || null
     },
   })
@@ -137,33 +137,18 @@ export const useDeleteFocusSession = () => {
   
   return useMutation({
     mutationFn: async (id: string) => {
-      console.log('useDeleteFocusSession called with id:', id)
       const supabase = createClient()
       const { error } = await supabase
         .from('sessions')
         .delete()
         .eq('id', id)
       
-      if (error) {
-        console.error('Supabase delete session error:', error)
-        throw error
-      }
-      
-      console.log('Session deleted successfully:', id)
+      if (error) throw error
       return id
     },
     onSuccess: () => {
-      console.log('Delete session onSuccess called')
       queryClient.invalidateQueries({ queryKey: ['sessions'] })
       triggerReplan()
-    },
-    onError: (error, variables) => {
-      console.error('Delete session onError called:', {
-        error: error || 'No error object',
-        errorMessage: error instanceof Error ? error.message : 'No message',
-        errorString: JSON.stringify(error, null, 2),
-        variables 
-      })
     },
   })
 }

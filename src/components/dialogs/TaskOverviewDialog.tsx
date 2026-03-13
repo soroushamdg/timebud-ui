@@ -2,7 +2,7 @@
 
 import { X, Calendar, Clock, Flag, Info } from 'lucide-react'
 import { formatLocalSmart } from '@/lib/dates'
-import { getDiceBearUrl } from '@/lib/utils'
+import { AvatarImage } from '@/components/ui/AvatarImage'
 import { PlannedTask } from '@/stores/sessionStore'
 
 interface TaskOverviewDialogProps {
@@ -43,10 +43,13 @@ export function TaskOverviewDialog({ isOpen, onClose, task }: TaskOverviewDialog
           {/* Project Info */}
           {task.projectId && (
             <div className="flex items-center gap-3">
-              <img
-                src={getDiceBearUrl(task.projectId, task.projectColor || '#F5C518')}
-                alt={task.projectName || 'Project'}
-                className="w-12 h-12 rounded-none flex-shrink-0"
+              <AvatarImage
+                src={undefined}
+                fallbackType="project"
+                fallbackLabel={task.projectName || 'Project'}
+                fallbackColor={task.projectColor || '#F5C518'}
+                size={48}
+                className="flex-shrink-0"
               />
               <div>
                 <p className="text-text-sec text-sm">Project</p>

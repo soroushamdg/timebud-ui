@@ -12,6 +12,7 @@ import { createClient } from '@/lib/supabase/client'
 import { isValidUuid } from '@/lib/utils'
 import { ProjectCardSkeleton } from '@/components/ui/Skeleton'
 import { AutoSizeText } from '@/components/ui/AutoSizeText'
+import { AvatarImage } from '@/components/ui/AvatarImage'
 import { Check, MoreVertical } from 'lucide-react'
 import { DbProject, ProjectStatus } from '@/types/database'
 
@@ -314,13 +315,17 @@ export default function SelectProjectsPage() {
                   onMouseUp={handleLongPressEnd}
                   onMouseLeave={handleLongPressEnd}
                 >
-                  {/* Project Image - DiceBear avatar */}
-                  <img
-                    src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${project.id}&backgroundColor=b6e3f4,c0aede,d1d4f9`}
-                    alt={project.name}
-                    className="w-full aspect-square object-cover rounded-none"
-                    onLoad={(e) => measureAvatarHeight(project.id, e.currentTarget)}
-                  />
+                  {/* Project Image */}
+                  <div className="w-full aspect-square">
+                    <AvatarImage
+                      src={project.project_avatar_url}
+                      fallbackType="project"
+                      fallbackLabel={project.name}
+                      fallbackColor={project.color || undefined}
+                      size={200}
+                      className="w-full h-full object-cover rounded-none"
+                    />
+                  </div>
                   
                   {/* Status badge */}
                   <div className={`absolute top-2 left-2 px-2 py-1 rounded-none text-xs font-medium ${
@@ -376,13 +381,17 @@ export default function SelectProjectsPage() {
                   onMouseUp={handleLongPressEnd}
                   onMouseLeave={handleLongPressEnd}
                 >
-                  {/* Project Image - DiceBear avatar */}
-                  <img
-                    src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${project.id}&backgroundColor=b6e3f4,c0aede,d1d4f9`}
-                    alt={project.name}
-                    className="w-full aspect-square object-cover rounded-none"
-                    onLoad={(e) => measureAvatarHeight(project.id, e.currentTarget)}
-                  />
+                  {/* Project Image */}
+                  <div className="w-full aspect-square">
+                    <AvatarImage
+                      src={project.project_avatar_url}
+                      fallbackType="project"
+                      fallbackLabel={project.name}
+                      fallbackColor={project.color || undefined}
+                      size={200}
+                      className="w-full h-full object-cover rounded-none"
+                    />
+                  </div>
                   
                   {/* Project name overlay */}
                   <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent p-2">

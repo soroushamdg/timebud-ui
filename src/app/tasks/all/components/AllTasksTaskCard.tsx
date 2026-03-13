@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { getDiceBearUrl } from "@/lib/utils";
+import { AvatarImage } from '@/components/ui/AvatarImage';
 import { ChevronDoubleUpIcon, CalendarIcon } from '@heroicons/react/24/outline';
 import { formatLocalSmart } from '@/lib/dates';
 import { Check, X, MoreVertical, Trash2, Edit } from 'lucide-react';
@@ -107,10 +107,13 @@ export function AllTasksTaskCard({
 
         {/* Avatar */}
         {task.project_id && (
-          <img
-            src={getDiceBearUrl(task.project_id, projectColor || '#F5C518')}
-            alt={projectName || 'Project'}
-            className="w-10 h-10 rounded-none flex-shrink-0"
+          <AvatarImage
+            src={undefined}
+            fallbackType="project"
+            fallbackLabel={projectName || 'Project'}
+            fallbackColor={projectColor || '#F5C518'}
+            size={40}
+            className="flex-shrink-0"
           />
         )}
 

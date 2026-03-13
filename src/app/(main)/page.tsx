@@ -18,10 +18,14 @@ import { useUIStore } from '@/stores/uiStore'
 import { useLoading } from '@/contexts/LoadingContext'
 import { useReplan } from '@/contexts/ReplanContext'
 import { useReplanOnUIChange } from '@/hooks/useReplanOnUIChange'
-import { getDiceBearUrl, isValidUuid } from '@/lib/utils'
+import { isValidUuid } from '@/lib/utils'
 import { DbFocusSession, DbTask } from '@/types/database'
 import { useFocusSessionGuard } from '@/hooks/useSessionGuard'
 import { ArrowsRightLeftIcon } from '@heroicons/react/24/outline'
+import { AvatarImage } from '@/components/ui/AvatarImage'
+import { useCurrentUser } from '@/hooks/useAuth'
+import { useQuery } from '@tanstack/react-query'
+import { createClient } from '@/lib/supabase/client'
 
 interface PlannedTask {
   taskId: string;
@@ -41,6 +45,7 @@ interface PlannedTask {
 
 export default function Home() {
   const router = useRouter();
+  const { data: user } = useCurrentUser();
   const [unfinishedFocusSession, setUnfinishedFocusSession] = useState<DbFocusSession | null>(
     null,
   );
@@ -48,6 +53,27 @@ export default function Home() {
   const [showTimeDialog, setShowTimeDialog] = useState(false)
   const [isLoading, setIsLoading] = useState(true);
   const { setLoadingProgress, setLoadingComplete } = useLoading();
+
+  // Query for user profile data
+  const { data: userProfile } = useQuery({
+    queryKey: ['user-profile', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null
+      const supabase = createClient()
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', user.id)
+        .maybeSingle()
+      if (error) {
+        console.error('Failed to fetch user profile:', error)
+        return null
+      }
+      return data
+    },
+    enabled: !!user?.id,
+    retry: false,
+  })
 
   // Focus session guard - auto-redirect to running focus session
   useFocusSessionGuard();
@@ -304,10 +330,11 @@ export default function Home() {
               onClick={() => router.push("/profile")}
               className="flex items-center gap-3"
             >
-              <img
-                src={getDiceBearUrl("user-id", "#F5C518")}
-                alt="User avatar"
-                className="w-12 h-12 rounded-none border-4 border-[#ffffff]"
+              <AvatarImage
+                src={userProfile?.profile_image_url}
+                fallbackType="profile"
+                fallbackSeed={`${userProfile?.first_name || ''}${userProfile?.last_name || ''}`}
+                size={48}
               />
               <span className="text-white text-base font-medium">
                 Your studio &gt;
@@ -345,10 +372,12 @@ export default function Home() {
                     onClick={() => router.push(`/projects/${project.id}`)}
                     className="flex-shrink-0 hover:scale-105 transition-transform"
                   >
-                    <img
-                      src={getDiceBearUrl(project.id, project.color || undefined)}
-                      alt={project.name}
-                      className="w-20 h-20 rounded-none border-1 border-[#ffffff]"
+                    <AvatarImage
+                      src={project.project_avatar_url}
+                      fallbackType="project"
+                      fallbackLabel={project.name}
+                      fallbackColor={project.color || undefined}
+                      size={80}
                     />
                   </button>
                 ))}

@@ -3,14 +3,16 @@
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { ChevronLeft, ChevronRight, Brain, Check, Edit3 } from 'lucide-react'
+import { PencilIcon } from '@heroicons/react/24/outline'
 import { AppShell } from '@/components/layout/AppShell'
 import { useCurrentUser } from '@/hooks/useAuth'
 import { useFocusSessions } from '@/hooks/useSessions'
-import { getDiceBearUrl } from '@/lib/avatar'
+import { AvatarImage } from '@/components/ui/AvatarImage'
 import { ChangeSessionTimeDialog } from '@/components/dialogs/ChangeSessionTimeDialog'
 import { PartialTasksDialog } from '@/components/dialogs/PartialTasksDialog'
 import { EditProfileDialog } from '@/components/dialogs/EditProfileDialog'
 import { SignOutDialog } from '@/components/dialogs/SignOutDialog'
+import { ProfileAvatarEditor } from '@/components/avatars/ProfileAvatarEditor'
 import { createClient } from '@/lib/supabase/client'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useFocusSessionGuard } from '@/hooks/useSessionGuard'
@@ -29,6 +31,7 @@ export default function ProfilePage() {
   const [isPartialDialogOpen, setIsPartialDialogOpen] = useState(false)
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false)
   const [isSignOutDialogOpen, setIsSignOutDialogOpen] = useState(false)
+  const [isAvatarEditorOpen, setIsAvatarEditorOpen] = useState(false)
 
   // Query for user profile data
   const { data: userProfile } = useQuery({
@@ -168,11 +171,22 @@ export default function ProfilePage() {
         <div className="flex flex-col items-center px-6">
           {/* Profile Header */}
           <div className="flex items-center gap-4 mb-8">
-            <img
-              src={getDiceBearUrl(user?.id || 'default', (user as any)?.avatar_color || undefined)}
-              alt="Profile"
-              className="w-20 h-20 rounded-none border-4 border-black"
-            />
+            <div className="relative">
+              <AvatarImage
+                src={userProfile?.profile_image_url}
+                fallbackType="profile"
+                fallbackSeed={`${userProfile?.first_name || ''}${userProfile?.last_name || ''}`}
+                size={80}
+                className="cursor-pointer"
+                onClick={() => setIsAvatarEditorOpen(true)}
+              />
+              <button
+                onClick={() => setIsAvatarEditorOpen(true)}
+                className="absolute bottom-0 right-0 w-6 h-6 rounded-full bg-bg-card flex items-center justify-center text-white hover:opacity-90 transition-opacity"
+              >
+                <PencilIcon className="w-3 h-3" />
+              </button>
+            </div>
             <div className="flex-1">
               <div className="flex items-center gap-2">
                 <h1 className="text-white text-2xl font-bold truncate">{getDisplayName()}</h1>
@@ -394,6 +408,16 @@ export default function ProfilePage() {
         isOpen={isSignOutDialogOpen}
         onClose={() => setIsSignOutDialogOpen(false)}
         onConfirm={handleSignOut}
+      />
+
+      {/* Profile Avatar Editor */}
+      <ProfileAvatarEditor
+        userId={user?.id || ''}
+        firstName={userProfile?.first_name || ''}
+        lastName={userProfile?.last_name || ''}
+        currentImageUrl={userProfile?.profile_image_url}
+        isOpen={isAvatarEditorOpen}
+        onClose={() => setIsAvatarEditorOpen(false)}
       />
     </AppShell>
   )

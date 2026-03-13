@@ -1,4 +1,4 @@
-import { getDiceBearUrl } from '@/lib/utils'
+import { AvatarImage } from '@/components/ui/AvatarImage'
 import { ChevronDoubleUpIcon, CalendarIcon } from '@heroicons/react/24/outline'
 import { formatLocalSmart } from '@/lib/dates'
 
@@ -38,10 +38,13 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
       >
         {/* Avatar */}
         {task.projectId && (
-          <img
-            src={getDiceBearUrl(task.projectId, task.projectColor || '#F5C518')}
-            alt={task.projectName || 'Project'}
-            className="w-10 h-10 rounded-none flex-shrink-0"
+          <AvatarImage
+            src={undefined}
+            fallbackType="project"
+            fallbackLabel={task.projectName || 'Project'}
+            fallbackColor={task.projectColor || '#F5C518'}
+            size={40}
+            className="flex-shrink-0"
           />
         )}
 

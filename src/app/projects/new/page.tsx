@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronLeft, Check } from 'lucide-react'
+import { ChevronLeft, Check, Camera } from 'lucide-react'
 import { ChevronDoubleUpIcon } from '@heroicons/react/24/outline'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { toUtcString } from '@/lib/dates'
-import { getDiceBearUrl } from '@/lib/avatar'
+import { AvatarImage } from '@/components/ui/AvatarImage'
 
 const COLOR_SWATCHES = [
   '#F5C518',
@@ -24,6 +24,7 @@ export default function NewProjectPage() {
   
   const [previewId, setPreviewId] = useState('')
   const [selectedColor, setSelectedColor] = useState(COLOR_SWATCHES[0])
+  const [selectedAvatarUrl, setSelectedAvatarUrl] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -32,6 +33,7 @@ export default function NewProjectPage() {
   })
   const [nameError, setNameError] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
+  const [showAvatarPicker, setShowAvatarPicker] = useState(false)
   
   // Generate preview ID on mount
   useEffect(() => {
@@ -70,6 +72,7 @@ export default function NewProjectPage() {
         deadline: data.deadline ? toUtcString(new Date(data.deadline)) : null,
         priority: data.priority,
         color: selectedColor,
+        project_avatar_url: selectedAvatarUrl,
         user_id: user.id,
         status: 'active' as const
       }
@@ -133,11 +136,23 @@ export default function NewProjectPage() {
       
       {/* Avatar preview */}
       <div className="flex justify-center mb-8 mt-6">
-        <img
-          src={getDiceBearUrl(previewId, selectedColor)}
-          alt="Project preview"
-          className="w-32 h-32 rounded-3xl border-4 border-black shadow-lg"
-        />
+        <div className="relative">
+          <AvatarImage
+            src={selectedAvatarUrl}
+            fallbackType="project"
+            fallbackLabel={formData.name || 'New Project'}
+            fallbackColor={selectedColor}
+            size={128}
+            className="shadow-lg"
+          />
+          <button
+            type="button"
+            onClick={() => setShowAvatarPicker(true)}
+            className="absolute bottom-0 right-0 w-10 h-10 rounded-full bg-bg-card flex items-center justify-center text-white hover:opacity-90 transition-opacity border-2 border-bg-primary"
+          >
+            <Camera size={20} />
+          </button>
+        </div>
       </div>
       
       {/* Error Message */}
@@ -257,6 +272,69 @@ export default function NewProjectPage() {
           </button>
         </div>
       </form>
+
+      {/* Simple Avatar Picker Dialog */}
+      {showAvatarPicker && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-end">
+          <div className="bg-bg-card w-full rounded-t-3xl max-h-[80vh] overflow-y-auto">
+            <div className="sticky top-0 bg-bg-card border-b border-border-card px-6 py-4 flex items-center justify-between">
+              <h3 className="text-white text-lg font-semibold">Choose Avatar</h3>
+              <button
+                onClick={() => setShowAvatarPicker(false)}
+                className="text-text-sec hover:text-white transition-colors"
+              >
+                <Check size={24} />
+              </button>
+            </div>
+            
+            <div className="p-6">
+              <p className="text-text-sec text-sm mb-4">
+                Select a static avatar from the library. Custom uploads and AI transformations will be available after creating the project.
+              </p>
+              
+              {/* Static Avatars Grid - We'll fetch these */}
+              <div className="grid grid-cols-3 gap-4">
+                {[
+                  '/project-avatars/art-palette.png',
+                  '/project-avatars/books-lamp.png',
+                  '/project-avatars/briefcase.png',
+                  '/project-avatars/calendar.png',
+                  '/project-avatars/camera.png',
+                  '/project-avatars/chart.png',
+                  '/project-avatars/dumbbell.png',
+                  '/project-avatars/game-controller.png',
+                  '/project-avatars/globe.png',
+                  '/project-avatars/guitar-amp.png',
+                  '/project-avatars/laptop-desk.png',
+                  '/project-avatars/lego-blocks.png',
+                  '/project-avatars/lightbulb.png',
+                  '/project-avatars/plant.png',
+                  '/project-avatars/toolbox.png',
+                  '/project-avatars/trophy.png',
+                ].map((avatarPath) => (
+                  <button
+                    key={avatarPath}
+                    type="button"
+                    onClick={() => {
+                      setSelectedAvatarUrl(avatarPath)
+                      setShowAvatarPicker(false)
+                    }}
+                    className={`aspect-square rounded-none border-4 overflow-hidden hover:border-accent-yellow transition-colors ${
+                      selectedAvatarUrl === avatarPath ? 'border-accent-yellow' : 'border-white'
+                    }`}
+                  >
+                    <img
+                      src={avatarPath}
+                      alt="Avatar option"
+                      className="w-full h-full object-cover"
+                    />
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

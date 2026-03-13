@@ -1,8 +1,8 @@
 export type ProjectStatus = 'active' | 'paused' | 'archived'
 export type TaskStatus    = 'pending' | 'completed'
 export type ItemType = 'task' | 'milestone'
-export interface DbUser      { id: string; email: string; first_name: string; last_name: string; created_at: string }
-export interface DbProject   { id: string; user_id: string; name: string; description: string | null; deadline: string | null; priority: boolean; status: ProjectStatus; color: string | null; created_at: string }
+export interface DbUser      { id: string; email: string; first_name: string; last_name: string; profile_image_url: string | null; created_at: string }
+export interface DbProject   { id: string; user_id: string; name: string; description: string | null; deadline: string | null; priority: boolean; status: ProjectStatus; color: string | null; project_avatar_url: string | null; created_at: string }
 export interface DbTask {
   id: string
   user_id: string

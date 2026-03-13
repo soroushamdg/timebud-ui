@@ -1,4 +1,4 @@
-import { getDiceBearUrl } from '@/lib/utils'
+import { AvatarImage } from '@/components/ui/AvatarImage'
 import { PlannedTask } from '@/stores/sessionStore'
 
 interface FocusTaskCardProps {
@@ -48,10 +48,13 @@ export function FocusTaskCard({ task, onCheckmark, onClick, isLoading }: FocusTa
       >
         {/* Project Avatar or Solo Task Avatar */}
         {task.projectId && task.projectName ? (
-          <img
-            src={getDiceBearUrl(task.projectId, task.projectColor || '#F5C518')}
-            alt={task.projectName}
-            className="w-10 h-10 rounded-none flex-shrink-0"
+          <AvatarImage
+            src={undefined}
+            fallbackType="project"
+            fallbackLabel={task.projectName}
+            fallbackColor={task.projectColor || '#F5C518'}
+            size={40}
+            className="flex-shrink-0"
           />
         ) : (
           <div className="w-10 h-10 rounded-none bg-accent-pink/20 flex items-center justify-center flex-shrink-0">

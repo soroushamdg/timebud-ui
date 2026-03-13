@@ -39,6 +39,7 @@ export type ActionType =
   | 'file_analysis'
   | 'project_from_file'
   | 'bulk_tasks'
+  | 'avatar_generation'
   | 'purchase'
   | 'renewal'
   | 'subscription'

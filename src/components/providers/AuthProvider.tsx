@@ -17,11 +17,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Auth state change:', event, session?.user?.email)
-      
       if (event === 'SIGNED_IN' && session?.user) {
         const user = session.user
         let { first_name, last_name } = user.user_metadata || {}
+        let profile_image_url: string | null = null
         
         // Extract name from Google OAuth if not in metadata
         if (!first_name && !last_name && user.user_metadata?.name) {
@@ -29,6 +28,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
           const nameParts = fullName.split(' ')
           first_name = nameParts[0] || ''
           last_name = nameParts.slice(1).join(' ') || ''
+        }
+        
+        // Extract profile image from user metadata (Google, etc.)
+        if (user.user_metadata?.avatar_url) {
+          profile_image_url = user.user_metadata.avatar_url
+        } else if (user.user_metadata?.picture) {
+          profile_image_url = user.user_metadata.picture
         }
         
         // Also try to extract from identity provider data
@@ -40,11 +46,28 @@ export function AuthProvider({ children }: AuthProviderProps) {
             first_name = nameParts[0] || ''
             last_name = nameParts.slice(1).join(' ') || ''
           }
+          // Extract profile image from Google identity data
+          if (!profile_image_url && googleIdentity?.identity_data?.picture) {
+            profile_image_url = googleIdentity.identity_data.picture
+          }
         }
         
-        console.log('Processing signed in user:', user.id, user.email, { first_name, last_name, provider: user.identities?.[0]?.provider })
-        
         try {
+          // Check if user already has a custom profile image
+          const { data: existingUser } = await supabase
+            .from('users')
+            .select('profile_image_url')
+            .eq('id', user.id)
+            .maybeSingle()
+          
+          // Only set social provider image if user doesn't have a custom uploaded one
+          // Custom uploads will be stored in Supabase Storage (contains 'supabase.co' or 'supabase.in')
+          const hasCustomImage = existingUser?.profile_image_url && 
+                                 (existingUser.profile_image_url.includes('supabase.co') || 
+                                  existingUser.profile_image_url.includes('supabase.in'))
+          
+          const shouldUpdateImage = !hasCustomImage && profile_image_url
+          
           // Upsert user to database
           const { error: userError } = await supabase
             .from('users')
@@ -53,25 +76,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
               email: user.email || '',
               first_name: first_name || '',
               last_name: last_name || '',
+              ...(shouldUpdateImage ? { profile_image_url } : {}),
             }, {
               onConflict: 'id'
             })
 
           if (userError) {
-            console.error('Failed to upsert user:', userError)
             // Try server-side fallback
             try {
-              const response = await fetch('/api/auth/create-user', { method: 'POST' })
-              if (response.ok) {
-                console.log('User created via server-side fallback')
-              } else {
-                console.error('Server-side user creation also failed:', await response.text())
-              }
+              await fetch('/api/auth/create-user', { method: 'POST' })
             } catch (fallbackError) {
-              console.error('Fallback user creation failed:', fallbackError)
+              // Silent fallback
             }
-          } else {
-            console.log('User upserted successfully')
           }
 
           // Initialize credits for new users
@@ -83,24 +99,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
               .single()
 
             if (!existingCredits) {
-              console.log('Initializing credits for new user')
-              const initResponse = await fetch('/api/credits/init', { method: 'POST' })
-              if (initResponse.ok) {
-                console.log('Credits initialized successfully')
-              } else {
-                console.error('Failed to initialize credits:', await initResponse.text())
-              }
-            } else {
-              console.log('User already has credits')
+              await fetch('/api/credits/init', { method: 'POST' })
             }
           } catch (error) {
-            console.error('Failed to initialize credits on sign-in:', error)
+            // Silent error handling
           }
         } catch (error) {
-          console.error('Error in auth state change handler:', error)
+          // Silent error handling
         }
       } else if (event === 'SIGNED_OUT') {
-        console.log('User signed out')
         router.push('/auth/login')
       }
     })
