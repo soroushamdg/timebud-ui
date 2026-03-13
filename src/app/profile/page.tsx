@@ -2,38 +2,58 @@
 
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
-import { ChevronLeft, ChevronRight, Brain, Eye, EyeOff, Check } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Brain, Check, Edit3 } from 'lucide-react'
 import { AppShell } from '@/components/layout/AppShell'
 import { useCurrentUser } from '@/hooks/useAuth'
 import { useFocusSessions } from '@/hooks/useSessions'
 import { getDiceBearUrl } from '@/lib/avatar'
 import { ChangeSessionTimeDialog } from '@/components/dialogs/ChangeSessionTimeDialog'
 import { PartialTasksDialog } from '@/components/dialogs/PartialTasksDialog'
+import { EditProfileDialog } from '@/components/dialogs/EditProfileDialog'
+import { SignOutDialog } from '@/components/dialogs/SignOutDialog'
 import { createClient } from '@/lib/supabase/client'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useFocusSessionGuard } from '@/hooks/useSessionGuard'
 import { useAISettings, useUpsertAISettings } from '@/hooks/useAISettings'
 import { SUPPORTED_MODELS } from '@/lib/ai/config'
 import { AIProvider } from '@/types/database'
+import { useTotalCredits } from '@/hooks/useCredits'
 
 export default function ProfilePage() {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const { data: user } = useCurrentUser()
   const { data: focusSessions = [] } = useFocusSessions()
+  const { total, proSubscriber, isLoading: creditsLoading } = useTotalCredits()
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isPartialDialogOpen, setIsPartialDialogOpen] = useState(false)
+  const [isEditProfileOpen, setIsEditProfileOpen] = useState(false)
+  const [isSignOutDialogOpen, setIsSignOutDialogOpen] = useState(false)
+
+  // Query for user profile data
+  const { data: userProfile } = useQuery({
+    queryKey: ['user-profile', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null
+      const supabase = createClient()
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', user.id)
+        .single()
+      if (error) throw error
+      return data
+    },
+    enabled: !!user?.id,
+  })
 
   // AI Settings
   const { data: aiSettings } = useAISettings()
   const upsertSettings = useUpsertAISettings()
   const [selectedProvider, setSelectedProvider] = useState<AIProvider>(aiSettings?.provider || 'anthropic')
   const [selectedModel, setSelectedModel] = useState(aiSettings?.model || 'claude-sonnet-4-20250514')
-  const [apiKey, setApiKey] = useState(aiSettings?.api_key || '')
   const [thinkingMode, setThinkingMode] = useState(aiSettings?.thinking_mode || false)
-  const [showApiKey, setShowApiKey] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
-  const [testingConnection, setTestingConnection] = useState(false)
-  const [testResult, setTestResult] = useState<'success' | 'error' | null>(null)
 
   // Focus session guard - auto-redirect to running focus session
   useFocusSessionGuard();
@@ -82,6 +102,10 @@ export default function ProfilePage() {
     router.push('/auth/login')
   }
 
+  const handleSignOutConfirm = () => {
+    setIsSignOutDialogOpen(true)
+  }
+
   const handleBack = () => {
     router.back()
   }
@@ -91,7 +115,6 @@ export default function ProfilePage() {
       await upsertSettings.mutateAsync({
         provider: selectedProvider,
         model: selectedModel,
-        api_key: apiKey,
         thinking_mode: thinkingMode,
       })
       setSaveSuccess(true)
@@ -101,29 +124,29 @@ export default function ProfilePage() {
     }
   }
 
-  const handleTestConnection = async () => {
-    setTestingConnection(true)
-    setTestResult(null)
+  const handleSaveProfile = async (firstName: string, lastName: string) => {
+    const response = await fetch('/api/user/profile', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ firstName, lastName }),
+    })
 
-    try {
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: [{ role: 'user', content: 'ping' }],
-          complexity: 'simple',
-        }),
-      })
-
-      const data = await response.json()
-      setTestResult(data.success ? 'success' : 'error')
-    } catch (error) {
-      setTestResult('error')
-    } finally {
-      setTestingConnection(false)
-      setTimeout(() => setTestResult(null), 3000)
+    if (!response.ok) {
+      throw new Error('Failed to save profile')
     }
+
+    // Invalidate user profile query to refresh data
+    queryClient.invalidateQueries({ queryKey: ['user-profile', user?.id] })
   }
+
+  // Get display name
+  const getDisplayName = () => {
+    if (userProfile?.first_name || userProfile?.last_name) {
+      return `${userProfile.first_name || ''} ${userProfile.last_name || ''}`.trim()
+    }
+    return user?.user_metadata?.full_name || 'User'
+  }
+
 
   const availableModels = SUPPORTED_MODELS.filter(m => m.provider === selectedProvider)
   const selectedModelConfig = SUPPORTED_MODELS.find(m => m.id === selectedModel)
@@ -150,9 +173,22 @@ export default function ProfilePage() {
               alt="Profile"
               className="w-20 h-20 rounded-none border-4 border-black"
             />
-            <div>
-              <h1 className="text-white text-2xl font-bold">{(user as any)?.full_name || 'User'}</h1>
-              <p className="text-text-sec">{user?.email || 'user@example.com'}</p>
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <h1 className="text-white text-2xl font-bold truncate">{getDisplayName()}</h1>
+                <button
+                  onClick={() => setIsEditProfileOpen(true)}
+                  className="w-6 h-6 rounded-full bg-bg-card border border-border-card flex items-center justify-center text-text-sec hover:text-white hover:bg-bg-card-hover transition-colors flex-shrink-0"
+                >
+                  <Edit3 size={12} />
+                </button>
+                {proSubscriber && (
+                  <div className="bg-accent-yellow text-black text-xs font-bold px-2 py-0.5 rounded flex-shrink-0">
+                    PRO
+                  </div>
+                )}
+              </div>
+              <p className="text-text-sec truncate">{user?.email || 'user@example.com'}</p>
             </div>
           </div>
 
@@ -178,6 +214,21 @@ export default function ProfilePage() {
             
             {/* Settings list */}
             <div className="px-4">
+              <button
+                onClick={() => router.push('/credits')}
+                className="w-full bg-bg-card rounded-none px-4 py-4 mb-2 flex justify-between items-center hover:bg-bg-card/80 transition-colors"
+              >
+                <span className="text-white">Credits & Billing</span>
+                <div className="flex items-center gap-2">
+                  {creditsLoading ? (
+                    <div className="h-4 w-16 bg-border-card rounded animate-pulse"></div>
+                  ) : (
+                    <span className="text-accent-yellow font-semibold">{total} credits</span>
+                  )}
+                  <ChevronRight className="w-5 h-5 text-text-sec" />
+                </div>
+              </button>
+              
               <button
                 onClick={() => setIsDialogOpen(true)}
                 className="w-full bg-bg-card rounded-none px-4 py-4 mb-2 flex justify-between items-center hover:bg-bg-card/80 transition-colors"
@@ -260,27 +311,6 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-              {/* API Key input */}
-              <div>
-                <label className="text-sm text-text-sec mb-2 block">API Key</label>
-                <div className="relative">
-                  <input
-                    type={showApiKey ? 'text' : 'password'}
-                    value={apiKey}
-                    onChange={(e) => setApiKey(e.target.value)}
-                    placeholder="Enter your API key"
-                    className="w-full bg-bg-card border border-border-card rounded-lg px-4 py-3 text-white placeholder-text-sec focus:outline-none focus:ring-2 focus:ring-accent-yellow pr-12"
-                  />
-                  <button
-                    onClick={() => setShowApiKey(!showApiKey)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-text-sec hover:text-white transition-colors"
-                  >
-                    {showApiKey ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                  </button>
-                </div>
-                <p className="text-xs text-text-sec mt-1">Stored securely server-side only</p>
-              </div>
-
               {/* Thinking mode toggle */}
               {selectedModelConfig?.supportsThinking && (
                 <div className="flex items-center justify-between bg-bg-card border border-border-card rounded-lg p-4">
@@ -306,12 +336,12 @@ export default function ProfilePage() {
                 </div>
               )}
 
-              {/* Action buttons */}
-              <div className="flex gap-2">
+              {/* Action button */}
+              <div>
                 <button
                   onClick={handleSaveAISettings}
-                  disabled={!apiKey || upsertSettings.isPending}
-                  className="flex-1 bg-accent-yellow text-black font-semibold py-3 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  disabled={upsertSettings.isPending}
+                  className="w-full bg-accent-yellow text-black font-semibold py-3 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {saveSuccess ? (
                     <>
@@ -322,13 +352,6 @@ export default function ProfilePage() {
                     'Save Settings'
                   )}
                 </button>
-                <button
-                  onClick={handleTestConnection}
-                  disabled={!apiKey || testingConnection}
-                  className="flex-1 bg-transparent border border-border-card text-white font-semibold py-3 rounded-lg hover:bg-bg-card transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {testingConnection ? 'Testing...' : testResult === 'success' ? '✓ Connected' : testResult === 'error' ? '✗ Failed' : 'Test Connection'}
-                </button>
               </div>
             </div>
           </div>
@@ -336,7 +359,7 @@ export default function ProfilePage() {
           {/* Sign out button */}
           <div className="w-full px-4 mt-8">
             <button
-              onClick={handleSignOut}
+              onClick={handleSignOutConfirm}
               className="w-full bg-accent-pink text-white font-bold py-3 rounded-none hover:bg-accent-pink/90 transition-colors"
             >
               Sign out
@@ -355,6 +378,22 @@ export default function ProfilePage() {
       <PartialTasksDialog 
         isOpen={isPartialDialogOpen}
         onClose={() => setIsPartialDialogOpen(false)}
+      />
+
+      {/* Edit Profile Dialog */}
+      <EditProfileDialog
+        isOpen={isEditProfileOpen}
+        onClose={() => setIsEditProfileOpen(false)}
+        currentFirstName={userProfile?.first_name || ''}
+        currentLastName={userProfile?.last_name || ''}
+        onSave={handleSaveProfile}
+      />
+
+      {/* Sign Out Dialog */}
+      <SignOutDialog
+        isOpen={isSignOutDialogOpen}
+        onClose={() => setIsSignOutDialogOpen(false)}
+        onConfirm={handleSignOut}
       />
     </AppShell>
   )

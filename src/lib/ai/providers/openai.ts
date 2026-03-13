@@ -7,10 +7,9 @@ export class OpenAIAdapter implements AIAdapter {
     systemPrompt: string,
     messages: Array<{ role: string; content: string }>,
     thinkingMode: boolean,
-    apiKey: string,
     maxTokens: number
   ): Promise<string> {
-    const client = new OpenAI({ apiKey })
+    const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 
     const formattedMessages: any[] = [
       { role: 'system', content: systemPrompt },

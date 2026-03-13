@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Sparkles, RotateCcw } from 'lucide-react'
+import { Sparkles, RotateCcw, Coins, X, AlertCircle } from 'lucide-react'
 import { useChatStore } from '@/stores/chatStore'
 import { MessageBubble } from '@/components/chat/MessageBubble'
 import { ChatInput } from '@/components/chat/ChatInput'
@@ -12,9 +12,15 @@ import { UndoToast } from '@/components/chat/UndoToast'
 import { AppShell } from '@/components/layout/AppShell'
 import { ChatAPIRequest, ChatAPIResponse } from '@/types/ai'
 import { useCurrentUser } from '@/hooks/useAuth'
+import { useTotalCredits } from '@/hooks/useCredits'
+import { useQueryClient } from '@tanstack/react-query'
+import { useRouter } from 'next/navigation'
 
 export default function ChatPage() {
+  const router = useRouter()
+  const queryClient = useQueryClient()
   const { data: user } = useCurrentUser()
+  const { total, isLow, isLoading: creditsLoading } = useTotalCredits()
   const {
     messages,
     isLoading,
@@ -32,6 +38,8 @@ export default function ChatPage() {
   const [loadingMessage, setLoadingMessage] = useState('AI is thinking...')
   const [quickActionMessageId, setQuickActionMessageId] = useState<string | null>(null)
   const [undoAction, setUndoAction] = useState<{ visible: boolean; message: string; tools: any[] } | null>(null)
+  const [lowCreditBannerDismissed, setLowCreditBannerDismissed] = useState(false)
+  const [lastCreditsDeducted, setLastCreditsDeducted] = useState<number | null>(null)
   
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
@@ -82,9 +90,25 @@ export default function ChatPage() {
       const data: ChatAPIResponse = await response.json()
 
       if (!data.success) {
+        if (data.error?.code === 'insufficient_credits') {
+          const creditsNeeded = (data.error as any).required || 20
+          addAssistantMessage(
+            `You've used all your credits for this session. This action requires ${creditsNeeded} credits.`,
+            undefined,
+            undefined,
+            undefined
+          )
+          setLoading(false)
+          return
+        }
         setError(data.error!)
         setLoading(false)
         return
+      }
+
+      if (data.credits) {
+        queryClient.invalidateQueries({ queryKey: ['credits'] })
+        setLastCreditsDeducted(data.credits.deducted)
       }
 
       if (data.contextLoaded && data.contextLoaded.length > 0) {
@@ -117,11 +141,17 @@ export default function ChatPage() {
       console.log('AI Response:', aiResponse)
       
       if (aiResponse.action === 'respond') {
+        const messageContent = aiResponse.message || ''
+        const metadata = aiResponse.metadata || {}
+        if (lastCreditsDeducted) {
+          metadata.creditsUsed = lastCreditsDeducted
+        }
         addAssistantMessage(
-          aiResponse.message || '',
+          messageContent,
           aiResponse.suggestions,
-          aiResponse.metadata
+          metadata
         )
+        setLastCreditsDeducted(null)
       } else if (aiResponse.action === 'execute_tools' && aiResponse.requiresConfirmation) {
         const confirmationType = aiResponse.tools?.some(t => t.name.includes('delete')) 
           ? 'delete' 
@@ -302,16 +332,55 @@ export default function ChatPage() {
             <Sparkles className="w-6 h-6 text-accent-yellow" />
             <h1 className="text-white font-bold text-xl">AI Assistant</h1>
           </div>
-          {messages.length > 0 && (
-            <button
-              onClick={handleClearChat}
-              className="text-text-sec hover:text-white transition-colors p-2"
-              title="Clear chat"
-            >
-              <RotateCcw className="w-5 h-5" />
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {creditsLoading ? (
+              <div className="h-6 w-16 bg-border-card rounded animate-pulse"></div>
+            ) : (
+              <button
+                onClick={() => router.push('/credits')}
+                className={`flex items-center gap-1 px-2 py-1 rounded ${
+                  isLow ? 'text-accent-yellow' : 'text-text-sec'
+                } hover:bg-bg-card transition-colors`}
+              >
+                {isLow && <AlertCircle className="w-3 h-3" />}
+                <span className="text-sm font-medium">{total} cr</span>
+              </button>
+            )}
+            {messages.length > 0 && (
+              <button
+                onClick={handleClearChat}
+                className="text-text-sec hover:text-white transition-colors p-2"
+                title="Clear chat"
+              >
+                <RotateCcw className="w-5 h-5" />
+              </button>
+            )}
+          </div>
         </div>
+
+        {/* Low credit warning banner */}
+        {isLow && !lowCreditBannerDismissed && !creditsLoading && (
+          <div className="bg-accent-yellow/10 border-b border-accent-yellow/30 px-4 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-accent-yellow flex-shrink-0" />
+              <p className="text-accent-yellow text-sm">
+                <span className="font-medium">{total} credits remaining</span> · 
+                <button
+                  onClick={() => router.push('/credits')}
+                  className="underline ml-1 hover:opacity-80"
+                >
+                  Top up
+                </button>
+              </p>
+            </div>
+            <button
+              onClick={() => setLowCreditBannerDismissed(true)}
+              className="text-accent-yellow hover:opacity-80"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
 
         <div className="flex-1 overflow-y-auto px-4 py-4">
           {messages.length === 0 ? (

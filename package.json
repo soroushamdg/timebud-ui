@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "stripe:listen": "stripe listen --forward-to localhost:3000/api/stripe/webhook"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",
@@ -28,6 +29,7 @@
     "react-dom": "19.2.3",
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1",
+    "stripe": "^20.4.1",
     "tailwind-merge": "^3.5.0",
     "zustand": "^5.0.11"
   },

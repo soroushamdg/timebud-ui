@@ -53,6 +53,7 @@ export interface ResponseMetadata {
   modelUsed?: string
   confidence?: 'high' | 'medium' | 'low'
   thinkingUsed?: boolean
+  creditsUsed?: number
 }
 
 export interface AIResponse {
@@ -87,6 +88,11 @@ export interface ChatAPIResponse {
   response?: AIResponse
   contextLoaded?: Array<{ projectId: string; projectName: string }>
   toolsExecuted?: Array<{ tool: string; success: boolean; summary: string }>
+  credits?: {
+    deducted: number
+    free_remaining: number
+    purchased_remaining: number
+  }
   error?: {
     code: string
     message: string

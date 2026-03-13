@@ -7,10 +7,9 @@ export class AnthropicAdapter implements AIAdapter {
     systemPrompt: string,
     messages: Array<{ role: string; content: string }>,
     thinkingMode: boolean,
-    apiKey: string,
     maxTokens: number
   ): Promise<string> {
-    const client = new Anthropic({ apiKey })
+    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
     const formattedMessages = messages.map(msg => ({
       role: msg.role === 'user' ? 'user' as const : 'assistant' as const,

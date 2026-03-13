@@ -22,6 +22,17 @@ export function LoadingProvider({ children }: { children: ReactNode }) {
     }, 300) // Small delay for smooth transition
   }
 
+  // Auto-complete loading after 1 second if not manually completed
+  useEffect(() => {
+    const autoCompleteTimer = setTimeout(() => {
+      if (isLoading) {
+        setLoadingComplete()
+      }
+    }, 1000)
+
+    return () => clearTimeout(autoCompleteTimer)
+  }, [isLoading])
+
   return (
     <LoadingContext.Provider value={{
       isLoading,

@@ -470,7 +470,7 @@ export default function AllTasksPage() {
 
         {/* Sort Dialog */}
         {showSortDialog && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100]">
             <div className="bg-bg-card rounded-none border border-border-card p-6 w-80">
               <h3 className="text-white text-lg font-semibold mb-4">Sort by</h3>
               <div className="space-y-2">

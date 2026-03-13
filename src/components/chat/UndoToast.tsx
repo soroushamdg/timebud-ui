@@ -44,7 +44,7 @@ export function UndoToast({
   const progress = (timeLeft / duration) * 100
 
   return (
-    <div className="fixed bottom-24 left-4 right-4 max-w-md mx-auto z-50">
+    <div className="fixed bottom-24 left-4 right-4 max-w-md mx-auto z-[100]">
       <div className="bg-accent-yellow text-black rounded-lg shadow-lg overflow-hidden">
         <div className="flex items-center justify-between p-4">
           <div className="flex items-center gap-3">

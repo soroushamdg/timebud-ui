@@ -46,6 +46,5 @@ export interface DbUserAISettings {
   user_id: string
   provider: AIProvider
   model: string
-  api_key: string
   thinking_mode: boolean
 }

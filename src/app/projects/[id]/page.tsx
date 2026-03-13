@@ -1073,7 +1073,7 @@ export default function ProjectOverviewPage({ params }: { params: Promise<{ id: 
       
       {/* Sort Dialog */}
       {showSortOptions && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4">
           <div className="bg-bg-primary rounded-2xl w-full max-w-sm">
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
@@ -1351,7 +1351,7 @@ export default function ProjectOverviewPage({ params }: { params: Promise<{ id: 
       
       {/* Edit Item Modal */}
       {editingItem && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4">
           <div className="bg-bg-primary rounded-2xl w-full max-w-md">
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
@@ -1508,7 +1508,7 @@ export default function ProjectOverviewPage({ params }: { params: Promise<{ id: 
       
       {/* Edit Project Modal */}
       {editingProject && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4">
           <div className="bg-bg-primary rounded-2xl w-full max-w-md">
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
@@ -1615,7 +1615,7 @@ export default function ProjectOverviewPage({ params }: { params: Promise<{ id: 
       
       {/* Delete Confirmation Dialog */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center">
+        <div className="fixed inset-0 bg-black/70 z-[100] flex items-center justify-center">
           <div className="bg-bg-card rounded-none p-6 max-w-sm mx-4">
             <h3 className="text-white font-bold text-lg mb-4">Delete Project</h3>
             <p className="text-text-sec mb-6">

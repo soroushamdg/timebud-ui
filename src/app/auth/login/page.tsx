@@ -32,6 +32,19 @@ export default function LoginPage() {
 
       if (error) throw error
       
+      // Ensure user exists in database after sign-in
+      try {
+        const userResponse = await fetch('/api/auth/create-user', { method: 'POST' })
+        if (userResponse.ok) {
+          const result = await userResponse.json()
+          console.log('Post-sign-in user creation:', result.created ? 'success' : 'already exists')
+        } else {
+          console.error('Post-sign-in user creation failed:', await userResponse.text())
+        }
+      } catch (createError) {
+        console.error('Failed to ensure user exists after sign-in:', createError)
+      }
+      
       router.push('/')
     } catch (err: any) {
       setError(err.message || 'Failed to sign in')

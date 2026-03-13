@@ -7,10 +7,9 @@ export class GoogleAdapter implements AIAdapter {
     systemPrompt: string,
     messages: Array<{ role: string; content: string }>,
     thinkingMode: boolean,
-    apiKey: string,
     maxTokens: number
   ): Promise<string> {
-    const genAI = new GoogleGenerativeAI(apiKey)
+    const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY!)
     const geminiModel = genAI.getGenerativeModel({ 
       model,
       systemInstruction: systemPrompt,

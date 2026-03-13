@@ -5,6 +5,8 @@ import { buildSystemPrompt, buildContextBlock } from '@/lib/ai/config'
 import { parseAIResponse } from '@/lib/ai/response'
 import { executeTool } from '@/lib/ai/execute'
 import { ChatAPIRequest, ChatAPIResponse } from '@/types/ai'
+import { getActionType } from '@/lib/credits/config'
+import { deductCreditsForAction, refundCreditsForAction } from '@/lib/credits/deduct'
 
 export async function POST(request: NextRequest) {
   try {
@@ -36,7 +38,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: false,
         error: {
-          code: 'no_api_key',
+          code: 'no_settings',
           message: 'Please configure your AI provider in Settings to use the assistant',
         },
       } as ChatAPIResponse, { status: 200 })
@@ -80,24 +82,111 @@ export async function POST(request: NextRequest) {
     const contextLoaded: Array<{ projectId: string; projectName: string }> = []
     let iterations = 0
     const maxIterations = 4
+    let creditsDeducted = 0
+    let creditDeductionResult: any = null
 
     while (iterations < maxIterations) {
       iterations++
+
+      // Deduct credits before AI call (only on first iteration)
+      if (iterations === 1) {
+        const serviceSupabase = createServiceClient()
+        
+        // Check if renewal is due
+        const { data: userCredits } = await serviceSupabase
+          .from('user_credits')
+          .select('free_renewal_at')
+          .eq('user_id', user.id)
+          .single()
+
+        if (userCredits) {
+          const renewalDate = new Date(userCredits.free_renewal_at)
+          const now = new Date()
+          
+          if (renewalDate <= now) {
+            await serviceSupabase.rpc('add_credits', {
+              p_user_id: user.id,
+              p_amount: 300,
+              p_action_type: 'renewal',
+              p_is_free_renewal: true,
+              p_stripe_session_id: null,
+              p_description: 'Monthly free credit renewal',
+            })
+          }
+        }
+
+        // Determine action type and deduct credits
+        const actionType = getActionType({
+          hasFiles: files && files.length > 0,
+          isThinking: settings.thinking_mode,
+          modelTier: complexity === 'simple' ? 'cheap' : 'standard',
+        })
+
+        try {
+          creditDeductionResult = await deductCreditsForAction({
+            userId: user.id,
+            actionType,
+            description: 'AI chat message',
+            supabase: serviceSupabase,
+          })
+
+          if (!creditDeductionResult.success) {
+            return NextResponse.json({
+              success: false,
+              error: {
+                code: 'insufficient_credits',
+                message: 'Not enough credits to complete this request',
+                balance: creditDeductionResult.balance,
+                required: creditDeductionResult.deducted?.total || 0,
+              },
+            } as ChatAPIResponse, { status: 200 })
+          }
+
+          creditsDeducted = creditDeductionResult.deducted?.total || 0
+        } catch (error) {
+          console.error('Credit deduction error:', error)
+          return NextResponse.json({
+            success: false,
+            error: {
+              code: 'credit_error',
+              message: 'Failed to process credits',
+            },
+          } as ChatAPIResponse, { status: 200 })
+        }
+      }
 
       // Resolve model and get adapter
       const model = resolveModel(settings, complexity)
       const adapter = getAdapter(settings.provider)
       const maxTokens = getMaxTokens(complexity)
 
-      // Call AI
-      const rawResponse = await adapter.completeMessage(
-        model,
-        systemPrompt,
-        conversationHistory,
-        settings.thinking_mode,
-        settings.api_key,
-        maxTokens
-      )
+      let rawResponse: string
+      try {
+        // Call AI
+        rawResponse = await adapter.completeMessage(
+          model,
+          systemPrompt,
+          conversationHistory,
+          settings.thinking_mode,
+          maxTokens
+        )
+      } catch (aiError) {
+        // Refund credits on AI failure
+        if (iterations === 1 && creditsDeducted > 0) {
+          const serviceSupabase = createServiceClient()
+          const actionType = getActionType({
+            hasFiles: files && files.length > 0,
+            isThinking: settings.thinking_mode,
+            modelTier: complexity === 'simple' ? 'cheap' : 'standard',
+          })
+          await refundCreditsForAction({
+            userId: user.id,
+            actionType,
+            supabase: serviceSupabase,
+          })
+        }
+        throw aiError
+      }
 
       // Parse response
       const aiResponse = parseAIResponse(rawResponse)
@@ -158,6 +247,11 @@ export async function POST(request: NextRequest) {
             success: true,
             response: aiResponse,
             contextLoaded,
+            credits: creditDeductionResult ? {
+              deducted: creditsDeducted,
+              free_remaining: creditDeductionResult.balance?.free_credits || 0,
+              purchased_remaining: creditDeductionResult.balance?.purchased_credits || 0,
+            } : undefined,
           } as ChatAPIResponse, { status: 200 })
         }
 
@@ -184,15 +278,25 @@ export async function POST(request: NextRequest) {
           response: aiResponse,
           contextLoaded,
           toolsExecuted,
+          credits: creditDeductionResult ? {
+            deducted: creditsDeducted,
+            free_remaining: creditDeductionResult.balance?.free_credits || 0,
+            purchased_remaining: creditDeductionResult.balance?.purchased_credits || 0,
+          } : undefined,
         } as ChatAPIResponse, { status: 200 })
       }
 
       if (aiResponse.action === 'preview_creation' || aiResponse.action === 'respond') {
-        // Final response
+        // Final response with credit info
         return NextResponse.json({
           success: true,
           response: aiResponse,
           contextLoaded,
+          credits: creditDeductionResult ? {
+            deducted: creditsDeducted,
+            free_remaining: creditDeductionResult.balance?.free_credits || 0,
+            purchased_remaining: creditDeductionResult.balance?.purchased_credits || 0,
+          } : undefined,
         } as ChatAPIResponse, { status: 200 })
       }
 
@@ -218,8 +322,8 @@ export async function POST(request: NextRequest) {
     let errorMessage = 'An unexpected error occurred. Please try again.'
 
     if (error.status === 401 || error.message?.includes('API key')) {
-      errorCode = 'invalid_api_key'
-      errorMessage = 'Your API key is invalid or expired. Please update it in Settings.'
+      errorCode = 'api_error'
+      errorMessage = 'AI provider authentication failed. Please contact support.'
     } else if (error.status === 429) {
       errorCode = 'rate_limit'
       errorMessage = 'Rate limit exceeded. Please wait a moment and try again.'

@@ -1,0 +1,18 @@
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+HOW FUTURE FEATURES USE THIS SYSTEM
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Any new AI feature (image generation, document summarization, etc.) must:
+1. Add a new ActionType entry to the union type in src/types/credits.ts
+2. Add its cost to CREDIT_COSTS in src/lib/credits/config.ts
+3. Call deductCreditsForAction() at the start of the server-side handler
+4. Call refundCreditsForAction() in the catch block if the AI call fails
+5. Include credits info in the response so the client can update the balance display
+
+The feature does NOT need to:
+- Know anything about Stripe
+- Create new DB tables or functions
+- Handle the purchase flow
+- Know about free vs purchased buckets
+
+The billing infrastructure handles all of that transparently.

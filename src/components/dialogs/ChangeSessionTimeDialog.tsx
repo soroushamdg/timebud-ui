@@ -92,10 +92,10 @@ export function ChangeSessionTimeDialog({ isOpen, onClose }: ChangeSessionTimeDi
   return (
     <>
       {/* Dark overlay */}
-      <div className="fixed inset-0 bg-black/70 z-50" onClick={onClose} />
+      <div className="fixed inset-0 bg-black/70 z-[100]" onClick={onClose} />
       
       {/* Panel */}
-      <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-black rounded-t-3xl pb-8 z-50">
+      <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-black rounded-t-3xl pb-8 z-[100]">
         {/* Header */}
         <div className="flex items-center justify-between p-6 pb-4">
           <div className="flex items-center gap-3">

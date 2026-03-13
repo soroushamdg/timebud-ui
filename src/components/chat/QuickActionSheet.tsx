@@ -26,10 +26,10 @@ export function QuickActionSheet({
   return (
     <>
       {/* Dark overlay */}
-      <div className="fixed inset-0 bg-black/70 z-50" onClick={onClose} />
+      <div className="fixed inset-0 bg-black/70 z-[100]" onClick={onClose} />
       
       {/* Bottom sheet */}
-      <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-bg-primary rounded-t-3xl pb-8 z-50">
+      <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-bg-primary rounded-t-3xl pb-8 z-[100]">
         {/* Header */}
         <div className="flex items-center justify-between p-6 pb-4">
           <h2 className="text-white font-bold text-lg">Quick Actions</h2>

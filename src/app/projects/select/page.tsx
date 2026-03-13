@@ -408,7 +408,7 @@ export default function SelectProjectsPage() {
         return (
           <div
             ref={contextMenuRef}
-            className="fixed bg-bg-card border border-border-card rounded-none py-2 z-50"
+            className="fixed bg-bg-card border border-border-card rounded-none py-2 z-[100]"
             style={{
               left: contextMenu.x,
               top: contextMenu.y,
@@ -451,7 +451,7 @@ export default function SelectProjectsPage() {
       
       {/* Delete Confirmation Dialog */}
       {deleteConfirm && (
-        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center">
+        <div className="fixed inset-0 bg-black/70 z-[100] flex items-center justify-center">
           <div className="bg-bg-card rounded-none p-6 max-w-sm mx-4">
             <h3 className="text-white font-bold text-lg mb-4">Delete Project</h3>
             <p className="text-text-sec mb-6">

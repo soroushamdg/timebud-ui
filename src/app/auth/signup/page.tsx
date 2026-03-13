@@ -41,6 +41,21 @@ export default function SignupPage() {
 
       if (error) throw error
       
+      // If email confirmation is disabled, user should be created immediately
+      if (!error) {
+        try {
+          const userResponse = await fetch('/api/auth/create-user', { method: 'POST' })
+          if (userResponse.ok) {
+            const result = await userResponse.json()
+            console.log('Post-signup user creation:', result.created ? 'success' : 'already exists')
+          } else {
+            console.error('Post-signup user creation failed:', await userResponse.text())
+          }
+        } catch (createError) {
+          console.error('Failed to ensure user exists after signup:', createError)
+        }
+      }
+      
       setSuccess(true)
     } catch (err: any) {
       setError(err.message || 'Failed to create account')

@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { AppShell } from "@/components/layout/AppShell";
+import { AppWrapper } from "@/components/layout/AppWrapper";
 import { TaskCard } from "@/components/tasks/TaskCard";
 import { TaskCardSkeleton } from "@/components/tasks/TaskCardSkeleton";
 import { UnfinishedSessionModal } from "@/components/sessions/UnfinishedSessionModal";
@@ -276,18 +277,21 @@ export default function Home() {
 
   if (unfinishedFocusSession) {
     return (
-      <AppShell>
-        <UnfinishedSessionModal
-          session={unfinishedFocusSession}
-          onContinue={handleContinueSession}
-          onStartFresh={handleStartFresh}
-        />
-      </AppShell>
+      <AppWrapper>
+        <AppShell>
+          <UnfinishedSessionModal
+            session={unfinishedFocusSession}
+            onContinue={handleContinueSession}
+            onStartFresh={handleStartFresh}
+          />
+        </AppShell>
+      </AppWrapper>
     );
   }
 
   return (
-    <AppShell>
+    <AppWrapper>
+      <AppShell>
       <div className="flex flex-col h-[calc(100vh-5rem)] pb-5">
         {/* Fixed Header Section */}
         <div className="flex-shrink-0">
@@ -429,5 +433,6 @@ export default function Home() {
         />
       )}
     </AppShell>
+    </AppWrapper>
   );
 }

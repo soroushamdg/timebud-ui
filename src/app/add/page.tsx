@@ -31,7 +31,7 @@ export default function AddPage() {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center">
       <div className="bg-[#1A1A1A] rounded-none w-full max-w-sm mx-4">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-[#333333]">
