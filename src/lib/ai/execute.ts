@@ -188,20 +188,30 @@ async function bulkCreateTasks(
 
   let nextOrder = maxOrderData && maxOrderData.length > 0 ? maxOrderData[0].order + 1.0 : 1.0
 
-  const tasksToInsert = tasks.map((task: any) => ({
-    id: crypto.randomUUID(),
-    user_id: userId,
-    project_id: projectId,
-    item_type: 'task',
-    title: task.title,
-    description: task.description || null,
-    estimated_minutes: task.estimatedMinutes || null,
-    status: 'pending',
-    due_date: task.dueDate || null,
-    order: nextOrder++,
-    priority: task.priority || false,
-    depends_on_task: null,
-  }))
+  const tasksToInsert = tasks.map((task: any) => {
+    // Convert priority to boolean if it's a string
+    let priority = false
+    if (typeof task.priority === 'boolean') {
+      priority = task.priority
+    } else if (typeof task.priority === 'string') {
+      priority = task.priority.toLowerCase() === 'high' || task.priority.toLowerCase() === 'true'
+    }
+
+    return {
+      id: crypto.randomUUID(),
+      user_id: userId,
+      project_id: projectId,
+      item_type: 'task',
+      title: task.title,
+      description: task.description || null,
+      estimated_minutes: task.estimatedMinutes || null,
+      status: 'pending',
+      due_date: task.dueDate || null,
+      order: nextOrder++,
+      priority,
+      depends_on_task: null,
+    }
+  })
 
   const { data, error } = await supabase
     .from('tasks')

@@ -13,14 +13,32 @@ export const useProjects = () => {
     queryKey: ['projects'],
     queryFn: async (): Promise<Project[]> => {
       const supabase = createClient()
+      console.log('[useProjects] Fetching projects...')
+      
+      // Verify user is authenticated
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        console.log('[useProjects] No authenticated user, returning empty array')
+        return []
+      }
+      
       const { data, error } = await supabase
         .from('projects')
         .select('*')
         .eq('status', 'active')
         .order('created_at', { ascending: false })
-      if (error) throw error
-      return data
+      console.log('[useProjects] Result:', { count: data?.length, error, data })
+      if (error) {
+        console.error('[useProjects] Error fetching projects:', error)
+        throw error
+      }
+      const result = data || []
+      console.log('[useProjects] Returning:', result, 'Length:', result.length)
+      return result
     },
+    staleTime: 0,
+    refetchOnMount: true,
+    refetchOnWindowFocus: false,
   })
 }
 

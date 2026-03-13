@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { AppShell } from "@/components/layout/AppShell";
-import { AppWrapper } from "@/components/layout/AppWrapper";
 import { TaskCard } from "@/components/tasks/TaskCard";
 import { TaskCardSkeleton } from "@/components/tasks/TaskCardSkeleton";
 import { UnfinishedSessionModal } from "@/components/sessions/UnfinishedSessionModal";
@@ -44,8 +43,11 @@ interface PlannedTask {
 }
 
 export default function Home() {
+  console.log('[Home] Component mounting')
   const router = useRouter();
-  const { data: user } = useCurrentUser();
+  const { data: user, isLoading: userLoading, error: userError } = useCurrentUser();
+  console.log('[Home] User query state:', { user: user?.id, isLoading: userLoading, error: userError, fullUser: user })
+  
   const [unfinishedFocusSession, setUnfinishedFocusSession] = useState<DbFocusSession | null>(
     null,
   );
@@ -82,7 +84,18 @@ export default function Home() {
   useReplanOnUIChange();
 
   const { data: latestUnfinished } = useLatestUnfinishedFocusSession();
-  const { data: projects, isLoading: projectsLoading } = useProjects();
+  const { data: projects, isLoading: projectsLoading, error: projectsError } = useProjects();
+  
+  // Debug: Test Supabase auth directly
+  useEffect(() => {
+    const testAuth = async () => {
+      const supabase = createClient();
+      const { data: { user }, error } = await supabase.auth.getUser();
+      console.log('[Home] Direct Supabase auth test:', { user: user?.id, error });
+    };
+    testAuth();
+  }, []);
+  
   const { data: tasks, isLoading: tasksLoading } = useTasks({
     status: "pending",
   });
@@ -92,6 +105,30 @@ export default function Home() {
   const { registerReplanFunction } = useReplan();
   const setFocusSession = useFocusSessionStore((state) => state.setFocusSession);
   const markTaskDone = useFocusSessionStore((state) => state.markTaskDone);
+  
+  // Show loading state while user is loading
+  if (userLoading) {
+    return (
+      <AppShell>
+        <div className="flex flex-col h-[calc(100vh-5rem)] items-center justify-center">
+          <p className="text-text-sec">Loading...</p>
+        </div>
+      </AppShell>
+    )
+  }
+  
+  // Redirect to login if user is not authenticated
+  if (!user) {
+    console.log('[Home] No user found, redirecting to login')
+    router.push('/auth/login')
+    return (
+      <AppShell>
+        <div className="flex flex-col h-[calc(100vh-5rem)] items-center justify-center">
+          <p className="text-text-sec">Redirecting to login...</p>
+        </div>
+      </AppShell>
+    )
+  }
 
   useEffect(() => {
     // Calculate loading progress
@@ -303,21 +340,18 @@ export default function Home() {
 
   if (unfinishedFocusSession) {
     return (
-      <AppWrapper>
-        <AppShell>
-          <UnfinishedSessionModal
-            session={unfinishedFocusSession}
-            onContinue={handleContinueSession}
-            onStartFresh={handleStartFresh}
-          />
-        </AppShell>
-      </AppWrapper>
+      <AppShell>
+        <UnfinishedSessionModal
+          session={unfinishedFocusSession}
+          onContinue={handleContinueSession}
+          onStartFresh={handleStartFresh}
+        />
+      </AppShell>
     );
   }
 
   return (
-    <AppWrapper>
-      <AppShell>
+    <AppShell>
       <div className="flex flex-col h-[calc(100vh-5rem)] pb-5">
         {/* Fixed Header Section */}
         <div className="flex-shrink-0">
@@ -462,6 +496,5 @@ export default function Home() {
         />
       )}
     </AppShell>
-    </AppWrapper>
   );
 }

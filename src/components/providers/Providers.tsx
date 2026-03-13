@@ -7,8 +7,14 @@ import { LoadingProvider } from "@/contexts/LoadingContext";
 import { ReplanProvider } from "@/contexts/ReplanContext";
 import { AuthProvider } from "@/components/providers/AuthProvider";
 import { OnboardingProvider } from "@/components/providers/OnboardingProvider";
+import { Session } from "@supabase/supabase-js";
 
-export function Providers({ children }: { children: React.ReactNode }) {
+interface ProvidersProps {
+  children: React.ReactNode
+  initialSession: Session | null
+}
+
+export function Providers({ children, initialSession }: ProvidersProps) {
   const [queryClient] = useState(
     () =>
       new QueryClient({
@@ -25,7 +31,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <ReplanProvider>
       <LoadingProvider>
         <QueryClientProvider client={queryClient}>
-          <AuthProvider>
+          <AuthProvider initialSession={initialSession}>
             <OnboardingProvider>
               {children}
               {process.env.NODE_ENV === 'development' && <ReactQueryDevtools />}

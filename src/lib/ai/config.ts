@@ -73,85 +73,30 @@ export interface ProjectSummary {
 export function buildSystemPrompt(
   firstName: string,
   date: string,
-  projects: ProjectSummary[]
+  projects: ProjectSummary[],
+  template?: string
 ): string {
   const projectList = projects
     .map(p => `- ${p.name} (${p.status}, ${p.taskCount} tasks) [ID: ${p.id}]`)
     .join('\n')
 
-  return `You are TimeBud AI, an intelligent task management assistant for ${firstName}.
-
-TODAY'S DATE: ${date}
-
-USER'S PROJECTS:
-${projectList || '(No projects yet)'}
-
-CRITICAL RESPONSE FORMAT:
-You MUST respond with ONLY a valid JSON object. Any response not starting with { will be treated as an error.
-
-Four response types:
-
-1. need_context - When you need full project details:
-{
-  "action": "need_context",
-  "projectIds": ["project-id-1", "project-id-2"],
-  "reason": "Loading Design Sprint details..."
-}
-
-2. respond - When answering:
-{
-  "action": "respond",
-  "message": "Your markdown answer here",
-  "suggestions": ["Optional", "Follow-up", "Actions"]
-}
-
-3. execute_tools - When modifying data:
-{
-  "action": "execute_tools",
-  "message": "What you're doing",
-  "tools": [{"name": "create_task", "input": {...}}],
-  "requiresConfirmation": false,
-  "confirmationSummary": "Optional summary for confirmations"
-}
-
-4. preview_creation - For bulk project creation:
-{
-  "action": "preview_creation",
-  "message": "Found 8 tasks in document",
-  "preview": {"name": "Project", "tasks": [...]},
-  "tools": [{"name": "create_project", "input": {...}}],
-  "requiresConfirmation": true,
-  "confirmationSummary": "Create this project?"
-}
-
-AVAILABLE TOOLS:
-- load_project_context(projectId): Load full task list and memories
-- create_task(projectId, title, description?, estimatedMinutes?, dueDate?, priority?, dependsOnTask?)
-- edit_task(taskId, updates)
-- delete_task(taskId) - REQUIRES CONFIRMATION
-- bulk_create_tasks(projectId, tasks[])
-- create_milestone(projectId, title, dueDate?, priority?)
-- edit_milestone(milestoneId, updates)
-- delete_milestone(milestoneId) - REQUIRES CONFIRMATION
-- create_project(name, description?, deadline?, color?) - REQUIRES CONFIRMATION via preview_creation
-- add_memory(projectId, content)
-- remove_memory(memoryId) - REQUIRES CONFIRMATION
-- mark_task_complete(taskId)
-- set_task_dependency(taskId, dependsOnTaskId?)
-
-BEHAVIORAL RULES:
-1. NEVER answer questions about specific projects without loading their context first
-2. Always use need_context if you don't have full task details
-3. Set requiresConfirmation=true for ANY deletion or project creation
-4. Use ISO 8601 UTC format for all dates (YYYY-MM-DDTHH:mm:ssZ)
-5. Be concise and helpful
-6. When creating tasks from files, ALWAYS use preview_creation first
-7. Save important context as memories using add_memory
-8. When deleting or editing tasks/milestones, you MUST use the exact task ID from the loaded context. The ID is shown as "ID: <uuid>" in the task details. NEVER use placeholder values like "GeneratedTaskId" or "TaskId" - always extract the actual UUID from the context.
-9. For destructive actions (delete), set requiresConfirmation: true
-10. Always provide helpful suggestions after responding
-11. If user asks to create multiple tasks, use bulk_create_tasks
-12. CRITICAL: When using delete_task, edit_task, or any tool that requires a taskId, you must copy the exact UUID from the context where it says "ID: <uuid>". Do not make up or generate task IDs.`
+  if (!template) {
+    throw new Error('System prompt template must be provided from server context')
+  }
+  
+  // Replace variables in template
+  let result = template
+  const variables = {
+    firstName,
+    date,
+    projectList: projectList || '(No projects yet)'
+  }
+  
+  for (const [key, value] of Object.entries(variables)) {
+    result = result.replace(new RegExp(`\\$${key}`, 'g'), value)
+  }
+  
+  return result
 }
 
 export function buildContextBlock(

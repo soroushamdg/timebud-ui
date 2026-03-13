@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { getAdapter, resolveModel, getMaxTokens } from '@/lib/ai/router'
 import { buildSystemPrompt, buildContextBlock } from '@/lib/ai/config'
+import { loadSystemPromptTemplate } from '@/lib/ai/prompt-loader'
 import { parseAIResponse } from '@/lib/ai/response'
 import { executeTool } from '@/lib/ai/execute'
 import { ChatAPIRequest, ChatAPIResponse } from '@/types/ai'
@@ -75,7 +76,8 @@ export async function POST(request: NextRequest) {
     // 4. Build system prompt
     const firstName = (user as any).first_name || 'there'
     const today = new Date().toISOString().split('T')[0]
-    const systemPrompt = buildSystemPrompt(firstName, today, projectSummaries)
+    const promptTemplate = loadSystemPromptTemplate()
+    const systemPrompt = buildSystemPrompt(firstName, today, projectSummaries, promptTemplate)
 
     // 5. Run AI loop (max 4 iterations)
     const conversationHistory = [...messages]

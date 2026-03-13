@@ -1,9 +1,13 @@
-import { AppShell } from '@/components/layout/AppShell'
+import { createClient } from '@/lib/supabase/server'
+import { MainLayoutClient } from '@/components/layout/MainLayoutClient'
 
-export default function MainLayout({
+export default async function MainLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  return <AppShell>{children}</AppShell>
+  const supabase = await createClient()
+  const { data: { session } } = await supabase.auth.getSession()
+  
+  return <MainLayoutClient>{children}</MainLayoutClient>
 }

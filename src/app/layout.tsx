@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { Providers } from "@/components/providers/Providers";
-import { SplashScreen } from "@/components/layout/SplashScreen";
+import { createClient } from "@/lib/supabase/server";
 import "./globals.css";
 
 const inter = Inter({
@@ -18,16 +18,18 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const supabase = await createClient()
+  const { data: { session } } = await supabase.auth.getSession()
+  
   return (
     <html lang="en" className={`dark ${inter.variable}`}>
       <body className={`${inter.variable} antialiased`} suppressHydrationWarning>
-        <Providers>
-          <SplashScreen />
+        <Providers initialSession={session}>
           {children}
         </Providers>
       </body>

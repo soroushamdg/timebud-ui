@@ -29,7 +29,6 @@ export function UndoToast({
     const interval = setInterval(() => {
       setTimeLeft(prev => {
         if (prev <= 100) {
-          onDismiss()
           return 0
         }
         return prev - 100
@@ -37,7 +36,13 @@ export function UndoToast({
     }, 100)
 
     return () => clearInterval(interval)
-  }, [isVisible, duration, onDismiss])
+  }, [isVisible, duration])
+
+  useEffect(() => {
+    if (isVisible && timeLeft === 0) {
+      onDismiss()
+    }
+  }, [timeLeft, isVisible, onDismiss])
 
   if (!isVisible) return null
 
