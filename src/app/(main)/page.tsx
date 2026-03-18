@@ -96,9 +96,9 @@ export default function Home() {
     testAuth();
   }, []);
   
-  const { data: tasks, isLoading: tasksLoading } = useTasks({
-    status: "pending",
-  });
+  // Fetch all tasks so planner can check dependencies against completed tasks
+  // The planner will filter out completed tasks after dependency checking
+  const { data: tasks, isLoading: tasksLoading } = useTasks();
   const createFocusSession = useCreateFocusSession();
   const deleteFocusSession = useDeleteFocusSession();
   const { preferredBudgetMinutes, allowPartialTasks } = useUIStore();
@@ -180,13 +180,12 @@ export default function Home() {
 
     try {
       // Transform DbTask[] to PlannerTask[] for the planner
-      const plannerTasks: PlannerTask[] = tasks
-        .filter(task => task.estimated_minutes !== null)
-        .map(task => ({
-          ...task,
-          estimated_minutes: task.estimated_minutes!,
-          status: task.status || 'pending',
-        }));
+      // Include all tasks (even completed ones) so dependency checks can find them
+      const plannerTasks: PlannerTask[] = tasks.map(task => ({
+        ...task,
+        estimated_minutes: task.estimated_minutes || 0,
+        status: task.status || 'pending',
+      }));
 
       const plan = planSession({
         projects,
@@ -412,6 +411,7 @@ export default function Home() {
                       fallbackLabel={project.name}
                       fallbackColor={project.color || undefined}
                       size={80}
+                      className="border-2 border-black"
                     />
                   </button>
                 ))}

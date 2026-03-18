@@ -11,7 +11,7 @@ import { AvatarImage } from '@/components/ui/AvatarImage'
 
 const COLOR_SWATCHES = [
   '#F5C518',
-  '#E8004D', 
+  '#FF6B6B', 
   '#2ECC71',
   '#3B82F6',
   '#8B5CF6',
@@ -143,7 +143,7 @@ export default function NewProjectPage() {
             fallbackLabel={formData.name || 'New Project'}
             fallbackColor={selectedColor}
             size={128}
-            className="shadow-lg"
+            className="shadow-lg border-4 border-white"
           />
           <button
             type="button"

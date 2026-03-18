@@ -177,7 +177,7 @@ export default function ProfilePage() {
                 fallbackType="profile"
                 fallbackSeed={`${userProfile?.first_name || ''}${userProfile?.last_name || ''}`}
                 size={80}
-                className="cursor-pointer"
+                className="cursor-pointer border-4 border-white"
                 onClick={() => setIsAvatarEditorOpen(true)}
               />
               <button

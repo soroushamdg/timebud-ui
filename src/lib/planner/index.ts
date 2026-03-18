@@ -193,24 +193,20 @@ export function planSession(input: PlannerInput): PlannerOutput {
     
     let tasksWithDeadlines = inheritMilestoneDeadlines(input.tasks);
     
+    // Filter by project but keep completed tasks for dependency checking
     tasksWithDeadlines = tasksWithDeadlines.filter(t => 
-      t.status !== 'completed' && 
-      (t.project_id === null || activeProjectIds.has(t.project_id))
+      t.project_id === null || activeProjectIds.has(t.project_id)
     );
     
-    if (tasksWithDeadlines.length === 0) {
-      return {
-        budgetMinutes,
-        totalUsedMinutes: 0,
-        slackMinutes: budgetMinutes,
-        taskCount: 0,
-        tasks: [],
-      };
-    }
-    
+    // Check dependencies first (needs completed tasks to be present)
     const eligibleTasks = gateDependencies(tasksWithDeadlines);
     
-    if (eligibleTasks.length === 0) {
+    // Now filter out completed tasks and tasks with no estimated minutes
+    const schedulableTasks = eligibleTasks.filter(t => 
+      t.status !== 'completed' && t.estimated_minutes > 0
+    );
+    
+    if (schedulableTasks.length === 0) {
       return {
         budgetMinutes,
         totalUsedMinutes: 0,
@@ -220,14 +216,14 @@ export function planSession(input: PlannerInput): PlannerOutput {
       };
     }
     
-    const unlockMap = buildUnlockMap(eligibleTasks);
+    const unlockMap = buildUnlockMap(schedulableTasks);
     
-    const scoredTasks = eligibleTasks.map(task => ({
+    const scoredTasks = schedulableTasks.map(task => ({
       task,
       score: scoreTask(task, activeProjects, unlockMap, today)
     }));
     
-    const hasUrgentTask = eligibleTasks.some(t => 
+    const hasUrgentTask = schedulableTasks.some(t => 
       t.due_date && daysUntil(t.due_date, today) < URGENT_DEADLINE_DAYS
     );
     

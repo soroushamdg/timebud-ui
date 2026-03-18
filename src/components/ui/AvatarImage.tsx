@@ -8,7 +8,7 @@ interface AvatarImageProps {
   fallbackSeed?: string
   fallbackLabel?: string
   fallbackColor?: string
-  size: number
+  size?: number
   className?: string
   onClick?: () => void
 }
@@ -23,7 +23,7 @@ function AvatarImageComponent({
   className = '',
   onClick,
 }: AvatarImageProps) {
-  const baseClasses = `rounded-none border-4 border-white object-cover ${className}`
+  const baseClasses = `rounded-none object-cover ${className}`
 
   if (src) {
     return (
@@ -42,16 +42,17 @@ function AvatarImageComponent({
   const seed = fallbackType === 'profile' ? fallbackSeed : fallbackLabel
   
   if (seed) {
+    const bgColor = fallbackColor.replace('#', '')
     const diceBearUrl = `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(
       seed
-    )}&backgroundColor=F5C518&textColor=000000&fontSize=40&bold=true`
+    )}&backgroundColor=${bgColor}&textColor=000000&fontSize=40&bold=true`
 
     return (
       <img
         src={diceBearUrl}
         alt={fallbackType === 'profile' ? 'Profile avatar' : 'Project avatar'}
         className={baseClasses}
-        style={{ width: size, height: size }}
+        style={size ? { width: size, height: size } : undefined}
         onClick={onClick}
       />
     )
@@ -61,7 +62,7 @@ function AvatarImageComponent({
   return (
     <div
       className={`${baseClasses} bg-bg-card`}
-      style={{ width: size, height: size }}
+      style={size ? { width: size, height: size } : undefined}
       onClick={onClick}
     />
   )
