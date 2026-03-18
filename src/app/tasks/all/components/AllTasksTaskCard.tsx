@@ -89,11 +89,11 @@ export function AllTasksTaskCard({
   const completed = task.status === 'completed';
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex items-center gap-3 min-w-0">
       <div
         onClick={handleCardClick}
         onDoubleClick={handleDoubleClick}
-        className={`flex-1 bg-bg-card rounded-none px-4 py-3 flex items-center gap-3 border border-[#ffffff] cursor-pointer transition-colors hover:bg-bg-card-hover min-h-[72px] ${
+        className={`flex-1 min-w-0 bg-bg-card rounded-none px-4 py-3 flex items-center gap-3 border border-[#ffffff] cursor-pointer transition-colors hover:bg-bg-card-hover min-h-[72px] ${
           completed ? 'bg-bg-card-done border-accent-green/30' : ''
         }`}
       >
@@ -119,11 +119,11 @@ export function AllTasksTaskCard({
 
         {/* Center content */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 min-w-0">
             {task.priority && (
               <ChevronDoubleUpIcon className="w-4 h-4 text-accent-yellow flex-shrink-0" />
             )}
-            <h4 className="text-white text-base font-semibold truncate">
+            <h4 className="text-white text-base font-semibold truncate min-w-0">
               {task.title}
             </h4>
           </div>
