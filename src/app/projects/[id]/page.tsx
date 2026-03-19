@@ -63,6 +63,11 @@ export default function ProjectOverviewPage({
   const [startX, setStartX] = useState(0);
   const [startY, setStartY] = useState(0);
 
+  // Long-press states (mobile alternative)
+  const [longPressTask, setLongPressTask] = useState<DbTask | null>(null);
+  const [showLongPressMenu, setShowLongPressMenu] = useState<string | null>(null);
+  const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null);
+
   // Desktop hover states
   const [hoveredTask, setHoveredTask] = useState<string | null>(null);
   const [showTaskMenu, setShowTaskMenu] = useState<string | null>(null);
@@ -245,6 +250,15 @@ export default function ProjectOverviewPage({
     }
   }, [creatingTask, creatingMilestone, newItemTitle]);
 
+  // Cleanup long-press timer on unmount
+  useEffect(() => {
+    return () => {
+      if (longPressTimer) {
+        clearTimeout(longPressTimer);
+      }
+    };
+  }, [longPressTimer]);
+
   const resolvedParams = use(params);
   const { id: projectId } = use(params);
   const { data: project, isLoading: projectLoading } = useProject(projectId);
@@ -355,17 +369,34 @@ export default function ProjectOverviewPage({
   // Swipe gesture handlers (mobile only)
   const handleTouchStart = useCallback(
     (e: React.TouchEvent, task: DbTask) => {
-      if (!isMobile || !canInteract(task) || task.status === "completed")
+      console.log('Touch start detected:', { task: task.title, isMobile, canInteract: canInteract(task) });
+      
+      if (!isMobile || !canInteract(task) || task.status === "completed") {
+        console.log('Touch start blocked by conditions');
         return;
+      }
 
       const touch = e.touches[0];
+      console.log('Touch coordinates:', { x: touch.clientX, y: touch.clientY });
+      
       setStartX(touch.clientX);
       setStartY(touch.clientY);
       setSwipedTask(task);
       setSwipeDistance(0);
       setSwipeDirection(null);
+
+      // Start long-press timer
+      const timer = setTimeout(() => {
+        console.log('Long-press triggered for task:', task.title);
+        setLongPressTask(task);
+        setShowLongPressMenu(task.id);
+        setSwipedTask(null); // Reset swipe state
+        setSwipeDirection(null);
+        setSwipeDistance(0);
+      }, 500);
+      setLongPressTimer(timer);
     },
-    [canInteract],
+    [canInteract, isMobile],
   );
 
   const handleTouchMove = useCallback(
@@ -376,19 +407,45 @@ export default function ProjectOverviewPage({
       const deltaX = touch.clientX - startX;
       const deltaY = touch.clientY - startY;
 
+      console.log('Touch move:', { deltaX, deltaY, task: swipedTask.title });
+
+      // Cancel long-press if we're moving
+      if (longPressTimer) {
+        clearTimeout(longPressTimer);
+        setLongPressTimer(null);
+      }
+
       // Only handle horizontal swipes
-      if (Math.abs(deltaY) > Math.abs(deltaX)) return;
+      if (Math.abs(deltaY) > Math.abs(deltaX)) {
+        console.log('Vertical movement detected, ignoring');
+        return;
+      }
 
       e.preventDefault();
 
       const direction = deltaX > 0 ? "right" : "left";
       setSwipeDirection(direction);
       setSwipeDistance(Math.abs(deltaX));
+      
+      console.log('Swipe updated:', { direction, distance: Math.abs(deltaX) });
     },
-    [swipedTask, startX, startY],
+    [swipedTask, startX, startY, longPressTimer],
   );
 
   const handleTouchEnd = useCallback(async () => {
+    console.log('Touch end:', { 
+      hasSwipedTask: !!swipedTask, 
+      swipeDirection, 
+      swipeDistance,
+      task: swipedTask?.title 
+    });
+
+    // Clear long-press timer
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      setLongPressTimer(null);
+    }
+
     if (!swipedTask || !swipeDirection) {
       setSwipedTask(null);
       setSwipeDirection(null);
@@ -399,19 +456,30 @@ export default function ProjectOverviewPage({
     const threshold = 100; // Full swipe threshold
     const fullSwipeThreshold = 200; // Instant action threshold
 
-    if (swipeDistance >= fullSwipeThreshold) {
-      // Full swipe - instant action
+    console.log('Checking swipe thresholds:', { 
+      swipeDistance, 
+      threshold, 
+      fullSwipeThreshold,
+      willTrigger: swipeDistance >= threshold 
+    });
+
+    if (swipeDistance >= threshold) {
+      // Swipe threshold met - show action options
       try {
         if (swipeDirection === "right") {
           // Complete task - check if locked
           if (!isLocked(swipedTask)) {
+            console.log('Completing task via swipe:', swipedTask.title);
             await updateTask.mutateAsync({
               id: swipedTask.id,
               status: "completed",
             });
+          } else {
+            console.log('Task is locked, cannot complete:', swipedTask.title);
           }
         } else if (swipeDirection === "left") {
           // Delete task
+          console.log('Deleting task via swipe:', swipedTask.title);
           const supabase = createClient();
           await supabase.from("tasks").delete().eq("id", swipedTask.id);
           queryClient.invalidateQueries({ queryKey: ["tasks"] });
@@ -425,7 +493,46 @@ export default function ProjectOverviewPage({
     setSwipedTask(null);
     setSwipeDirection(null);
     setSwipeDistance(0);
-  }, [swipedTask, swipeDirection, swipeDistance, updateTask, queryClient]);
+  }, [swipedTask, swipeDirection, swipeDistance, updateTask, queryClient, longPressTimer, isLocked]);
+
+  // Long-press handlers
+  const handleLongPressAction = useCallback(async (action: 'complete' | 'priority' | 'delete', task: DbTask) => {
+    console.log('Long-press action:', { action, task: task.title });
+    
+    try {
+      if (action === 'complete') {
+        if (!isLocked(task)) {
+          await updateTask.mutateAsync({
+            id: task.id,
+            status: "completed",
+          });
+        }
+      } else if (action === 'priority') {
+        await updateTask.mutateAsync({
+          id: task.id,
+          priority: !task.priority,
+        });
+      } else if (action === 'delete') {
+        const supabase = createClient();
+        await supabase.from("tasks").delete().eq("id", task.id);
+        queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      }
+    } catch (error) {
+      console.error('Failed to perform long-press action:', error);
+    }
+    
+    setShowLongPressMenu(null);
+    setLongPressTask(null);
+  }, [updateTask, queryClient, isLocked]);
+
+  const handleCancelLongPress = useCallback(() => {
+    setShowLongPressMenu(null);
+    setLongPressTask(null);
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      setLongPressTimer(null);
+    }
+  }, [longPressTimer]);
 
   const handleCompleteTask = useCallback(
     async (task: DbTask) => {
@@ -985,6 +1092,16 @@ export default function ProjectOverviewPage({
             }
             onTouchMove={isMobile ? handleTouchMove : undefined}
             onTouchEnd={isMobile ? handleTouchEnd : undefined}
+            onTouchCancel={isMobile ? () => {
+              // Cancel long-press on touch cancel
+              if (longPressTimer) {
+                clearTimeout(longPressTimer);
+                setLongPressTimer(null);
+              }
+              setSwipedTask(null);
+              setSwipeDirection(null);
+              setSwipeDistance(0);
+            } : undefined}
             onMouseEnter={() => !isMobile && setHoveredTask(item.id)}
             onMouseLeave={() => !isMobile && setHoveredTask(null)}
             onClick={() => {
@@ -997,7 +1114,10 @@ export default function ProjectOverviewPage({
                 handleDoubleClick(item);
               }
             }}
-            style={{ transform: swipeTransform }}
+            style={{ 
+              transform: swipeTransform,
+              touchAction: isMobile ? 'pan-y' : 'auto'
+            }}
             className={`
               mb-3 rounded-none px-4 py-3 flex items-center gap-3 border transition-all relative z-10
               ${
@@ -1113,6 +1233,55 @@ export default function ProjectOverviewPage({
         </div>
       );
     }
+  };
+
+  // Long-press menu component
+  const LongPressMenu = ({ task }: { task: DbTask }) => {
+    const locked = isLocked(task);
+    
+    return (
+      <div className="fixed inset-0 bg-black/50 z-[100] flex items-end" onClick={handleCancelLongPress}>
+        <div className="bg-bg-card w-full rounded-t-3xl p-6" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-white text-lg font-semibold">{task.title}</h3>
+            <button
+              onClick={handleCancelLongPress}
+              className="text-text-sec hover:text-white transition-colors"
+            >
+              <X size={24} />
+            </button>
+          </div>
+          
+          <div className="space-y-3">
+            {!locked && (
+              <button
+                onClick={() => handleLongPressAction('complete', task)}
+                className="w-full flex items-center gap-3 bg-accent-green/20 text-accent-green p-4 rounded-2xl hover:bg-accent-green/30 transition-colors"
+              >
+                <Check size={20} />
+                <span className="font-medium">Complete Task</span>
+              </button>
+            )}
+            
+            <button
+              onClick={() => handleLongPressAction('priority', task)}
+              className="w-full flex items-center gap-3 bg-accent-yellow/20 text-accent-yellow p-4 rounded-2xl hover:bg-accent-yellow/30 transition-colors"
+            >
+              <ChevronDoubleUpIcon className="w-5 h-5" />
+              <span className="font-medium">{task.priority ? 'Remove Priority' : 'Add Priority'}</span>
+            </button>
+            
+            <button
+              onClick={() => handleLongPressAction('delete', task)}
+              className="w-full flex items-center gap-3 bg-red-500/20 text-red-500 p-4 rounded-2xl hover:bg-red-500/30 transition-colors"
+            >
+              <Trash2 size={20} />
+              <span className="font-medium">Delete Task</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   if (projectLoading || tasksLoading || !project) {
@@ -1764,6 +1933,27 @@ export default function ProjectOverviewPage({
                 </button>
               </div>
 
+              {/* Avatar Preview Section */}
+              <div className="flex justify-center mb-6">
+                <div className="relative">
+                  <AvatarImage
+                    src={project.project_avatar_url}
+                    fallbackType="project"
+                    fallbackLabel={projectFormData.name || project.name}
+                    fallbackColor={projectFormData.color || project.color || undefined}
+                    size={96}
+                    className="shadow-lg border-4 border-white"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowAvatarPicker(true)}
+                    className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-bg-card flex items-center justify-center text-white hover:opacity-90 transition-opacity border-2 border-bg-primary"
+                  >
+                    <Camera size={16} />
+                  </button>
+                </div>
+              </div>
+
               <div className="space-y-4">
                 {/* Project Name */}
                 <div>
@@ -1932,6 +2122,11 @@ export default function ProjectOverviewPage({
         </div>
       )}
 
+      {/* Long-press Menu */}
+      {showLongPressMenu && longPressTask && (
+        <LongPressMenu task={longPressTask} />
+      )}
+
       {/* Project Avatar Picker */}
       {showAvatarPicker && (
         <ProjectAvatarPicker
@@ -1941,6 +2136,9 @@ export default function ProjectOverviewPage({
           onAvatarChanged={() => {
             queryClient.invalidateQueries({
               queryKey: ["project", project.id],
+            });
+            queryClient.invalidateQueries({
+              queryKey: ["projects"],
             });
           }}
         />
