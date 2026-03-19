@@ -110,9 +110,9 @@ export function ProjectAvatarPicker({
 
   return (
     <>
-      <div className="fixed inset-0 bg-black/50 z-40" onClick={onClose} />
+      <div className="fixed inset-0 bg-black/50 z-[150]" onClick={onClose} />
       
-      <div className="fixed bottom-0 left-0 right-0 bg-bg-card rounded-t-3xl z-50 max-h-[70vh] overflow-y-auto">
+      <div className="fixed bottom-0 left-0 right-0 bg-bg-card rounded-t-3xl z-[160] max-h-[70vh] overflow-y-auto">
         {/* Handle bar */}
         <div className="flex justify-center pt-3 pb-2">
           <div className="w-12 h-1 bg-border-card rounded-full" />
