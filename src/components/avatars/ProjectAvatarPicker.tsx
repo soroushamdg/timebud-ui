@@ -7,6 +7,7 @@ import { AvatarImage } from '@/components/ui/AvatarImage'
 import { ImageCropDialog } from './ImageCropDialog'
 import { LegoTransformSheet } from './LegoTransformSheet'
 import { ErrorDialog } from '@/components/ui/ErrorDialog'
+import { useImageCache } from '@/hooks/useImageCache'
 import { validateImageFile, createImagePreviewUrl, revokeImagePreviewUrl, compressImage } from '@/lib/avatars/imageProcessing'
 
 interface ProjectAvatarPickerProps {
@@ -62,6 +63,7 @@ export function ProjectAvatarPicker({
   const { data: avatars = [], isLoading } = useStaticAvatars()
   const setAvatar = useSetProjectAvatar()
   const removeAvatar = useRemoveProjectAvatar()
+  const { invalidateProject } = useImageCache()
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -224,6 +226,8 @@ export function ProjectAvatarPicker({
     setSelectedFile(null)
     setPreviewUrl(null)
     setCroppedBlob(null)
+    // Invalidate cache when avatar is updated
+    invalidateProject(projectId)
     onAvatarChanged(avatarUrl)
     onClose()
   }
@@ -241,6 +245,8 @@ export function ProjectAvatarPicker({
   const handleStaticAvatarSelect = async (path: string) => {
     try {
       await setAvatar.mutateAsync({ projectId, staticPath: path })
+      // Invalidate cache when avatar is updated
+      invalidateProject(projectId)
       onAvatarChanged(path)
       onClose()
     } catch (error) {
@@ -252,6 +258,8 @@ export function ProjectAvatarPicker({
   const handleRemoveConfirm = async () => {
     try {
       await removeAvatar.mutateAsync(projectId)
+      // Invalidate cache when avatar is removed
+      invalidateProject(projectId)
       onAvatarChanged(null)
       onClose()
     } catch (error) {
@@ -310,8 +318,8 @@ export function ProjectAvatarPicker({
           </div>
 
           {/* Library Section */}
-          <div>
-            <h3 className="text-text-sec text-sm font-medium mb-3">From Library</h3>
+          <div className="mt-8">
+            <h3 className="text-text-sec text-sm font-medium mb-4">From Library</h3>
             {isLoading ? (
               <div className="grid grid-cols-4 gap-3">
                 {[...Array(8)].map((_, i) => (
@@ -324,16 +332,17 @@ export function ProjectAvatarPicker({
                   <button
                     key={avatar.id}
                     onClick={() => handleStaticAvatarSelect(avatar.path)}
-                    className={`aspect-square rounded-2xl overflow-hidden transition-all ${
+                    className={`aspect-square rounded-2xl overflow-hidden transition-all flex items-center justify-center ${
                       currentAvatarUrl === avatar.path
                         ? 'ring-2 ring-accent-yellow ring-offset-2 ring-offset-bg-card'
                         : 'hover:scale-105'
                     }`}
                   >
-                    <img
+                    <AvatarImage
                       src={avatar.path}
-                      alt={avatar.label}
-                      className="w-full h-full object-cover"
+                      fallbackType="project"
+                      fallbackLabel={avatar.label}
+                      className="w-full h-full"
                     />
                   </button>
                 ))}

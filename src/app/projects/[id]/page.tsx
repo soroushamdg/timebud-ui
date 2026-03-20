@@ -72,6 +72,9 @@ export default function ProjectOverviewPage({
   const [hoveredTask, setHoveredTask] = useState<string | null>(null);
   const [showTaskMenu, setShowTaskMenu] = useState<string | null>(null);
 
+  // Parallax effect state
+  const [scrollY, setScrollY] = useState(0);
+
   // Inline creation states
   const [creatingTask, setCreatingTask] = useState(false);
   const [creatingMilestone, setCreatingMilestone] = useState(false);
@@ -298,6 +301,16 @@ export default function ProjectOverviewPage({
   useEffect(() => {
     localStorage.setItem(`project-${projectId}-sort-mode`, sortMode);
   }, [projectId, sortMode]);
+
+  // Parallax scroll effect
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrollY(window.scrollY);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   // Sort items based on selected mode
   const sortedItems = useCallback(() => {
@@ -1376,15 +1389,21 @@ export default function ProjectOverviewPage({
         </button>
 
         {/* Hero */}
-        <div className="relative h-48">
+        <div className="relative h-64 overflow-hidden">
           <div className="relative w-full h-full">
-            <AvatarImage
-              src={project.project_avatar_url}
-              fallbackType="project"
-              fallbackLabel={project.name}
-              fallbackColor={project.color || undefined}
-              className="w-full h-full"
-            />
+            <div className="parallax-container" style={{
+                transform: `translateY(${scrollY * 0.5}px) scale(1.1)`,
+                transition: 'transform 0.1s ease-out'
+              }}>
+              <AvatarImage
+                src={project.project_avatar_url}
+                fallbackType="project"
+                fallbackLabel={project.name}
+                fallbackColor={project.color || undefined}
+                projectId={project.id}
+                className="w-full h-full"
+              />
+            </div>
             <button
               onClick={() => setShowAvatarPicker(true)}
               className="absolute top-4 right-4 w-10 h-10 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/70 transition-colors"
@@ -1392,7 +1411,7 @@ export default function ProjectOverviewPage({
               <Camera size={20} />
             </button>
           </div>
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent" />
 
           {/* Hero content */}
           <div className="absolute bottom-4 left-4 right-4">
@@ -1977,6 +1996,7 @@ export default function ProjectOverviewPage({
                     fallbackType="project"
                     fallbackLabel={projectFormData.name || project.name}
                     fallbackColor={projectFormData.color || project.color || undefined}
+                    projectId={project.id}
                     size={96}
                     className="shadow-lg border-4 border-white"
                   />
