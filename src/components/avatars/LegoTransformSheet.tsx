@@ -1,10 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Sparkles } from 'lucide-react'
 import { useCredits } from '@/hooks/useCredits'
 import { createClient } from '@/lib/supabase/client'
 import { uploadAvatarToStorage } from '@/lib/avatars/storage'
+import { LoadingDialog } from '@/components/ui/ProgressBar'
 
 interface LegoTransformSheetProps {
   file: Blob
@@ -24,24 +25,38 @@ export function LegoTransformSheet({
   const [isTransforming, setIsTransforming] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [currentStage, setCurrentStage] = useState('')
+  const [stageProgress, setStageProgress] = useState(0)
   const { data: credits } = useCredits()
 
   const totalCredits = (credits?.free_credits || 0) + (credits?.purchased_credits || 0)
   const hasEnoughCredits = totalCredits >= 15
 
+  const updateStageProgress = (stage: string, progress: number) => {
+    setCurrentStage(stage)
+    setStageProgress(progress)
+  }
+
   const handleApplyTheme = async () => {
     setIsTransforming(true)
     setError(null)
-
+    
     try {
+      // Stage 1: Upload
+      updateStageProgress('Uploading your image...', 25)
+      
       const formData = new FormData()
       formData.append('image', file, 'avatar.png')
       formData.append('projectId', projectId)
+
+      updateStageProgress('Uploading your image...', 75)
 
       const response = await fetch('/api/avatars/transform', {
         method: 'POST',
         body: formData,
       })
+
+      updateStageProgress('Transforming with AI...', 10)
 
       const data = await response.json()
 
@@ -58,7 +73,16 @@ export function LegoTransformSheet({
       }
 
       if (data.success && data.avatarUrl) {
-        onComplete(data.avatarUrl)
+        updateStageProgress('Transforming with AI...', 80)
+        
+        // Simulate final save progress
+        setTimeout(() => {
+          updateStageProgress('Saving your avatar...', 50)
+          setTimeout(() => {
+            updateStageProgress('Saving your avatar...', 100)
+            onComplete(data.avatarUrl)
+          }, 500)
+        }, 1000)
       } else {
         throw new Error('Unexpected response from server')
       }
@@ -74,6 +98,8 @@ export function LegoTransformSheet({
   const handleKeepOriginal = async () => {
     setIsUploading(true)
     setError(null)
+    
+    updateStageProgress('Saving original image...', 25)
 
     try {
       const supabase = createClient()
@@ -82,6 +108,8 @@ export function LegoTransformSheet({
       if (!user) {
         throw new Error('Not authenticated')
       }
+
+      updateStageProgress('Saving original image...', 50)
 
       const filename = `${user.id}/${projectId}-${Date.now()}.png`
       
@@ -95,6 +123,8 @@ export function LegoTransformSheet({
       if (uploadError) {
         throw uploadError
       }
+
+      updateStageProgress('Saving original image...', 75)
 
       const { data: urlData } = supabase.storage
         .from('project-avatars')
@@ -112,6 +142,7 @@ export function LegoTransformSheet({
         throw updateError
       }
 
+      updateStageProgress('Saving original image...', 100)
       onComplete(publicUrl)
     } catch (error: any) {
       console.error('Upload error:', error)
@@ -119,6 +150,13 @@ export function LegoTransformSheet({
     } finally {
       setIsUploading(false)
     }
+  }
+
+  const handleRetry = () => {
+    setError(null)
+    setCurrentStage('')
+    setStageProgress(0)
+    handleApplyTheme()
   }
 
   return (
@@ -163,10 +201,27 @@ export function LegoTransformSheet({
             </span>
           </div>
 
+          {/* Progress Bar */}
+          {isTransforming && (
+            <LoadingDialog 
+              isOpen={isTransforming}
+              currentStage={currentStage}
+              progress={stageProgress}
+            />
+          )}
+
           {/* Error Message */}
           {error && (
-            <div className="bg-accent-pink bg-opacity-10 border border-accent-pink rounded-xl px-4 py-3">
-              <p className="text-accent-pink text-sm text-center">{error}</p>
+            <div className="bg-accent-pink bg-opacity-10 border border-accent-pink rounded-xl p-4">
+              <p className="text-accent-pink text-sm text-center mb-3">{error}</p>
+              {!isTransforming && !isUploading && (
+                <button
+                  onClick={handleRetry}
+                  className="w-full bg-accent-pink text-white font-medium py-2 rounded-xl hover:bg-opacity-90 transition-opacity"
+                >
+                  Retry Transformation
+                </button>
+              )}
             </div>
           )}
 

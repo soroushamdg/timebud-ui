@@ -49,6 +49,33 @@ export function ProjectAvatarPicker({
     setShowCropDialog(true)
   }
 
+  const handleCameraSelect = () => {
+    // Create a file input that accepts camera
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = 'image/*'
+    input.capture = 'environment' // Use rear camera
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0]
+      if (file) {
+        const validation = validateImageFile(file)
+        if (!validation.valid) {
+          alert(validation.error)
+          return
+        }
+        setSelectedFile(file)
+        const url = createImagePreviewUrl(file)
+        setPreviewUrl(url)
+        setShowCropDialog(true)
+      }
+    }
+    input.click()
+  }
+
+  const handleLibrarySelect = () => {
+    fileInputRef.current?.click()
+  }
+
   const handleCropComplete = (blob: Blob) => {
     setCroppedBlob(blob)
     setShowCropDialog(false)
@@ -139,13 +166,22 @@ export function ProjectAvatarPicker({
               onChange={handleFileSelect}
               className="hidden"
             />
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="w-full h-20 bg-bg-card border-2 border-dashed border-border-card rounded-2xl flex items-center justify-center gap-3 hover:border-accent-yellow transition-colors"
-            >
-              <Camera size={24} className="text-accent-yellow" />
-              <span className="text-white font-medium">Upload photo</span>
-            </button>
+            <div className="flex gap-3">
+              <button
+                onClick={handleCameraSelect}
+                className="flex-1 h-20 bg-bg-card border-2 border-dashed border-border-card rounded-2xl flex flex-col items-center justify-center gap-2 hover:border-accent-yellow transition-colors"
+              >
+                <Camera size={20} className="text-accent-yellow" />
+                <span className="text-white text-xs font-medium">Camera</span>
+              </button>
+              <button
+                onClick={handleLibrarySelect}
+                className="flex-1 h-20 bg-bg-card border-2 border-dashed border-border-card rounded-2xl flex flex-col items-center justify-center gap-2 hover:border-accent-yellow transition-colors"
+              >
+                <Upload size={20} className="text-accent-yellow" />
+                <span className="text-white text-xs font-medium">Library</span>
+              </button>
+            </div>
           </div>
 
           {/* Library Section */}

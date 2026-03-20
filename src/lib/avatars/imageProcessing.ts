@@ -55,6 +55,19 @@ export async function getCroppedImage(
   })
 }
 
+export async function getCroppedAndCompressedImage(
+  imageSrc: string,
+  cropArea: CropArea,
+  targetSize: number = AVATAR_CONFIG.size,
+  maxSizeKB: number = AVATAR_CONFIG.targetCompressedSizeKB
+): Promise<Blob> {
+  // First crop the image
+  const croppedBlob = await getCroppedImage(imageSrc, cropArea, targetSize)
+  
+  // Then compress if needed
+  return await compressImage(croppedBlob, maxSizeKB)
+}
+
 export async function resizeImage(
   file: File,
   targetSize: number = AVATAR_CONFIG.size
@@ -99,11 +112,13 @@ export async function resizeImage(
 
 export async function compressImage(
   blob: Blob,
-  maxSizeKB: number = AVATAR_CONFIG.targetCompressedSizeKB
+  maxSizeKB: number = AVATAR_CONFIG.targetCompressedSizeKB,
+  onProgress?: (progress: number) => void
 ): Promise<Blob> {
   const maxSizeBytes = maxSizeKB * 1024
 
   if (blob.size <= maxSizeBytes) {
+    onProgress?.(100)
     return blob
   }
 
@@ -125,7 +140,13 @@ export async function compressImage(
         ctx.drawImage(img, 0, 0)
 
         let quality = 0.9
+        let attempts = 0
+        const maxAttempts = 9
+
         const tryCompress = () => {
+          attempts++
+          onProgress?.(Math.min(attempts * 10, 90))
+
           canvas.toBlob(
             (compressedBlob) => {
               if (!compressedBlob) {
@@ -133,14 +154,15 @@ export async function compressImage(
                 return
               }
 
-              if (compressedBlob.size <= maxSizeBytes || quality <= 0.5) {
+              if (compressedBlob.size <= maxSizeBytes || quality <= 0.1 || attempts >= maxAttempts) {
+                onProgress?.(100)
                 resolve(compressedBlob)
               } else {
                 quality -= 0.1
                 tryCompress()
               }
             },
-            'image/png',
+            'image/jpeg',
             quality
           )
         }

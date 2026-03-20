@@ -1,13 +1,17 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronLeft, Check, Camera } from 'lucide-react'
+import { ChevronLeft, Check, Camera, Upload } from 'lucide-react'
 import { ChevronDoubleUpIcon } from '@heroicons/react/24/outline'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { toUtcString } from '@/lib/dates'
 import { AvatarImage } from '@/components/ui/AvatarImage'
+import { ImageCropDialog } from '@/components/avatars/ImageCropDialog'
+import { LegoTransformSheet } from '@/components/avatars/LegoTransformSheet'
+import { useStaticAvatars, useSetProjectAvatar } from '@/hooks/useProjectAvatar'
+import { validateImageFile, createImagePreviewUrl, revokeImagePreviewUrl } from '@/lib/avatars/imageProcessing'
 
 const COLOR_SWATCHES = [
   '#F5C518',
@@ -34,11 +38,15 @@ export default function NewProjectPage() {
   const [nameError, setNameError] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
   const [showAvatarPicker, setShowAvatarPicker] = useState(false)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [croppedBlob, setCroppedBlob] = useState<Blob | null>(null)
+  const [showCropDialog, setShowCropDialog] = useState(false)
+  const [showTransformSheet, setShowTransformSheet] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   
-  // Generate preview ID on mount
-  useEffect(() => {
-    setPreviewId(crypto.randomUUID())
-  }, [])
+  const { data: avatars = [], isLoading } = useStaticAvatars()
+  const setAvatar = useSetProjectAvatar()
   
   const createProject = useMutation({
     mutationFn: async (data: typeof formData) => {
@@ -96,6 +104,97 @@ export default function NewProjectPage() {
       setErrorMessage(message)
     }
   })
+  
+  // Generate preview ID on mount
+  useEffect(() => {
+    setPreviewId(crypto.randomUUID())
+  }, [])
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    const validation = validateImageFile(file)
+    if (!validation.valid) {
+      alert(validation.error)
+      return
+    }
+
+    setSelectedFile(file)
+    const url = createImagePreviewUrl(file)
+    setPreviewUrl(url)
+    setShowCropDialog(true)
+    setShowAvatarPicker(false)
+  }
+
+  const handleCameraSelect = () => {
+    // Create a file input that accepts camera
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = 'image/*'
+    input.capture = 'environment' // Use rear camera
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0]
+      if (file) {
+        const validation = validateImageFile(file)
+        if (!validation.valid) {
+          alert(validation.error)
+          return
+        }
+        setSelectedFile(file)
+        const url = createImagePreviewUrl(file)
+        setPreviewUrl(url)
+        setShowCropDialog(true)
+        setShowAvatarPicker(false)
+      }
+    }
+    input.click()
+  }
+
+  const handleLibrarySelect = () => {
+    fileInputRef.current?.click()
+  }
+
+  const handleCropComplete = (blob: Blob) => {
+    setCroppedBlob(blob)
+    setShowCropDialog(false)
+    setShowTransformSheet(true)
+  }
+
+  const handleCropCancel = () => {
+    if (previewUrl) {
+      revokeImagePreviewUrl(previewUrl)
+    }
+    setSelectedFile(null)
+    setPreviewUrl(null)
+    setShowCropDialog(false)
+  }
+
+  const handleTransformComplete = (avatarUrl: string) => {
+    setShowTransformSheet(false)
+    if (previewUrl) {
+      revokeImagePreviewUrl(previewUrl)
+    }
+    setSelectedFile(null)
+    setPreviewUrl(null)
+    setCroppedBlob(null)
+    setSelectedAvatarUrl(avatarUrl)
+  }
+
+  const handleTransformDismiss = () => {
+    setShowTransformSheet(false)
+    if (previewUrl) {
+      revokeImagePreviewUrl(previewUrl)
+    }
+    setSelectedFile(null)
+    setPreviewUrl(null)
+    setCroppedBlob(null)
+  }
+
+  const handleStaticAvatarSelect = async (path: string) => {
+    setSelectedAvatarUrl(path)
+    setShowAvatarPicker(false)
+  }
   
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -273,7 +372,7 @@ export default function NewProjectPage() {
         </div>
       </form>
 
-      {/* Simple Avatar Picker Dialog */}
+      {/* Avatar Picker Dialog */}
       {showAvatarPicker && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-end">
           <div className="bg-bg-card w-full rounded-t-3xl max-h-[80vh] overflow-y-auto">
@@ -287,53 +386,88 @@ export default function NewProjectPage() {
               </button>
             </div>
             
-            <div className="p-6">
-              <p className="text-text-sec text-sm mb-4">
-                Select a static avatar from the library. Custom uploads and AI transformations will be available after creating the project.
-              </p>
-              
-              {/* Static Avatars Grid - We'll fetch these */}
-              <div className="grid grid-cols-3 gap-4">
-                {[
-                  '/project-avatars/art-palette.png',
-                  '/project-avatars/books-lamp.png',
-                  '/project-avatars/briefcase.png',
-                  '/project-avatars/calendar.png',
-                  '/project-avatars/camera.png',
-                  '/project-avatars/chart.png',
-                  '/project-avatars/dumbbell.png',
-                  '/project-avatars/game-controller.png',
-                  '/project-avatars/globe.png',
-                  '/project-avatars/guitar-amp.png',
-                  '/project-avatars/laptop-desk.png',
-                  '/project-avatars/lego-blocks.png',
-                  '/project-avatars/lightbulb.png',
-                  '/project-avatars/plant.png',
-                  '/project-avatars/toolbox.png',
-                  '/project-avatars/trophy.png',
-                ].map((avatarPath) => (
+            <div className="p-6 space-y-6">
+              {/* Upload Section */}
+              <div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
+                <div className="flex gap-3">
                   <button
-                    key={avatarPath}
-                    type="button"
-                    onClick={() => {
-                      setSelectedAvatarUrl(avatarPath)
-                      setShowAvatarPicker(false)
-                    }}
-                    className={`aspect-square rounded-none border-4 overflow-hidden hover:border-accent-yellow transition-colors ${
-                      selectedAvatarUrl === avatarPath ? 'border-accent-yellow' : 'border-white'
-                    }`}
+                    onClick={handleCameraSelect}
+                    className="flex-1 h-20 bg-bg-card border-2 border-dashed border-border-card rounded-2xl flex flex-col items-center justify-center gap-2 hover:border-accent-yellow transition-colors"
                   >
-                    <img
-                      src={avatarPath}
-                      alt="Avatar option"
-                      className="w-full h-full object-cover"
-                    />
+                    <Camera size={20} className="text-accent-yellow" />
+                    <span className="text-white text-xs font-medium">Camera</span>
                   </button>
-                ))}
+                  <button
+                    onClick={handleLibrarySelect}
+                    className="flex-1 h-20 bg-bg-card border-2 border-dashed border-border-card rounded-2xl flex flex-col items-center justify-center gap-2 hover:border-accent-yellow transition-colors"
+                  >
+                    <Upload size={20} className="text-accent-yellow" />
+                    <span className="text-white text-xs font-medium">Library</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Library Section */}
+              <div>
+                <h3 className="text-text-sec text-sm font-medium mb-3">From Library</h3>
+                {isLoading ? (
+                  <div className="grid grid-cols-4 gap-3">
+                    {[...Array(8)].map((_, i) => (
+                      <div key={i} className="aspect-square bg-bg-primary rounded-2xl animate-pulse" />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-4 gap-3">
+                    {avatars.map((avatar) => (
+                      <button
+                        key={avatar.id}
+                        onClick={() => handleStaticAvatarSelect(avatar.path)}
+                        className={`aspect-square rounded-2xl overflow-hidden transition-all ${
+                          selectedAvatarUrl === avatar.path
+                            ? 'ring-2 ring-accent-yellow ring-offset-2 ring-offset-bg-card'
+                            : 'hover:scale-105'
+                        }`}
+                      >
+                        <img
+                          src={avatar.path}
+                          alt={avatar.label}
+                          className="w-full h-full object-cover"
+                        />
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>
         </div>
+      )}
+
+      {/* Crop Dialog */}
+      {showCropDialog && previewUrl && (
+        <ImageCropDialog
+          imageSrc={previewUrl}
+          onComplete={handleCropComplete}
+          onCancel={handleCropCancel}
+        />
+      )}
+
+      {/* Transform Sheet */}
+      {showTransformSheet && croppedBlob && (
+        <LegoTransformSheet
+          file={croppedBlob}
+          previewUrl={URL.createObjectURL(croppedBlob)}
+          projectId={previewId}
+          onComplete={handleTransformComplete}
+          onDismiss={handleTransformDismiss}
+        />
       )}
     </div>
   )

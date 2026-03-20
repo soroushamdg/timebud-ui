@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react'
 import Cropper from 'react-easy-crop'
 import { X } from 'lucide-react'
-import { getCroppedImage } from '@/lib/avatars/imageProcessing'
+import { getCroppedAndCompressedImage } from '@/lib/avatars/imageProcessing'
 import { Area } from 'react-easy-crop'
 
 interface ImageCropDialogProps {
@@ -23,6 +23,7 @@ export function ImageCropDialog({
   const [zoom, setZoom] = useState(1)
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null)
   const [isProcessing, setIsProcessing] = useState(false)
+  const [compressionProgress, setCompressionProgress] = useState(0)
 
   const onCropComplete = useCallback((croppedArea: Area, croppedAreaPixels: Area) => {
     setCroppedAreaPixels(croppedAreaPixels)
@@ -32,14 +33,21 @@ export function ImageCropDialog({
     if (!croppedAreaPixels) return
 
     setIsProcessing(true)
+    setCompressionProgress(0)
     try {
-      const croppedBlob = await getCroppedImage(imageSrc, croppedAreaPixels)
+      const croppedBlob = await getCroppedAndCompressedImage(
+        imageSrc, 
+        croppedAreaPixels,
+        256, // target size
+        500  // max size in KB
+      )
       onComplete(croppedBlob)
     } catch (error) {
-      console.error('Failed to crop image:', error)
-      alert('Failed to crop image. Please try again.')
+      console.error('Failed to crop and compress image:', error)
+      alert('Failed to process image. Please try again.')
     } finally {
       setIsProcessing(false)
+      setCompressionProgress(0)
     }
   }
 
@@ -92,6 +100,22 @@ export function ImageCropDialog({
             className="w-full accent-accent-yellow"
           />
         </div>
+
+        {/* Compression Progress */}
+        {isProcessing && compressionProgress > 0 && (
+          <div className="px-4 py-2 border-b border-border-card">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-text-sec text-xs">Compressing image...</span>
+              <span className="text-text-sec text-xs">{compressionProgress}%</span>
+            </div>
+            <div className="w-full bg-bg-primary rounded-full h-1">
+              <div 
+                className="bg-accent-yellow h-1 rounded-full transition-all duration-200"
+                style={{ width: `${compressionProgress}%` }}
+              />
+            </div>
+          </div>
+        )}
 
         {/* Actions */}
         <div className="flex gap-3 p-4">

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import { X, Camera } from 'lucide-react'
+import { X, Camera, Upload } from 'lucide-react'
 import { PencilIcon } from '@heroicons/react/24/outline'
 import { AvatarImage } from '@/components/ui/AvatarImage'
 import { ImageCropDialog } from './ImageCropDialog'
@@ -49,6 +49,33 @@ export function ProfileAvatarEditor({
     const url = createImagePreviewUrl(file)
     setPreviewUrl(url)
     setShowCropDialog(true)
+  }
+
+  const handleCameraSelect = () => {
+    // Create a file input that accepts camera
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = 'image/*'
+    input.capture = 'environment' // Use rear camera
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0]
+      if (file) {
+        const validation = validateImageFile(file)
+        if (!validation.valid) {
+          alert(validation.error)
+          return
+        }
+        setSelectedFile(file)
+        const url = createImagePreviewUrl(file)
+        setPreviewUrl(url)
+        setShowCropDialog(true)
+      }
+    }
+    input.click()
+  }
+
+  const handleLibrarySelect = () => {
+    fileInputRef.current?.click()
   }
 
   const handleCropComplete = async (blob: Blob) => {
@@ -137,30 +164,50 @@ export function ProfileAvatarEditor({
               </div>
 
               {/* Controls */}
-              <div className="flex gap-4">
+              <div className="flex flex-col gap-3">
                 {!currentImageUrl ? (
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={uploadImage.isPending}
-                    className="flex items-center gap-2 text-accent-yellow text-sm font-medium hover:opacity-80 transition-opacity disabled:opacity-50"
-                  >
-                    <Camera size={16} />
-                    <span>Add photo</span>
-                  </button>
-                ) : (
-                  <>
+                  <div className="flex gap-3">
                     <button
-                      onClick={() => fileInputRef.current?.click()}
+                      onClick={handleCameraSelect}
                       disabled={uploadImage.isPending}
-                      className="flex items-center gap-2 text-accent-yellow text-sm font-medium hover:opacity-80 transition-opacity disabled:opacity-50"
+                      className="flex-1 flex items-center justify-center gap-2 bg-accent-yellow text-black text-sm font-medium py-2 rounded-xl hover:opacity-80 transition-opacity disabled:opacity-50"
                     >
                       <Camera size={16} />
-                      <span>Change</span>
+                      <span>Take Photo</span>
                     </button>
+                    <button
+                      onClick={handleLibrarySelect}
+                      disabled={uploadImage.isPending}
+                      className="flex-1 flex items-center justify-center gap-2 bg-bg-card border border-border-card text-white text-sm font-medium py-2 rounded-xl hover:bg-opacity-80 transition-opacity disabled:opacity-50"
+                    >
+                      <Upload size={16} />
+                      <span>Library</span>
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex gap-3">
+                      <button
+                        onClick={handleCameraSelect}
+                        disabled={uploadImage.isPending}
+                        className="flex-1 flex items-center justify-center gap-2 text-accent-yellow text-sm font-medium hover:opacity-80 transition-opacity disabled:opacity-50"
+                      >
+                        <Camera size={16} />
+                        <span>Camera</span>
+                      </button>
+                      <button
+                        onClick={handleLibrarySelect}
+                        disabled={uploadImage.isPending}
+                        className="flex-1 flex items-center justify-center gap-2 text-accent-yellow text-sm font-medium hover:opacity-80 transition-opacity disabled:opacity-50"
+                      >
+                        <Upload size={16} />
+                        <span>Library</span>
+                      </button>
+                    </div>
                     <button
                       onClick={handleRemove}
                       disabled={removeImage.isPending || uploadImage.isPending}
-                      className="flex items-center gap-2 text-accent-pink text-sm font-medium hover:opacity-80 transition-opacity disabled:opacity-50"
+                      className="w-full flex items-center justify-center gap-2 text-accent-pink text-sm font-medium py-2 hover:opacity-80 transition-opacity disabled:opacity-50"
                     >
                       <X size={16} />
                       <span>{removeImage.isPending ? 'Removing...' : 'Remove'}</span>

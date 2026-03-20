@@ -11,7 +11,15 @@ export const LEGO_TRANSFORM_PROMPT = `Transform this image into a vibrant LEGO m
 - Ensure high contrast and sharp edges typical of LEGO photography
 - Output must be 256x256 pixels
 - No text, letters, or labels should appear in the final image
-- Maintain a playful, toy-like aesthetic throughout`
+- Maintain a playful, toy-like aesthetic throughout
+
+REFERENCE IMAGE INSTRUCTIONS:
+When a reference image is provided, carefully analyze the person's facial features, hair style, skin tone, and distinctive characteristics. Create a LEGO minifigure that captures their unique identity while applying the LEGO transformation style. Focus on:
+- Matching hair color and style with LEGO hair pieces
+- Capturing facial structure and expressions within minifigure constraints
+- Using appropriate skin tone colors for the minifigure
+- Including distinctive features like glasses, facial hair, or accessories
+- Creating a recognizable likeness that maintains the person's identity`
 
 export const AVATAR_CONFIG = {
   size: 256,

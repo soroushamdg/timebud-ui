@@ -368,6 +368,7 @@ export default function Home() {
                 fallbackType="profile"
                 fallbackSeed={`${userProfile?.first_name || ''}${userProfile?.last_name || ''}`}
                 size={48}
+                className="border-4 border-white"
               />
               <span className="text-white text-base font-medium">
                 Your studio &gt;
@@ -411,7 +412,7 @@ export default function Home() {
                       fallbackLabel={project.name}
                       fallbackColor={project.color || undefined}
                       size={80}
-                      className="border-2 border-black"
+                      className="border-2 border-black border-4 border-white"
                     />
                   </button>
                 ))}
@@ -478,7 +479,7 @@ export default function Home() {
             <button
               onClick={handleStartWork}
               disabled={plannedTasks.length === 0 || isLoading}
-              className="w-full bg-accent-yellow text-black font-bold text-lg py-4 rounded-none hover:bg-yellow-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed border border-[#ffffff]"
+              className="w-full bg-accent-yellow text-black font-bold text-lg py-4 rounded-none hover:bg-yellow-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed border-4 border-white"
             >
               Start work
             </button>
