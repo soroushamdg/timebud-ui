@@ -7,7 +7,7 @@ import { AvatarImage } from '@/components/ui/AvatarImage'
 import { ImageCropDialog } from './ImageCropDialog'
 import { LegoTransformSheet } from './LegoTransformSheet'
 import { ErrorDialog } from '@/components/ui/ErrorDialog'
-import { validateImageFile, createImagePreviewUrl, revokeImagePreviewUrl } from '@/lib/avatars/imageProcessing'
+import { validateImageFile, createImagePreviewUrl, revokeImagePreviewUrl, compressImage } from '@/lib/avatars/imageProcessing'
 
 interface ProjectAvatarPickerProps {
   projectId: string
@@ -43,11 +43,27 @@ export function ProjectAvatarPicker({
     setErrorDialog({ isOpen: false, title: '', message: '' })
   }
 
+  const handleOversizedFile = async (file: File): Promise<File> => {
+    try {
+      console.log('Compressing oversized file:', file.name, file.size)
+      const compressedBlob = await compressImage(file, 1500) // Target 1.5MB
+      const compressedFile = new File([compressedBlob], file.name, {
+        type: compressedBlob.type,
+        lastModified: Date.now()
+      })
+      console.log('Compressed file size:', compressedFile.size)
+      return compressedFile
+    } catch (error) {
+      console.error('Compression failed:', error)
+      throw error
+    }
+  }
+
   const { data: avatars = [], isLoading } = useStaticAvatars()
   const setAvatar = useSetProjectAvatar()
   const removeAvatar = useRemoveProjectAvatar()
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     console.log('Library file selected:', file?.name, file?.type, file?.size)
     
@@ -57,17 +73,46 @@ export function ProjectAvatarPicker({
       return
     }
 
-    const validation = validateImageFile(file)
-    console.log('File validation:', validation)
+    let processedFile = file
     
-    if (!validation.valid) {
+    // Check if file needs compression
+    const validation = validateImageFile(file)
+    if (!validation.valid && validation.error?.includes('smaller than')) {
+      try {
+        // Show compression dialog
+        setErrorDialog({ 
+          isOpen: true, 
+          title: 'Compressing Photo', 
+          message: 'Your photo is large. Compressing it to fit size limits...' 
+        })
+        
+        processedFile = await handleOversizedFile(file)
+        
+        // Close compression dialog
+        dismissErrorDialog()
+        
+        // Re-validate compressed file
+        const revalidation = validateImageFile(processedFile)
+        if (!revalidation.valid) {
+          showErrorDialog('File Too Large', 'Photo is still too large after compression. Please try a smaller photo.')
+          return
+        }
+        
+        console.log('File compressed successfully:', processedFile.size)
+      } catch (error) {
+        console.error('Compression failed:', error)
+        showErrorDialog('Compression Failed', 'Failed to compress photo. Please try a smaller photo.')
+        return
+      }
+    } else if (!validation.valid) {
+      // Other validation errors (file type, etc.)
       console.error('Validation failed:', validation.error)
       showErrorDialog('Invalid File', validation.error || 'Please select a valid image file.')
       return
     }
 
-    setSelectedFile(file)
-    const url = createImagePreviewUrl(file)
+    setSelectedFile(processedFile)
+    const url = createImagePreviewUrl(processedFile)
     setPreviewUrl(url)
     setShowCropDialog(true)
   }
@@ -81,22 +126,51 @@ export function ProjectAvatarPicker({
     // Try rear camera first, fallback to front camera
     input.capture = 'environment'
     
-    input.onchange = (e) => {
+    input.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0]
       console.log('Camera file selected:', file?.name, file?.type, file?.size)
       
       if (file) {
-        const validation = validateImageFile(file)
-        console.log('File validation:', validation)
+        let processedFile = file
         
-        if (!validation.valid) {
+        // Check if file needs compression
+        const validation = validateImageFile(file)
+        if (!validation.valid && validation.error?.includes('smaller than')) {
+          try {
+            // Show compression dialog
+            setErrorDialog({ 
+              isOpen: true, 
+              title: 'Compressing Photo', 
+              message: 'Your photo is large. Compressing it to fit size limits...' 
+            })
+            
+            processedFile = await handleOversizedFile(file)
+            
+            // Close compression dialog
+            dismissErrorDialog()
+            
+            // Re-validate compressed file
+            const revalidation = validateImageFile(processedFile)
+            if (!revalidation.valid) {
+              showErrorDialog('File Too Large', 'Photo is still too large after compression. Please try a smaller photo.')
+              return
+            }
+            
+            console.log('File compressed successfully:', processedFile.size)
+          } catch (error) {
+            console.error('Compression failed:', error)
+            showErrorDialog('Compression Failed', 'Failed to compress photo. Please try a smaller photo.')
+            return
+          }
+        } else if (!validation.valid) {
+          // Other validation errors (file type, etc.)
           console.error('Validation failed:', validation.error)
           showErrorDialog('Invalid File', validation.error || 'Please select a valid image file.')
           return
         }
         
-        setSelectedFile(file)
-        const url = createImagePreviewUrl(file)
+        setSelectedFile(processedFile)
+        const url = createImagePreviewUrl(processedFile)
         setPreviewUrl(url)
         setShowCropDialog(true)
       } else {
