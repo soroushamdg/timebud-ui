@@ -348,6 +348,11 @@ export default function ProjectOverviewPage({
     return task.item_type === "task"; // Only tasks can be interacted with, not milestones
   }, []);
 
+  // Check if task can be swiped (including completed tasks for undo/delete)
+  const canSwipe = useCallback((task: DbTask) => {
+    return task.item_type === "task"; // All tasks can be swiped, including completed ones
+  }, []);
+
   // Calculate progress - only count tasks, not milestones
   const completedTaskCount = tasks.filter(
     (t) => t.status === "completed",
@@ -369,9 +374,9 @@ export default function ProjectOverviewPage({
   // Swipe gesture handlers (mobile only)
   const handleTouchStart = useCallback(
     (e: React.TouchEvent, task: DbTask) => {
-      console.log('Touch start detected:', { task: task.title, isMobile, canInteract: canInteract(task) });
+      console.log('Touch start detected:', { task: task.title, isMobile, canSwipe: canSwipe(task) });
       
-      if (!isMobile || !canInteract(task) || task.status === "completed") {
+      if (!isMobile || !canSwipe(task)) {
         console.log('Touch start blocked by conditions');
         return;
       }
@@ -396,7 +401,7 @@ export default function ProjectOverviewPage({
       }, 500);
       setLongPressTimer(timer);
     },
-    [canInteract, isMobile],
+    [canSwipe, isMobile],
   );
 
   const handleTouchMove = useCallback(
@@ -467,18 +472,27 @@ export default function ProjectOverviewPage({
       // Swipe threshold met - show action options
       try {
         if (swipeDirection === "right") {
-          // Complete task - check if locked
-          if (!isLocked(swipedTask)) {
-            console.log('Completing task via swipe:', swipedTask.title);
+          // Right swipe: toggle task completion (undo if completed, complete if pending)
+          if (swipedTask.status === "completed") {
+            console.log('Undoing task completion via swipe:', swipedTask.title);
             await updateTask.mutateAsync({
               id: swipedTask.id,
-              status: "completed",
+              status: "pending",
             });
           } else {
-            console.log('Task is locked, cannot complete:', swipedTask.title);
+            // Complete task - check if locked
+            if (!isLocked(swipedTask)) {
+              console.log('Completing task via swipe:', swipedTask.title);
+              await updateTask.mutateAsync({
+                id: swipedTask.id,
+                status: "completed",
+              });
+            } else {
+              console.log('Task is locked, cannot complete:', swipedTask.title);
+            }
           }
         } else if (swipeDirection === "left") {
-          // Delete task
+          // Delete task (works for both completed and pending tasks)
           console.log('Deleting task via swipe:', swipedTask.title);
           const supabase = createClient();
           await supabase.from("tasks").delete().eq("id", swipedTask.id);
@@ -1033,7 +1047,7 @@ export default function ProjectOverviewPage({
       const taskNumber = getTaskNumber(item);
       const locked = isLocked(item);
       const completed = item.status === "completed";
-      const canEdit = canInteract(item) && !completed;
+      const canEdit = canInteract(item); // Allow editing for all tasks, including completed ones
 
       return (
         <div key={item.id} className="relative">
@@ -1043,12 +1057,23 @@ export default function ProjectOverviewPage({
               {swipeDirection === "right" && (
                 <div className="absolute inset-0 bg-accent-green rounded-2xl flex items-center justify-start px-4">
                   <div className="flex items-center gap-2">
-                    <Check size={20} className="text-white" />
-                    <span className="text-white font-semibold">
-                      {swipeDistance > 150 ? "Release to Complete" : "Complete"}
-                    </span>
+                    {completed ? (
+                      <>
+                        <X size={20} className="text-white" />
+                        <span className="text-white font-semibold">
+                          {swipeDistance > 150 ? "Release to Undo" : "Undo"}
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <Check size={20} className="text-white" />
+                        <span className="text-white font-semibold">
+                          {swipeDistance > 150 ? "Release to Complete" : "Complete"}
+                        </span>
+                      </>
+                    )}
                   </div>
-                  {swipeDistance < 150 && (
+                  {!completed && swipeDistance < 150 && !locked && (
                     <button
                       onClick={() => handleTogglePriority(item)}
                       className="ml-4 bg-accent-yellow text-black px-3 py-1 rounded-lg text-sm font-semibold"
@@ -1105,12 +1130,12 @@ export default function ProjectOverviewPage({
             onMouseEnter={() => !isMobile && setHoveredTask(item.id)}
             onMouseLeave={() => !isMobile && setHoveredTask(null)}
             onClick={() => {
-              if (!isMobile && canEdit) {
+              if (canEdit) {
                 handleSingleClick(item);
               }
             }}
             onDoubleClick={() => {
-              if (!isMobile && canEdit) {
+              if (canEdit) {
                 handleDoubleClick(item);
               }
             }}
@@ -1127,7 +1152,7 @@ export default function ProjectOverviewPage({
                   ? "bg-bg-card-locked"
                   : "bg-bg-card border-border-card"
               }
-              ${canEdit && !isMobile ? "cursor-pointer" : ""}
+              ${canEdit ? "cursor-pointer" : ""}
               ${
                 isDraggable && sortMode === "manual" && !completed
                   ? "cursor-move"
@@ -1238,6 +1263,7 @@ export default function ProjectOverviewPage({
   // Long-press menu component
   const LongPressMenu = ({ task }: { task: DbTask }) => {
     const locked = isLocked(task);
+    const completed = task.status === "completed";
     
     return (
       <div className="fixed inset-0 bg-black/50 z-[100] flex items-end" onClick={handleCancelLongPress}>
@@ -1253,14 +1279,24 @@ export default function ProjectOverviewPage({
           </div>
           
           <div className="space-y-3">
-            {!locked && (
+            {completed ? (
               <button
                 onClick={() => handleLongPressAction('complete', task)}
-                className="w-full flex items-center gap-3 bg-accent-green/20 text-accent-green p-4 rounded-2xl hover:bg-accent-green/30 transition-colors"
+                className="w-full flex items-center gap-3 bg-orange-500/20 text-orange-500 p-4 rounded-2xl hover:bg-orange-500/30 transition-colors"
               >
-                <Check size={20} />
-                <span className="font-medium">Complete Task</span>
+                <X size={20} />
+                <span className="font-medium">Undo Completion</span>
               </button>
+            ) : (
+              !locked && (
+                <button
+                  onClick={() => handleLongPressAction('complete', task)}
+                  className="w-full flex items-center gap-3 bg-accent-green/20 text-accent-green p-4 rounded-2xl hover:bg-accent-green/30 transition-colors"
+                >
+                  <Check size={20} />
+                  <span className="font-medium">Complete Task</span>
+                </button>
+              )
             )}
             
             <button
