@@ -6,6 +6,7 @@ import { useStaticAvatars, useSetProjectAvatar, useRemoveProjectAvatar } from '@
 import { AvatarImage } from '@/components/ui/AvatarImage'
 import { ImageCropDialog } from './ImageCropDialog'
 import { LegoTransformSheet } from './LegoTransformSheet'
+import { ErrorDialog } from '@/components/ui/ErrorDialog'
 import { validateImageFile, createImagePreviewUrl, revokeImagePreviewUrl } from '@/lib/avatars/imageProcessing'
 
 interface ProjectAvatarPickerProps {
@@ -28,6 +29,19 @@ export function ProjectAvatarPicker({
   const [showCropDialog, setShowCropDialog] = useState(false)
   const [showTransformSheet, setShowTransformSheet] = useState(false)
   const [showConfirmRemove, setShowConfirmRemove] = useState(false)
+  const [errorDialog, setErrorDialog] = useState<{ isOpen: boolean; title: string; message: string }>({
+    isOpen: false,
+    title: '',
+    message: ''
+  })
+
+  const showErrorDialog = (title: string, message: string) => {
+    setErrorDialog({ isOpen: true, title, message })
+  }
+
+  const dismissErrorDialog = () => {
+    setErrorDialog({ isOpen: false, title: '', message: '' })
+  }
 
   const { data: avatars = [], isLoading } = useStaticAvatars()
   const setAvatar = useSetProjectAvatar()
@@ -35,11 +49,20 @@ export function ProjectAvatarPicker({
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (!file) return
+    console.log('Library file selected:', file?.name, file?.type, file?.size)
+    
+    if (!file) {
+      console.error('No file selected from library')
+      showErrorDialog('File Selection', 'No file was selected. Please try again.')
+      return
+    }
 
     const validation = validateImageFile(file)
+    console.log('File validation:', validation)
+    
     if (!validation.valid) {
-      alert(validation.error)
+      console.error('Validation failed:', validation.error)
+      showErrorDialog('Invalid File', validation.error || 'Please select a valid image file.')
       return
     }
 
@@ -50,26 +73,54 @@ export function ProjectAvatarPicker({
   }
 
   const handleCameraSelect = () => {
-    // Create a file input that accepts camera
+    // Create a file input that accepts camera with better mobile support
     const input = document.createElement('input')
     input.type = 'file'
     input.accept = 'image/*'
-    input.capture = 'environment' // Use rear camera
+    
+    // Try rear camera first, fallback to front camera
+    input.capture = 'environment'
+    
     input.onchange = (e) => {
       const file = (e.target as HTMLInputElement).files?.[0]
+      console.log('Camera file selected:', file?.name, file?.type, file?.size)
+      
       if (file) {
         const validation = validateImageFile(file)
+        console.log('File validation:', validation)
+        
         if (!validation.valid) {
-          alert(validation.error)
+          console.error('Validation failed:', validation.error)
+          showErrorDialog('Invalid File', validation.error || 'Please select a valid image file.')
           return
         }
+        
         setSelectedFile(file)
         const url = createImagePreviewUrl(file)
         setPreviewUrl(url)
         setShowCropDialog(true)
+      } else {
+        console.error('No file selected from camera')
+        showErrorDialog('Camera Error', 'No photo was captured. Please try again.')
       }
     }
-    input.click()
+    
+    input.onerror = (error) => {
+      console.error('Camera input error:', error)
+      showErrorDialog('Camera Error', 'Failed to access camera. Please try again or use photo library.')
+    }
+    
+    // Add timeout to handle mobile camera issues
+    setTimeout(() => {
+      try {
+        input.click()
+        console.log('Camera input triggered')
+      } catch (error) {
+        console.error('Failed to trigger camera input:', error)
+        showErrorDialog('Camera Unavailable', 'Camera is not available. Please use photo library instead.')
+      } 
+      fileInputRef.current?.click()
+    }, 100)
   }
 
   const handleLibrarySelect = () => {
@@ -120,7 +171,7 @@ export function ProjectAvatarPicker({
       onClose()
     } catch (error) {
       console.error('Failed to set avatar:', error)
-      alert('Failed to set avatar. Please try again.')
+      showErrorDialog('Upload Failed', 'Failed to set avatar. Please try again.')
     }
   }
 
@@ -131,7 +182,7 @@ export function ProjectAvatarPicker({
       onClose()
     } catch (error) {
       console.error('Failed to remove avatar:', error)
-      alert('Failed to remove avatar. Please try again.')
+      showErrorDialog('Removal Failed', 'Failed to remove avatar. Please try again.')
     }
   }
 
@@ -279,6 +330,14 @@ export function ProjectAvatarPicker({
           onDismiss={handleTransformDismiss}
         />
       )}
+
+      {/* Error Dialog */}
+      <ErrorDialog
+        isOpen={errorDialog.isOpen}
+        title={errorDialog.title}
+        message={errorDialog.message}
+        onDismiss={dismissErrorDialog}
+      />
     </>
   )
 }

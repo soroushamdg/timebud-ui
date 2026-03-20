@@ -6,6 +6,7 @@ import { useCredits } from '@/hooks/useCredits'
 import { createClient } from '@/lib/supabase/client'
 import { uploadAvatarToStorage } from '@/lib/avatars/storage'
 import { LoadingDialog } from '@/components/ui/ProgressBar'
+import { ErrorDialog } from '@/components/ui/ErrorDialog'
 
 interface LegoTransformSheetProps {
   file: Blob
@@ -27,10 +28,23 @@ export function LegoTransformSheet({
   const [error, setError] = useState<string | null>(null)
   const [currentStage, setCurrentStage] = useState('')
   const [stageProgress, setStageProgress] = useState(0)
+  const [errorDialogState, setErrorDialogState] = useState<{ isOpen: boolean; title: string; message: string }>({
+    isOpen: false,
+    title: '',
+    message: ''
+  })
   const { data: credits } = useCredits()
 
   const totalCredits = (credits?.free_credits || 0) + (credits?.purchased_credits || 0)
   const hasEnoughCredits = totalCredits >= 15
+
+  const showErrorDialog = (title: string, message: string) => {
+    setErrorDialogState({ isOpen: true, title, message })
+  }
+
+  const dismissErrorDialog = () => {
+    setErrorDialogState({ isOpen: false, title: '', message: '' })
+  }
 
   const updateStageProgress = (stage: string, progress: number) => {
     setCurrentStage(stage)
@@ -61,13 +75,13 @@ export function LegoTransformSheet({
       const data = await response.json()
 
       if (data.error === 'insufficient_credits') {
-        setError('Not enough credits. You need 15 credits for this feature.')
+        showErrorDialog('Insufficient Credits', 'Not enough credits. You need 15 credits for this feature.')
         setIsTransforming(false)
         return
       }
 
       if (data.error === 'transformation_failed') {
-        setError('Transformation failed. Uploading original image instead...')
+        showErrorDialog('Transformation Failed', 'Transformation failed. Uploading original image instead...')
         await handleKeepOriginal()
         return
       }
@@ -88,7 +102,7 @@ export function LegoTransformSheet({
       }
     } catch (error: any) {
       console.error('Transform error:', error)
-      setError('Failed to transform image. Uploading original instead...')
+      showErrorDialog('Transform Error', 'Failed to transform image. Uploading original instead...')
       await handleKeepOriginal()
     } finally {
       setIsTransforming(false)
@@ -146,14 +160,14 @@ export function LegoTransformSheet({
       onComplete(publicUrl)
     } catch (error: any) {
       console.error('Upload error:', error)
-      setError('Failed to upload image. Please try again.')
+      showErrorDialog('Upload Failed', 'Failed to upload image. Please try again.')
     } finally {
       setIsUploading(false)
     }
   }
 
   const handleRetry = () => {
-    setError(null)
+    dismissErrorDialog()
     setCurrentStage('')
     setStageProgress(0)
     handleApplyTheme()
@@ -210,21 +224,6 @@ export function LegoTransformSheet({
             />
           )}
 
-          {/* Error Message */}
-          {error && (
-            <div className="bg-accent-pink bg-opacity-10 border border-accent-pink rounded-xl p-4">
-              <p className="text-accent-pink text-sm text-center mb-3">{error}</p>
-              {!isTransforming && !isUploading && (
-                <button
-                  onClick={handleRetry}
-                  className="w-full bg-accent-pink text-white font-medium py-2 rounded-xl hover:bg-opacity-90 transition-opacity"
-                >
-                  Retry Transformation
-                </button>
-              )}
-            </div>
-          )}
-
           {/* Buttons */}
           <div className="space-y-3">
             <button
@@ -262,6 +261,14 @@ export function LegoTransformSheet({
           </div>
         </div>
       </div>
+
+      {/* Error Dialog */}
+      <ErrorDialog
+        isOpen={errorDialogState.isOpen}
+        title={errorDialogState.title}
+        message={errorDialogState.message}
+        onDismiss={dismissErrorDialog}
+      />
     </>
   )
 }

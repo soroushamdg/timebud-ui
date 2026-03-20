@@ -178,12 +178,28 @@ export async function compressImage(
 }
 
 export function validateImageFile(file: File): { valid: boolean; error?: string } {
-  const validTypes = ['image/jpeg', 'image/png', 'image/webp']
+  // More permissive MIME types for mobile cameras
+  const validTypes = [
+    'image/jpeg', 
+    'image/jpg', 
+    'image/png', 
+    'image/webp',
+    'image/heic', // iOS format
+    'image/heif', // iOS format
+  ]
+  
+  console.log('Validating file:', file.name, file.type, file.size)
   
   if (!validTypes.includes(file.type)) {
-    return {
-      valid: false,
-      error: 'Please upload a JPEG, PNG, or WebP image',
+    // Try to detect image type from file extension if MIME type is missing or generic
+    const extension = file.name.toLowerCase().split('.').pop()
+    const validExtensions = ['jpg', 'jpeg', 'png', 'webp', 'heic', 'heif']
+    
+    if (!extension || !validExtensions.includes(extension)) {
+      return {
+        valid: false,
+        error: `Unsupported file type: ${file.type}. Please upload JPEG, PNG, WebP, HEIC, or HEIF image.`,
+      }
     }
   }
 
@@ -193,10 +209,11 @@ export function validateImageFile(file: File): { valid: boolean; error?: string 
   if (file.size > maxSizeBytes) {
     return {
       valid: false,
-      error: `Image must be smaller than ${maxSizeMB}MB`,
+      error: `Image must be smaller than ${maxSizeMB}MB (current: ${(file.size / 1024 / 1024).toFixed(1)}MB)`,
     }
   }
 
+  console.log('File validation passed')
   return { valid: true }
 }
 
