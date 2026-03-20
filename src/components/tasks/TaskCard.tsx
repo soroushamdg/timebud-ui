@@ -8,6 +8,7 @@ interface PlannedTask {
   projectId?: string
   projectName?: string
   projectColor?: string
+  projectAvatarUrl?: string
   done?: boolean
   percentage?: number
   estimatedMinutes?: number
@@ -39,12 +40,13 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
         {/* Avatar */}
         {task.projectId && (
           <AvatarImage
-            src={undefined}
+            src={task.projectAvatarUrl}
             fallbackType="project"
             fallbackLabel={task.projectName || 'Project'}
             fallbackColor={task.projectColor || '#F5C518'}
+            projectId={task.projectId}
             size={40}
-            className="flex-shrink-0"
+            className="flex-shrink-0 border-3 border-white"
           />
         )}
 

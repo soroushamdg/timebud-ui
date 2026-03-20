@@ -32,6 +32,7 @@ interface PlannedTask {
   projectId?: string;
   projectName?: string;
   projectColor?: string;
+  projectAvatarUrl?: string;
   done?: boolean;
   percentage?: number;
   estimatedMinutes?: number;
@@ -204,12 +205,14 @@ export default function Home() {
       // Convert PlannedTaskResult to PlannedTask for TaskCard
       const tasksWithDone = plan.tasks.map((task) => {
         const dbTask = tasks.find((t) => t.id === task.taskId);
+        const project = task.projectId ? projects?.find((p) => p.id === task.projectId) : undefined;
         return {
           taskId: task.taskId,
           title: task.title,
           projectId: task.projectId || undefined,
-          projectName: task.projectId ? projects?.find((p) => p.id === task.projectId)?.name : undefined,
-          projectColor: task.projectId ? projects?.find((p) => p.id === task.projectId)?.color || undefined : undefined,
+          projectName: project?.name || undefined,
+          projectColor: project?.color || undefined,
+          projectAvatarUrl: project?.project_avatar_url || undefined,
           done: false,
           estimatedMinutes: dbTask?.estimated_minutes || undefined,
           scheduledMinutes: task.scheduledMinutes,
@@ -224,13 +227,17 @@ export default function Home() {
       const localSessionId = `local-${Date.now()}`;
       setFocusSession(
         localSessionId,
-        plan.tasks.map((t) => ({ 
-          ...t, 
-          done: false,
-          projectName: t.projectId ? projects?.find((p) => p.id === t.projectId)?.name : undefined,
-          projectColor: t.projectId ? projects?.find((p) => p.id === t.projectId)?.color : undefined,
-          estimatedMinutes: tasks.find(task => task.id === t.taskId)?.estimated_minutes,
-        })) as any,
+        plan.tasks.map((t) => { 
+          const project = t.projectId ? projects?.find((p) => p.id === t.projectId) : undefined;
+          return { 
+            ...t, 
+            done: false,
+            projectName: project?.name || undefined,
+            projectColor: project?.color || undefined,
+            projectAvatarUrl: project?.project_avatar_url || undefined,
+            estimatedMinutes: tasks.find(task => task.id === t.taskId)?.estimated_minutes,
+          };
+        }) as any,
         plan.budgetMinutes,
       );
       setPlannedTasks(tasksWithDone);
@@ -256,44 +263,48 @@ export default function Home() {
       ).filter(Boolean) as DbTask[];
 
       // Convert DbTask to PlannedTask format for TaskCard
-      const plannedSessionTasks = sessionTasks.map((task) => ({
-        taskId: task.id,
-        title: task.title,
-        projectId: task.project_id || undefined,
-        projectName: projects?.find((p) => p.id === task.project_id)?.name,
-        projectColor:
-          projects?.find((p) => p.id === task.project_id)?.color || undefined,
-        done: false,
-        estimatedMinutes: task.estimated_minutes || undefined,
-        priority: task.priority,
-        deadline: task.due_date || undefined,
-        description: task.description || undefined,
-      }));
-
-      // Also convert to session store format
-      const sessionStoreTasks = sessionTasks.map((task) => ({
-        position: 0,
-        taskId: task.id,
-        projectId: task.project_id,
-        projectName: task.project_id ? projects?.find((p) => p.id === task.project_id)?.name : undefined,
-        projectColor: task.project_id ? projects?.find((p) => p.id === task.project_id)?.color || undefined : undefined,
-        isSolo: task.project_id === null,
-        tier1: false,
-        milestoneTitle: null,
-        title: task.title,
-        priority: task.priority,
-        scheduledMinutes: task.estimated_minutes || 0,
-        partial: false,
-        carryOverMinutes: 0,
-        done: false,
-        estimatedMinutes: task.estimated_minutes || 0,
-      }));
+      const sessionStoreTasks = sessionTasks.map((task) => {
+        const project = task.project_id ? projects?.find((p) => p.id === task.project_id) : undefined;
+        return {
+          position: 0,
+          taskId: task.id,
+          projectId: task.project_id,
+          projectName: task.project_id ? projects?.find((p) => p.id === task.project_id)?.name : undefined,
+          projectColor: task.project_id ? projects?.find((p) => p.id === task.project_id)?.color || undefined : undefined,
+          projectAvatarUrl: project?.project_avatar_url || undefined,
+          isSolo: task.project_id === null,
+          tier1: false,
+          milestoneTitle: null,
+          title: task.title,
+          priority: task.priority,
+          scheduledMinutes: task.estimated_minutes || 0,
+          partial: false,
+          carryOverMinutes: 0,
+          done: false,
+          estimatedMinutes: task.estimated_minutes || undefined,
+        };
+      });
 
       setFocusSession(
         unfinishedFocusSession.id,
         sessionStoreTasks,
         unfinishedFocusSession.budget_minutes,
       );
+      const plannedSessionTasks = sessionTasks.map((task) => {
+        const project = task.project_id ? projects?.find((p) => p.id === task.project_id) : undefined;
+        return {
+          taskId: task.id,
+          title: task.title,
+          projectId: task.project_id || undefined,
+          projectName: project?.name,
+          projectColor: project?.color || undefined,
+          projectAvatarUrl: project?.project_avatar_url || undefined,
+          done: false,
+          estimatedMinutes: task.estimated_minutes || undefined,
+          priority: task.priority,
+          deadline: task.due_date || undefined,
+        };
+      });
       setPlannedTasks(plannedSessionTasks);
       setUnfinishedFocusSession(null);
       router.push("/session/focus");
@@ -302,6 +313,7 @@ export default function Home() {
     }
   };
 
+// ... (rest of the code remains the same)
   const handleStartFresh = async () => {
     if (!unfinishedFocusSession) return;
 

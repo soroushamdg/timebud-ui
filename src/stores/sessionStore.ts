@@ -7,6 +7,7 @@ export interface PlannedTask {
   projectId: string | null;
   projectName: string | undefined;
   projectColor: string | undefined;
+  projectAvatarUrl: string | undefined;
   isSolo: boolean;
   tier1: boolean;
   milestoneTitle: string | null;

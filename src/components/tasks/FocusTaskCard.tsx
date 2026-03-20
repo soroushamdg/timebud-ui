@@ -19,7 +19,7 @@ export function FocusTaskCard({ task, onCheckmark, onClick, isLoading }: FocusTa
   }
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex items-center gap-3 min-w-0 max-w-full">
       {/* Checkmark - Outside the card on the leading side */}
       <button
         onClick={handleCheckmarkClick}
@@ -42,19 +42,20 @@ export function FocusTaskCard({ task, onCheckmark, onClick, isLoading }: FocusTa
       {/* Task Card */}
       <div
         onClick={handleCardClick}
-        className={`flex-1 bg-bg-card rounded-none px-4 py-3 flex items-center gap-3 border border-[#ffffff] cursor-pointer transition-colors hover:bg-bg-card-hover ${
+        className={`flex-1 min-w-0 bg-bg-card rounded-none px-4 py-3 flex items-center gap-3 border border-[#ffffff] cursor-pointer transition-colors hover:bg-bg-card-hover ${
           task.done ? 'bg-bg-card-done border-accent-green/30' : ''
         }`}
       >
         {/* Project Avatar or Solo Task Avatar */}
         {task.projectId && task.projectName ? (
           <AvatarImage
-            src={undefined}
+            src={task.projectAvatarUrl}
             fallbackType="project"
             fallbackLabel={task.projectName}
             fallbackColor={task.projectColor || '#F5C518'}
+            projectId={task.projectId}
             size={40}
-            className="flex-shrink-0"
+            className="flex-shrink-0 border-3 border-white"
           />
         ) : (
           <div className="w-10 h-10 rounded-none bg-accent-pink/20 flex items-center justify-center flex-shrink-0">

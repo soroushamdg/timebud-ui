@@ -237,7 +237,7 @@ export default function FocusSession() {
 
       {/* Task list */}
       <div className="px-4 mt-12 max-h-[calc(100vh-300px)] overflow-y-auto">
-        <div className="space-y-3">
+        <div className="space-y-3 max-w-full">
           {focusSessionStore.plannedTasks.map((task) => (
             <FocusTaskCard
               key={task.taskId}
