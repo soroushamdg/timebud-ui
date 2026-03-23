@@ -103,7 +103,7 @@ export function EditTaskDialog({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
           {/* Project info */}
           <div className="text-text-sec text-sm mb-4">
             Current project: {projectName}
