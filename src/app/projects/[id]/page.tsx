@@ -1975,8 +1975,8 @@ export default function ProjectOverviewPage({
 
       {/* Edit Project Modal */}
       {editingProject && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4">
-          <div className="bg-bg-primary rounded-2xl w-full max-w-md">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4 overflow-y-auto">
+          <div className="bg-bg-primary rounded-2xl w-full max-w-md my-4">
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold text-white">Edit Project</h2>
@@ -2010,7 +2010,7 @@ export default function ProjectOverviewPage({
                 </div>
               </div>
 
-              <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+              <div className="space-y-4">
                 {/* Project Name */}
                 <div>
                   <label className="text-text-sec text-sm mb-2 block">

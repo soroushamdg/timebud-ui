@@ -91,8 +91,8 @@ export function EditTaskDialog({
     : 'Solo task';
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100]">
-      <div className="bg-bg-card rounded-none border border-border-card p-6 w-full max-w-md">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4 overflow-y-auto">
+      <div className="bg-bg-card rounded-none border border-border-card p-6 w-full max-w-md my-4">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-white text-lg font-semibold">Edit task</h3>
           <button
@@ -103,7 +103,7 @@ export function EditTaskDialog({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
+        <form onSubmit={handleSubmit} className="space-y-4">
           {/* Project info */}
           <div className="text-text-sec text-sm mb-4">
             Current project: {projectName}
