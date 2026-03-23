@@ -91,8 +91,8 @@ export function EditTaskDialog({
     : 'Solo task';
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-[100] p-4 overflow-y-auto">
-      <div className="bg-bg-card rounded-none border border-border-card p-6 w-full max-w-md mx-auto my-4">
+    <div className="fixed inset-0 bg-black/50 z-[100] overflow-y-auto">
+      <div className="bg-bg-card rounded-none border border-border-card p-4 sm:p-6 w-full max-w-md mx-auto">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-white text-lg font-semibold">Edit task</h3>
           <button
