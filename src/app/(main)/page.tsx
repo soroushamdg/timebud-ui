@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { AppShell } from "@/components/layout/AppShell";
 import { TaskCard } from "@/components/tasks/TaskCard";
@@ -100,6 +100,61 @@ export default function Home() {
   // Fetch all tasks so planner can check dependencies against completed tasks
   // The planner will filter out completed tasks after dependency checking
   const { data: tasks, isLoading: tasksLoading } = useTasks();
+  
+  // Calculate completion for all projects
+  const projectsWithCompletion = useMemo(() => {
+    if (!projects) return []
+    return projects.map(project => {
+      const projectTasks = tasks.filter(task => 
+        task.project_id === project.id && task.item_type === 'task'
+      )
+      const completedTaskCount = projectTasks.filter(task => task.status === 'completed').length
+      const totalTaskCount = projectTasks.length
+      const percentage = totalTaskCount > 0 
+        ? Math.round((completedTaskCount / totalTaskCount) * 100) 
+        : 0
+      const isCompleted = percentage === 100 && totalTaskCount > 0
+      
+      return {
+        ...project,
+        completion: {
+          percentage,
+          isCompleted,
+          completedTaskCount,
+          totalTaskCount
+        }
+      }
+    })
+  }, [projects, tasks])
+
+  // Sort projects: incomplete first, then completed, both groups sorted by deadline
+  const sortedProjects = useMemo(() => {
+    const incompleteProjects = projectsWithCompletion.filter((p: any) => !p.completion.isCompleted)
+    const completedProjects = projectsWithCompletion.filter((p: any) => p.completion.isCompleted)
+    
+    const sortByDeadline = (a: any, b: any) => {
+      if (!a.deadline && !b.deadline) return 0
+      if (!a.deadline) return 1
+      if (!b.deadline) return -1
+      return new Date(a.deadline).getTime() - new Date(b.deadline).getTime()
+    }
+    
+    incompleteProjects.sort(sortByDeadline)
+    completedProjects.sort(sortByDeadline)
+    
+    return [...incompleteProjects, ...completedProjects]
+  }, [projectsWithCompletion])
+  
+  // Debug: Test Supabase auth directly
+  useEffect(() => {
+    const testAuth = async () => {
+      const supabase = createClient();
+      const { data: { user }, error } = await supabase.auth.getUser();
+      console.log('[Home] Direct Supabase auth test:', { user: user?.id, error });
+    };
+    testAuth();
+  }, []);
+  
   const createFocusSession = useCreateFocusSession();
   const deleteFocusSession = useDeleteFocusSession();
   const { preferredBudgetMinutes, allowPartialTasks } = useUIStore();
@@ -415,11 +470,11 @@ export default function Home() {
               </div>
             ) : (
               <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
-                {projects.map((project) => (
+                {sortedProjects.map((project) => (
                   <button
                     key={project.id}
                     onClick={() => router.push(`/projects/${project.id}`)}
-                    className="flex-shrink-0 hover:scale-105 transition-transform"
+                    className="flex-shrink-0 hover:scale-105 transition-transform relative"
                   >
                     <AvatarImage
                       src={project.project_avatar_url}
@@ -429,6 +484,16 @@ export default function Home() {
                       size={80}
                       className="border-2 border-black border-4 border-white"
                     />
+                    {/* 100% completion ribbon */}
+                    {project.completion.isCompleted && (
+                      <div className="absolute top-0 right-0 w-20 h-20 overflow-hidden pointer-events-none z-10">
+                        <div className="absolute top-3 -right-8 w-[120%] bg-yellow-400 text-black text-center py-1.5 transform rotate-45 font-bold text-xs shadow-md">
+                          100%
+                          <div className="absolute bottom-0 left-0 w-0 h-0 border-b-[8px] border-l-[8px] border-transparent border-b-yellow-700 -translate-x-full"></div>
+                          <div className="absolute bottom-0 right-0 w-0 h-0 border-b-[8px] border-r-[8px] border-transparent border-b-yellow-700 translate-x-full"></div>
+                        </div>
+                      </div>
+                    )}
                   </button>
                 ))}
               </div>
