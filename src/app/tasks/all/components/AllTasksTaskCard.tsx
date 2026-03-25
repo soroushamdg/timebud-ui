@@ -11,6 +11,7 @@ interface AllTasksTaskCardProps {
   task: DbTask;
   projectName?: string;
   projectColor?: string;
+  projectAvatarUrl?: string;
   onUpdateTask: (id: string, updates: Partial<DbTask>) => Promise<void>;
   onDeleteTask: (id: string) => Promise<void>;
   onEditTask: (task: DbTask) => void;
@@ -22,6 +23,7 @@ export function AllTasksTaskCard({
   task, 
   projectName, 
   projectColor, 
+  projectAvatarUrl,
   onUpdateTask, 
   onDeleteTask, 
   onEditTask,
@@ -118,10 +120,11 @@ export function AllTasksTaskCard({
         {/* Avatar */}
         {task.project_id && (
           <AvatarImage
-            src={undefined}
+            src={projectAvatarUrl}
             fallbackType="project"
             fallbackLabel={projectName || 'Project'}
             fallbackColor={projectColor || '#F5C518'}
+            projectId={task.project_id}
             size={40}
             className="flex-shrink-0"
           />

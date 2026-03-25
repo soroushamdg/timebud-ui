@@ -356,8 +356,10 @@ export default function AllTasksPage() {
 
   // Convert DbTask to TaskCard format and render with AllTasksTaskCard
   const taskElements = filteredAndSortedTasks.map((task) => {
-    const projectName = task.project_id ? projects.find(p => p.id === task.project_id)?.name : undefined;
-    const projectColor = task.project_id ? (projects.find(p => p.id === task.project_id)?.color || undefined) : undefined;
+    const project = task.project_id ? projects.find(p => p.id === task.project_id) : undefined;
+    const projectName = project?.name || undefined;
+    const projectColor = project?.color || undefined;
+    const projectAvatarUrl = project?.project_avatar_url || undefined;
     
     return (
       <AllTasksTaskCard
@@ -365,6 +367,7 @@ export default function AllTasksPage() {
         task={task}
         projectName={projectName}
         projectColor={projectColor}
+        projectAvatarUrl={projectAvatarUrl}
         onUpdateTask={handleUpdateTask}
         onDeleteTask={handleDeleteTask}
         onEditTask={handleEditTask}
