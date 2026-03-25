@@ -453,8 +453,8 @@ export default function Home() {
           </div>
 
           {/* Target Projects */}
-          <div className="px-6 mb-6 overflow-visible">
-            <div className="flex items-center justify-between mb-4">
+          <div className="mb-6 overflow-visible">
+            <div className="flex items-center justify-between mb-2 px-6">
               <h2 className="text-white text-xl font-bold">Target projects</h2>
               <button
                 onClick={() => router.push("/projects/select")}
@@ -465,11 +465,11 @@ export default function Home() {
               </button>
             </div>
             {!projects || projects.length === 0 ? (
-              <div className="flex items-center justify-center h-20">
+              <div className="flex items-center justify-center h-20 px-6">
                 <p className="text-text-sec text-center">No projects</p>
               </div>
             ) : (
-              <div className="flex gap-4 overflow-x-visible overflow-y-visible pb-2 scrollbar-visible px-2">
+              <div className="flex gap-4 overflow-x-auto pb-2 pt-6 scrollbar-hide px-6">
                 {sortedProjects.map((project) => (
                   <button
                     key={project.id}
@@ -486,11 +486,11 @@ export default function Home() {
                     />
                     {/* 100% completion ribbon */}
                     {project.completion.isCompleted && (
-                      <div className="absolute top-0 right-0 w-20 h-20 overflow-hidden pointer-events-none z-10">
-                        <div className="absolute top-3 -right-8 w-[120%] bg-yellow-400 text-black text-center py-1.5 transform rotate-45 font-bold text-xs shadow-md">
+                      <div className="absolute -top-1 -right-1 w-20 h-20 overflow-hidden pointer-events-none z-10">
+                        <div className="absolute top-4 -right-7 w-[120%] bg-yellow-400 text-black text-center py-1.5 transform rotate-45 font-bold text-xs shadow-lg">
                           100%
-                          <div className="absolute bottom-0 left-0 w-0 h-0 border-b-[8px] border-l-[8px] border-transparent border-b-yellow-700 -translate-x-full"></div>
-                          <div className="absolute bottom-0 right-0 w-0 h-0 border-b-[8px] border-r-[8px] border-transparent border-b-yellow-700 translate-x-full"></div>
+                          <div className="absolute bottom-0 left-0 w-0 h-0 border-b-[6px] border-l-[6px] border-transparent border-b-yellow-700 -translate-x-full"></div>
+                          <div className="absolute bottom-0 right-0 w-0 h-0 border-b-[6px] border-r-[6px] border-transparent border-b-yellow-700 translate-x-full"></div>
                         </div>
                       </div>
                     )}
