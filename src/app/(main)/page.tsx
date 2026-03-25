@@ -229,13 +229,15 @@ export default function Home() {
         localSessionId,
         plan.tasks.map((t) => { 
           const project = t.projectId ? projects?.find((p) => p.id === t.projectId) : undefined;
+          const dbTask = tasks.find(task => task.id === t.taskId);
           return { 
             ...t, 
             done: false,
             projectName: project?.name || undefined,
             projectColor: project?.color || undefined,
             projectAvatarUrl: project?.project_avatar_url || undefined,
-            estimatedMinutes: tasks.find(task => task.id === t.taskId)?.estimated_minutes,
+            estimatedMinutes: dbTask?.estimated_minutes,
+            deadline: dbTask?.due_date || undefined,
           };
         }) as any,
         plan.budgetMinutes,
@@ -282,6 +284,7 @@ export default function Home() {
           carryOverMinutes: 0,
           done: false,
           estimatedMinutes: task.estimated_minutes || undefined,
+          deadline: task.due_date || undefined,
         };
       });
 

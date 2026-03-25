@@ -71,6 +71,7 @@ const QUICK_WIN_THRESHOLD_MIN = 20;
 const URGENT_DEADLINE_DAYS = 2;
 const PARTIAL_FLOOR = 5;
 const NO_DEADLINE_DAYS = 30;
+const OVERDUE_BOOST = 50.0;
 
 interface TaskWithMeta extends PlannerTask {
   _inherited?: boolean;
@@ -80,7 +81,7 @@ function daysUntil(dateStr: string, today: Date): number {
   const target = new Date(dateStr + 'T00:00:00Z');
   const todayUTC = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()));
   const diff = (target.getTime() - todayUTC.getTime()) / (1000 * 60 * 60 * 24);
-  return Math.max(0.5, diff);
+  return diff;
 }
 
 function inheritMilestoneDeadlines(allItems: PlannerTask[]): TaskWithMeta[] {
@@ -154,10 +155,21 @@ function scoreTask(
   let score = 0;
   
   if (task.due_date) {
-    const days = Math.max(0.5, daysUntil(task.due_date, today));
-    const rawUrgency = Math.exp(URGENCY_K / days);
-    const multiplier = task._inherited ? MILESTONE_DEADLINE_MULT : 1.0;
-    score += Math.min(rawUrgency * multiplier, URGENCY_CAP);
+    const days = daysUntil(task.due_date, today);
+    
+    if (days < 0) {
+      // Task is overdue - apply massive boost
+      // More overdue = higher priority
+      score += OVERDUE_BOOST + Math.abs(days) * 2;
+      const multiplier = task._inherited ? MILESTONE_DEADLINE_MULT : 1.0;
+      score *= multiplier;
+    } else {
+      // Task is not overdue - use normal urgency calculation
+      const safeDays = Math.max(0.5, days);
+      const rawUrgency = Math.exp(URGENCY_K / safeDays);
+      const multiplier = task._inherited ? MILESTONE_DEADLINE_MULT : 1.0;
+      score += Math.min(rawUrgency * multiplier, URGENCY_CAP);
+    }
   } else {
     score += Math.exp(URGENCY_K / NO_DEADLINE_DAYS);
   }

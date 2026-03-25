@@ -18,6 +18,7 @@ export interface PlannedTask {
   carryOverMinutes: number;
   done: boolean;
   estimatedMinutes?: number;
+  deadline?: string;
 }
 
 interface FocusSessionStore {

@@ -28,6 +28,17 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
     onClick?.()
   }
 
+  const isOverdue = (deadline: string | undefined): boolean => {
+    if (!deadline) return false
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const dueDate = new Date(deadline)
+    dueDate.setHours(0, 0, 0, 0)
+    return dueDate < today
+  }
+
+  const taskIsOverdue = isOverdue(task.deadline)
+
   return (
     <div className="flex items-center gap-3 min-w-0">
       {/* Task Card */}
@@ -63,10 +74,15 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
           <div className="flex items-center gap-2 mt-1">
             {task.deadline && (
               <>
-                <CalendarIcon className="w-3 h-3 text-text-sec flex-shrink-0" />
-                <span className="text-text-sec text-sm truncate">
+                <CalendarIcon className={`w-3 h-3 flex-shrink-0 ${taskIsOverdue && !task.done ? 'text-red-500' : 'text-text-sec'}`} />
+                <span className={`text-sm truncate ${taskIsOverdue && !task.done ? 'text-red-500 font-semibold' : 'text-text-sec'}`}>
                   {formatLocalSmart(task.deadline)}
                 </span>
+                {taskIsOverdue && !task.done && (
+                  <span className="px-1.5 py-0.5 bg-red-500 text-white text-xs font-bold rounded flex-shrink-0">
+                    OVERDUE
+                  </span>
+                )}
               </>
             )}
             {task.projectName && !task.deadline && (

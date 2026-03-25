@@ -1,5 +1,7 @@
 import { AvatarImage } from '@/components/ui/AvatarImage'
 import { PlannedTask } from '@/stores/sessionStore'
+import { CalendarIcon } from '@heroicons/react/24/outline'
+import { formatLocalSmart } from '@/lib/dates'
 
 interface FocusTaskCardProps {
   task: PlannedTask
@@ -17,6 +19,17 @@ export function FocusTaskCard({ task, onCheckmark, onClick, isLoading }: FocusTa
     e.stopPropagation()
     onCheckmark?.()
   }
+
+  const isOverdue = (deadline: string | undefined): boolean => {
+    if (!deadline) return false
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const dueDate = new Date(deadline)
+    dueDate.setHours(0, 0, 0, 0)
+    return dueDate < today
+  }
+
+  const taskIsOverdue = isOverdue(task.deadline)
 
   return (
     <div className="flex items-center gap-3 min-w-0 max-w-full">
@@ -68,10 +81,31 @@ export function FocusTaskCard({ task, onCheckmark, onClick, isLoading }: FocusTa
           <h4 className="text-white text-base font-semibold truncate">
             {task.title}
           </h4>
-          <p className="text-text-sec text-sm truncate">
-            {task.projectName || task.milestoneTitle || 'Solo Task'}
-            {task.priority && ' • High Priority'}
-          </p>
+          <div className="flex items-center gap-2 mt-1">
+            {task.deadline ? (
+              <>
+                <CalendarIcon className={`w-3 h-3 flex-shrink-0 ${taskIsOverdue && !task.done ? 'text-red-500' : 'text-text-sec'}`} />
+                <span className={`text-sm truncate ${taskIsOverdue && !task.done ? 'text-red-500 font-semibold' : 'text-text-sec'}`}>
+                  {formatLocalSmart(task.deadline)}
+                </span>
+                {taskIsOverdue && !task.done && (
+                  <span className="px-1.5 py-0.5 bg-red-500 text-white text-xs font-bold rounded flex-shrink-0">
+                    OVERDUE
+                  </span>
+                )}
+                {task.projectName && (
+                  <span className="text-text-sec text-sm truncate">
+                    • {task.projectName}
+                  </span>
+                )}
+              </>
+            ) : (
+              <p className="text-text-sec text-sm truncate">
+                {task.projectName || task.milestoneTitle || 'Solo Task'}
+                {task.priority && ' • High Priority'}
+              </p>
+            )}
+          </div>
         </div>
 
         {/* Estimated Time */}
