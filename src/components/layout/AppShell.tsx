@@ -8,7 +8,7 @@ interface AppShellProps {
 
 export function AppShell({ children, showTabBar = true }: AppShellProps) {
   return (
-    <div className="max-w-md mx-auto min-h-screen bg-bg-primary relative">
+    <div className="max-w-md mx-auto min-h-screen bg-bg-primary relative overflow-visible">
       <div className={showTabBar ? 'pb-0' : ''}>
         {children}
       </div>

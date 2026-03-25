@@ -421,7 +421,7 @@ export default function Home() {
 
   return (
     <AppShell>
-      <div className="flex flex-col h-[calc(100vh-5rem)] pb-5">
+      <div className="flex flex-col h-[calc(100vh-5rem)] pb-5 overflow-visible">
         {/* Fixed Header Section */}
         <div className="flex-shrink-0">
           {/* 2% top padding */}
@@ -453,7 +453,7 @@ export default function Home() {
           </div>
 
           {/* Target Projects */}
-          <div className="px-6 mb-6">
+          <div className="px-6 mb-6 overflow-visible">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-white text-xl font-bold">Target projects</h2>
               <button
@@ -469,12 +469,12 @@ export default function Home() {
                 <p className="text-text-sec text-center">No projects</p>
               </div>
             ) : (
-              <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
+              <div className="flex gap-4 overflow-x-visible overflow-y-visible pb-2 scrollbar-visible px-2">
                 {sortedProjects.map((project) => (
                   <button
                     key={project.id}
                     onClick={() => router.push(`/projects/${project.id}`)}
-                    className="flex-shrink-0 hover:scale-105 transition-transform relative"
+                    className="flex-shrink-0 transition-all relative hover:scale-110 hover:z-20 hover:shadow-xl hover:shadow-black/50"
                   >
                     <AvatarImage
                       src={project.project_avatar_url}
