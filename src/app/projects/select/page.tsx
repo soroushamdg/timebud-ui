@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useRef, useEffect } from 'react'
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAllProjects, useUpdateProject, useDeleteProject } from '@/hooks/useProjects'
@@ -13,7 +13,7 @@ import { isValidUuid } from '@/lib/utils'
 import { ProjectCardSkeleton } from '@/components/ui/Skeleton'
 import { AutoSizeText } from '@/components/ui/AutoSizeText'
 import { AvatarImage } from '@/components/ui/AvatarImage'
-import { Check, MoreVertical } from 'lucide-react'
+import { Check, MoreVertical, ArrowUpDown } from 'lucide-react'
 import { DbProject, ProjectStatus } from '@/types/database'
 
 interface PendingChanges {
@@ -28,6 +28,17 @@ interface ContextMenuState {
 
 interface AvatarHeights {
   [projectId: string]: number
+}
+
+type SortMode = 'creation' | 'deadline' | 'alphabet'
+
+interface ProjectWithCompletion extends DbProject {
+  completion: {
+    percentage: number
+    isCompleted: boolean
+    completedTaskCount: number
+    totalTaskCount: number
+  }
 }
 
 export default function SelectProjectsPage() {
@@ -51,6 +62,7 @@ export default function SelectProjectsPage() {
   })
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [avatarHeights, setAvatarHeights] = useState<AvatarHeights>({})
+  const [sortMode, setSortMode] = useState<SortMode>('creation')
   
   const longPressTimer = useRef<NodeJS.Timeout | null>(null)
   const contextMenuRef = useRef<HTMLDivElement>(null)
@@ -129,6 +141,27 @@ export default function SelectProjectsPage() {
     setDeleteConfirm(projectId)
     setContextMenu({ projectId: null, x: 0, y: 0 })
   }, [])
+
+  const handleOverview = useCallback((projectId: string) => {
+    setContextMenu({ projectId: null, x: 0, y: 0 })
+    router.push(`/projects/${projectId}`)
+  }, [router])
+
+  const cycleSortMode = useCallback(() => {
+    setSortMode(prev => {
+      if (prev === 'creation') return 'deadline'
+      if (prev === 'deadline') return 'alphabet'
+      return 'creation'
+    })
+  }, [])
+
+  const getSortLabel = (mode: SortMode): string => {
+    switch (mode) {
+      case 'creation': return 'Creation Date'
+      case 'deadline': return 'Deadline'
+      case 'alphabet': return 'Alphabet'
+    }
+  }
 
   const confirmDelete = useCallback(async () => {
     if (deleteConfirm) {
@@ -238,12 +271,81 @@ export default function SelectProjectsPage() {
     return getProjectStatus(project) === 'archived'
   }, [getProjectStatus])
 
-  // Group projects by status
-  const activeProjects = projects.filter(project => getProjectStatus(project) === 'active')
-  const pausedProjects = projects.filter(project => getProjectStatus(project) === 'paused')
-  const archivedProjects = projects.filter(project => getProjectStatus(project) === 'archived')
-  
-  const activeAndPausedProjects = [...activeProjects, ...pausedProjects]
+  // Calculate completion for all projects
+  const projectsWithCompletion = useMemo(() => {
+    if (!projects || !tasks) return []
+    return projects.map(project => {
+      const projectTasks = tasks.filter(task => 
+        task.project_id === project.id && task.item_type === 'task'
+      )
+      const completedTaskCount = projectTasks.filter(task => task.status === 'completed').length
+      const totalTaskCount = projectTasks.length
+      const percentage = totalTaskCount > 0 
+        ? Math.round((completedTaskCount / totalTaskCount) * 100) 
+        : 0
+      const isCompleted = percentage === 100 && totalTaskCount > 0
+      
+      return {
+        ...project,
+        completion: {
+          percentage,
+          isCompleted,
+          completedTaskCount,
+          totalTaskCount
+        }
+      } as ProjectWithCompletion
+    })
+  }, [projects, tasks])
+
+  // Sort and group projects
+  const { activeAndPausedProjects, archivedProjects } = useMemo(() => {
+    const activeAndPaused = projectsWithCompletion.filter(
+      project => getProjectStatus(project) === 'active' || getProjectStatus(project) === 'paused'
+    )
+    const archived = projectsWithCompletion.filter(
+      project => getProjectStatus(project) === 'archived'
+    )
+
+    const sortByDeadline = (a: ProjectWithCompletion, b: ProjectWithCompletion) => {
+      if (!a.deadline && !b.deadline) return 0
+      if (!a.deadline) return 1
+      if (!b.deadline) return -1
+      return new Date(a.deadline).getTime() - new Date(b.deadline).getTime()
+    }
+
+    const sortByAlphabet = (a: ProjectWithCompletion, b: ProjectWithCompletion) => {
+      return a.name.localeCompare(b.name)
+    }
+
+    const sortByCreation = (a: ProjectWithCompletion, b: ProjectWithCompletion) => {
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    }
+
+    let sortedActiveAndPaused: ProjectWithCompletion[]
+    let sortedArchived: ProjectWithCompletion[]
+
+    if (sortMode === 'deadline') {
+      // For deadline sort: incomplete first, then completed, both sorted by deadline
+      const incomplete = activeAndPaused.filter(p => !p.completion.isCompleted)
+      const completed = activeAndPaused.filter(p => p.completion.isCompleted)
+      incomplete.sort(sortByDeadline)
+      completed.sort(sortByDeadline)
+      sortedActiveAndPaused = [...incomplete, ...completed]
+      sortedArchived = [...archived].sort(sortByDeadline)
+    } else if (sortMode === 'alphabet') {
+      sortedActiveAndPaused = [...activeAndPaused].sort(sortByAlphabet)
+      sortedArchived = [...archived].sort(sortByAlphabet)
+    } else {
+      // creation date
+      sortedActiveAndPaused = [...activeAndPaused].sort(sortByCreation)
+      sortedArchived = [...archived].sort(sortByCreation)
+    }
+
+    return {
+      activeAndPausedProjects: sortedActiveAndPaused,
+      archivedProjects: sortedArchived
+    }
+  }, [projectsWithCompletion, sortMode, getProjectStatus])
 
   if (isLoading) {
     return (
@@ -300,7 +402,16 @@ export default function SelectProjectsPage() {
         {/* Active and Paused Projects */}
         {activeAndPausedProjects.length > 0 && (
           <div className="px-4 mb-6">
-            <h2 className="text-white text-lg font-semibold mb-4">Active & Paused Projects</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-white text-lg font-semibold">Active & Paused Projects</h2>
+              <button
+                onClick={cycleSortMode}
+                className="flex items-center gap-2 bg-[#2A2A2A] text-white rounded-full px-4 py-2 text-sm font-medium hover:bg-[#3A3A3A] transition-colors"
+              >
+                <ArrowUpDown className="w-4 h-4" />
+                {getSortLabel(sortMode)}
+              </button>
+            </div>
             <div className="grid grid-cols-2 gap-4">
               {activeAndPausedProjects.map(project => (
                 <div
@@ -322,10 +433,20 @@ export default function SelectProjectsPage() {
                       fallbackType="project"
                       fallbackLabel={project.name}
                       fallbackColor={project.color || undefined}
-                      size={200}
                       className="w-full h-full object-cover rounded-none"
                     />
                   </div>
+                  
+                  {/* 100% completion ribbon */}
+                  {project.completion.isCompleted && (
+                    <div className="absolute -top-1 -right-1 w-20 h-20 overflow-hidden pointer-events-none z-10">
+                      <div className="absolute top-4 -right-7 bg-yellow-400 text-black text-center py-1.5 transform rotate-45 font-bold text-xs shadow-lg" style={{ width: '120%' }}>
+                        100%
+                        <div className="absolute bottom-0 left-0 w-0 h-0 border-b-[6px] border-l-[6px] border-transparent border-b-yellow-700 -translate-x-full"></div>
+                        <div className="absolute bottom-0 right-0 w-0 h-0 border-b-[6px] border-r-[6px] border-transparent border-b-yellow-700 translate-x-full"></div>
+                      </div>
+                    </div>
+                  )}
                   
                   {/* Status badge */}
                   <div className={`absolute top-2 left-2 px-2 py-1 rounded-none text-xs font-medium ${
@@ -338,8 +459,8 @@ export default function SelectProjectsPage() {
                   
                   {/* Active state badge */}
                   {isActive(project) && (
-                    <div className="absolute bottom-1 right-1 bg-accent-yellow rounded-none w-5 h-5 flex items-center justify-center">
-                      <Check className="w-3 h-3 text-black" />
+                    <div className="absolute bottom-1 right-1 bg-accent-yellow rounded-none w-[20%] aspect-square flex items-center justify-center z-20">
+                      <Check className="w-1/2 h-1/2 text-black" />
                     </div>
                   )}
                   
@@ -373,7 +494,7 @@ export default function SelectProjectsPage() {
               {archivedProjects.map(project => (
                 <div
                   key={project.id}
-                  className="rounded-none overflow-hidden relative cursor-pointer filter grayscale(100%) opacity-60"
+                  className="rounded-none overflow-hidden relative cursor-pointer grayscale opacity-60"
                   onClick={() => handleProjectTap(project.id, getProjectStatus(project))}
                   onTouchStart={(e) => handleLongPressStart(e, project.id)}
                   onMouseDown={(e) => handleLongPressStart(e, project.id)}
@@ -388,10 +509,20 @@ export default function SelectProjectsPage() {
                       fallbackType="project"
                       fallbackLabel={project.name}
                       fallbackColor={project.color || undefined}
-                      size={200}
                       className="w-full h-full object-cover rounded-none"
                     />
                   </div>
+                  
+                  {/* 100% completion ribbon */}
+                  {project.completion.isCompleted && (
+                    <div className="absolute -top-1 -right-1 w-20 h-20 overflow-hidden pointer-events-none z-10">
+                      <div className="absolute top-4 -right-7 bg-yellow-400 text-black text-center py-1.5 transform rotate-45 font-bold text-xs shadow-lg" style={{ width: '120%' }}>
+                        100%
+                        <div className="absolute bottom-0 left-0 w-0 h-0 border-b-[6px] border-l-[6px] border-transparent border-b-yellow-700 -translate-x-full"></div>
+                        <div className="absolute bottom-0 right-0 w-0 h-0 border-b-[6px] border-r-[6px] border-transparent border-b-yellow-700 translate-x-full"></div>
+                      </div>
+                    </div>
+                  )}
                   
                   {/* Project name overlay */}
                   <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent p-2">
@@ -423,6 +554,12 @@ export default function SelectProjectsPage() {
               top: contextMenu.y,
             }}
           >
+            <button
+              onClick={() => handleOverview(contextMenu.projectId!)}
+              className="block w-full text-left px-4 py-2 text-white hover:bg-bg-card-locked"
+            >
+              Overview
+            </button>
             {isArchivedProject ? (
               <>
                 <button
