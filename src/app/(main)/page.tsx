@@ -103,7 +103,7 @@ export default function Home() {
   
   // Calculate completion for all projects
   const projectsWithCompletion = useMemo(() => {
-    if (!projects) return []
+    if (!projects || !tasks) return []
     return projects.map(project => {
       const projectTasks = tasks.filter(task => 
         task.project_id === project.id && task.item_type === 'task'
