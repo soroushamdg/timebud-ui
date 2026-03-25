@@ -77,9 +77,25 @@ interface TaskWithMeta extends PlannerTask {
   _inherited?: boolean;
 }
 
-function daysUntil(dateStr: string, today: Date): number {
-  const target = new Date(dateStr + 'T00:00:00Z');
-  const todayUTC = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()));
+export function daysUntil(dateStr: string, today: Date): number {
+  // Handle both 'YYYY-MM-DD' and 'YYYY-MM-DDTHH:mm:ss+00:00' formats
+  let targetDate: Date;
+  if (dateStr.includes('T')) {
+    // Already has time component, parse as-is
+    targetDate = new Date(dateStr);
+  } else {
+    // Date-only string, add midnight UTC
+    targetDate = new Date(dateStr + 'T00:00:00Z');
+  }
+  
+  // Set target to midnight UTC
+  const target = new Date(Date.UTC(
+    targetDate.getUTCFullYear(),
+    targetDate.getUTCMonth(),
+    targetDate.getUTCDate()
+  ));
+  
+  const todayUTC = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
   const diff = (target.getTime() - todayUTC.getTime()) / (1000 * 60 * 60 * 24);
   return diff;
 }
@@ -235,115 +251,178 @@ export function planSession(input: PlannerInput): PlannerOutput {
       score: scoreTask(task, activeProjects, unlockMap, today)
     }));
     
-    const hasUrgentTask = schedulableTasks.some(t => 
-      t.due_date && daysUntil(t.due_date, today) < URGENT_DEADLINE_DAYS
+    // Separate overdue and non-overdue tasks
+    const overdueTasks = scoredTasks.filter(st => 
+      st.task.due_date && daysUntil(st.task.due_date, today) < 0
+    ).sort((a, b) => b.score - a.score);
+    
+    const nonOverdueTasks = scoredTasks.filter(st => 
+      !st.task.due_date || daysUntil(st.task.due_date, today) >= 0
     );
     
-    let quickWinOpener: typeof scoredTasks[0] | null = null;
     let remainingBudget = budgetMinutes;
     const scheduledTasks: PlannedTaskResult[] = [];
     let position = 1;
+    const scheduledTaskIds = new Set<string>();
     
-    if (!hasUrgentTask) {
-      const quickWinCandidates = scoredTasks
-        .filter(st => st.task.estimated_minutes && st.task.estimated_minutes <= QUICK_WIN_THRESHOLD_MIN)
-        .sort((a, b) => b.score - a.score);
+    // STEP 1: Schedule all overdue tasks first (most overdue first)
+    for (const st of overdueTasks) {
+      if (remainingBudget <= 0) break;
       
-      if (quickWinCandidates.length > 0) {
-        quickWinOpener = quickWinCandidates[0];
-        const task = quickWinOpener.task;
-        
+      const task = st.task;
+      const estimate = task.estimated_minutes;
+      
+      if (estimate <= remainingBudget) {
         scheduledTasks.push({
           position: position++,
           taskId: task.id,
           projectId: task.project_id,
           isSolo: task.project_id === null,
           tier1: false,
-          isOpener: true,
+          isOpener: false,
           inheritedDeadline: task._inherited ?? false,
           milestoneTitle: null,
           title: task.title,
           priority: task.priority,
-          scheduledMinutes: task.estimated_minutes,
+          scheduledMinutes: estimate,
           partial: false,
           carryOverMinutes: 0
         });
-        
-        remainingBudget -= task.estimated_minutes;
+        scheduledTaskIds.add(task.id);
+        remainingBudget -= estimate;
+      } else if (allowPartial && remainingBudget >= PARTIAL_FLOOR) {
+        scheduledTasks.push({
+          position: position++,
+          taskId: task.id,
+          projectId: task.project_id,
+          isSolo: task.project_id === null,
+          tier1: false,
+          isOpener: false,
+          inheritedDeadline: task._inherited ?? false,
+          milestoneTitle: null,
+          title: task.title,
+          priority: task.priority,
+          scheduledMinutes: remainingBudget,
+          partial: true,
+          carryOverMinutes: estimate - remainingBudget
+        });
+        scheduledTaskIds.add(task.id);
+        remainingBudget = 0;
+        break;
       }
     }
     
-    const remainingTasks = quickWinOpener 
-      ? scoredTasks.filter(st => st.task.id !== quickWinOpener!.task.id)
-      : scoredTasks;
-    
-    remainingTasks.sort((a, b) => b.score - a.score);
-    
-    const tasksByProject = new Map<string | null, typeof remainingTasks>();
-    for (const st of remainingTasks) {
-      const key = st.task.project_id;
-      if (!tasksByProject.has(key)) tasksByProject.set(key, []);
-      tasksByProject.get(key)!.push(st);
-    }
-    
-    const projectScores = new Map<string | null, number>();
-    for (const [projectId, tasks] of tasksByProject) {
-      const maxScore = Math.max(...tasks.map(st => st.score));
-      projectScores.set(projectId, maxScore);
-    }
-    
-    const projectOrder = Array.from(projectScores.entries())
-      .sort((a, b) => b[1] - a[1])
-      .map(([projectId]) => projectId);
-    
-    for (const projectId of projectOrder) {
-      if (remainingBudget <= 0) break;
+    // STEP 2: Apply existing logic to non-overdue tasks
+    if (remainingBudget > 0) {
+      const hasUrgentTask = nonOverdueTasks.some(st => 
+        st.task.due_date && daysUntil(st.task.due_date, today) < URGENT_DEADLINE_DAYS
+      );
       
-      const projectTasks = tasksByProject.get(projectId)!;
-      projectTasks.sort((a, b) => b.score - a.score);
+      let quickWinOpener: typeof scoredTasks[0] | null = null;
       
-      for (const st of projectTasks) {
-        const task = st.task;
-        const estimate = task.estimated_minutes;
+      if (!hasUrgentTask) {
+        const quickWinCandidates = nonOverdueTasks
+          .filter(st => st.task.estimated_minutes && st.task.estimated_minutes <= QUICK_WIN_THRESHOLD_MIN)
+          .sort((a, b) => b.score - a.score);
         
-        if (estimate <= remainingBudget) {
+        if (quickWinCandidates.length > 0) {
+          quickWinOpener = quickWinCandidates[0];
+          const task = quickWinOpener.task;
+          
           scheduledTasks.push({
             position: position++,
             taskId: task.id,
             projectId: task.project_id,
             isSolo: task.project_id === null,
             tier1: false,
-            isOpener: false,
+            isOpener: true,
             inheritedDeadline: task._inherited ?? false,
             milestoneTitle: null,
             title: task.title,
             priority: task.priority,
-            scheduledMinutes: estimate,
+            scheduledMinutes: task.estimated_minutes,
             partial: false,
             carryOverMinutes: 0
           });
-          remainingBudget -= estimate;
-        } else if (allowPartial && remainingBudget >= PARTIAL_FLOOR) {
-          scheduledTasks.push({
-            position: position++,
-            taskId: task.id,
-            projectId: task.project_id,
-            isSolo: task.project_id === null,
-            tier1: false,
-            isOpener: false,
-            inheritedDeadline: task._inherited ?? false,
-            milestoneTitle: null,
-            title: task.title,
-            priority: task.priority,
-            scheduledMinutes: remainingBudget,
-            partial: true,
-            carryOverMinutes: estimate - remainingBudget
-          });
-          remainingBudget = 0;
-          break;
+          scheduledTaskIds.add(task.id);
+          remainingBudget -= task.estimated_minutes;
         }
-        
+      }
+      
+      const remainingTasks = quickWinOpener 
+        ? nonOverdueTasks.filter(st => st.task.id !== quickWinOpener!.task.id)
+        : nonOverdueTasks;
+      
+      remainingTasks.sort((a, b) => b.score - a.score);
+      
+      const tasksByProject = new Map<string | null, typeof remainingTasks>();
+      for (const st of remainingTasks) {
+        const key = st.task.project_id;
+        if (!tasksByProject.has(key)) tasksByProject.set(key, []);
+        tasksByProject.get(key)!.push(st);
+      }
+      
+      const projectScores = new Map<string | null, number>();
+      for (const [projectId, tasks] of tasksByProject) {
+        const maxScore = Math.max(...tasks.map(st => st.score));
+        projectScores.set(projectId, maxScore);
+      }
+      
+      const projectOrder = Array.from(projectScores.entries())
+        .sort((a, b) => b[1] - a[1])
+        .map(([projectId]) => projectId);
+      
+      for (const projectId of projectOrder) {
         if (remainingBudget <= 0) break;
+        
+        const projectTasks = tasksByProject.get(projectId)!;
+        projectTasks.sort((a, b) => b.score - a.score);
+        
+        for (const st of projectTasks) {
+          const task = st.task;
+          const estimate = task.estimated_minutes;
+          
+          if (estimate <= remainingBudget) {
+            scheduledTasks.push({
+              position: position++,
+              taskId: task.id,
+              projectId: task.project_id,
+              isSolo: task.project_id === null,
+              tier1: false,
+              isOpener: false,
+              inheritedDeadline: task._inherited ?? false,
+              milestoneTitle: null,
+              title: task.title,
+              priority: task.priority,
+              scheduledMinutes: estimate,
+              partial: false,
+              carryOverMinutes: 0
+            });
+            scheduledTaskIds.add(task.id);
+            remainingBudget -= estimate;
+          } else if (allowPartial && remainingBudget >= PARTIAL_FLOOR) {
+            scheduledTasks.push({
+              position: position++,
+              taskId: task.id,
+              projectId: task.project_id,
+              isSolo: task.project_id === null,
+              tier1: false,
+              isOpener: false,
+              inheritedDeadline: task._inherited ?? false,
+              milestoneTitle: null,
+              title: task.title,
+              priority: task.priority,
+              scheduledMinutes: remainingBudget,
+              partial: true,
+              carryOverMinutes: estimate - remainingBudget
+            });
+            scheduledTaskIds.add(task.id);
+            remainingBudget = 0;
+            break;
+          }
+          
+          if (remainingBudget <= 0) break;
+        }
       }
     }
     
