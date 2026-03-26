@@ -125,7 +125,7 @@ const testTasks: PlannerTask[] = [
     milestone_id: null,
     title: 'assignment 2',
     estimated_minutes: 120,
-    status: 'pending',
+    status: 'completed',
     due_date: '2026-03-24',
     order: 4,
     priority: false,
@@ -135,10 +135,10 @@ const testTasks: PlannerTask[] = [
     id: 'task-9',
     project_id: 'fina-210',
     milestone_id: null,
-    title: 'Make presentation',
+    title: 'convert the excel format to given template',
     estimated_minutes: 120,
     status: 'pending',
-    due_date: '2026-03-24',
+    due_date: '2026-03-26',
     order: 5,
     priority: false,
     depends_on_task: null
@@ -183,8 +183,9 @@ const testTasks: PlannerTask[] = [
   }
 ];
 
-// Test with today being March 25, 2026
-const testToday = new Date('2026-03-25T00:00:00Z');
+// Test with today being March 26, 2026 (user's actual date)
+// Simulate how the app creates the date in production (local timezone)
+const testToday = new Date(2026, 2, 26); // Month is 0-indexed, so 2 = March
 
 const input: PlannerInput = {
   projects: testProjects,
@@ -247,3 +248,19 @@ result.tasks.forEach((task, index) => {
 if (result.tasks.length === 0) {
   console.log('\n⚠️  NO TASKS SCHEDULED - DEBUGGING NEEDED');
 }
+
+// Test 2: With 60 min budget (user's actual scenario)
+console.log('\n\n=== TEST 2: 60 MIN BUDGET (USER SCENARIO) ===');
+const input60 = {
+  ...input,
+  budgetMinutes: 60
+};
+
+const result60 = planSession(input60);
+console.log('Tasks scheduled:', result60.taskCount);
+console.log('Total used minutes:', result60.totalUsedMinutes);
+console.log('Slack minutes:', result60.slackMinutes);
+console.log('\n=== SCHEDULED TASKS (60 MIN) ===');
+result60.tasks.forEach((task, index) => {
+  console.log(`${index + 1}. ${task.title} (${task.scheduledMinutes}min${task.partial ? ' - PARTIAL' : ''})`);
+});

@@ -78,25 +78,30 @@ interface TaskWithMeta extends PlannerTask {
 }
 
 export function daysUntil(dateStr: string, today: Date): number {
-  // Handle both 'YYYY-MM-DD' and 'YYYY-MM-DDTHH:mm:ss+00:00' formats
+  // For date-only deadlines (YYYY-MM-DD), compare local dates without timezone conversion
+  // This treats "due March 25" as "due on March 25 in the user's timezone"
+  
   let targetDate: Date;
   if (dateStr.includes('T')) {
     // Already has time component, parse as-is
     targetDate = new Date(dateStr);
   } else {
-    // Date-only string, add midnight UTC
-    targetDate = new Date(dateStr + 'T00:00:00Z');
+    // Date-only string: parse as local date
+    const [year, month, day] = dateStr.split('-').map(Number);
+    targetDate = new Date(year, month - 1, day); // month is 0-indexed
   }
   
-  // Set target to midnight UTC
-  const target = new Date(Date.UTC(
-    targetDate.getUTCFullYear(),
-    targetDate.getUTCMonth(),
-    targetDate.getUTCDate()
-  ));
+  // Compare dates in local timezone by normalizing both to midnight local time
+  const targetMidnight = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
+  const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
   
-  const todayUTC = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
-  const diff = (target.getTime() - todayUTC.getTime()) / (1000 * 60 * 60 * 24);
+  const diff = (targetMidnight.getTime() - todayMidnight.getTime()) / (1000 * 60 * 60 * 24);
+  
+  // Debug logging
+  if (typeof window !== 'undefined') {
+    console.log(`[daysUntil] dateStr=${dateStr}, today=${today.toISOString()}, targetMidnight=${targetMidnight.toISOString()}, todayMidnight=${todayMidnight.toISOString()}, diff=${diff}`);
+  }
+  
   return diff;
 }
 
@@ -215,7 +220,7 @@ export function planSession(input: PlannerInput): PlannerOutput {
     const { budgetMinutes, allowPartial = true } = input;
     
     const activeProjects = input.projects.filter(p => 
-      p.status === 'active' || p.status === 'target'
+      p.status === 'active'
     );
     const activeProjectIds = new Set(activeProjects.map(p => p.id));
     
