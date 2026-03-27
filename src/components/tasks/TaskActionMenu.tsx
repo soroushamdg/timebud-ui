@@ -9,6 +9,9 @@ interface TaskActionMenuProps {
   taskId: string
   taskTitle: string
   onDeferClick: () => void
+  isPinnedTask?: boolean
+  isManualTask?: boolean
+  onReplan?: () => void
 }
 
 export function TaskActionMenu({ 
@@ -16,10 +19,14 @@ export function TaskActionMenu({
   onClose, 
   taskId,
   taskTitle,
-  onDeferClick
+  onDeferClick,
+  isPinnedTask = false,
+  isManualTask = false,
+  onReplan
 }: TaskActionMenuProps) {
-  const { isPinned, addPinnedTask, removePinnedTask } = useUIStore()
+  const { isPinned, addPinnedTask, removePinnedTask, removeManualTask } = useUIStore()
   const pinned = isPinned(taskId)
+  const isPinnedOrManual = isPinnedTask || isManualTask
 
   const handlePinToggle = () => {
     if (pinned) {
@@ -27,6 +34,18 @@ export function TaskActionMenu({
     } else {
       addPinnedTask(taskId)
     }
+    onReplan?.()
+    onClose()
+  }
+
+  const handleUnpin = () => {
+    if (isPinnedTask) {
+      removePinnedTask(taskId)
+    }
+    if (isManualTask) {
+      removeManualTask(taskId)
+    }
+    onReplan?.()
     onClose()
   }
 
@@ -51,35 +70,52 @@ export function TaskActionMenu({
         <div className="border-t border-[#333333]" />
         
         <div className="p-4 space-y-2">
-          <button
-            onClick={handlePinToggle}
-            className="w-full bg-[#2A2A2A] border border-[#333333] rounded-lg p-4 flex items-center gap-4 hover:bg-[#333333] transition-colors"
-          >
-            <div className={`w-12 h-12 ${pinned ? 'bg-accent-yellow' : 'bg-[#FFD233]'} rounded-lg flex items-center justify-center`}>
-              <Pin className={`w-6 h-6 ${pinned ? 'text-black fill-black' : 'text-black'}`} />
-            </div>
-            <div className="flex-1 text-left">
-              <h4 className="text-white font-semibold">
-                {pinned ? 'Unpin from Planner' : 'Pin to Planner'}
-              </h4>
-              <p className="text-[#666666] text-sm">
-                {pinned ? 'Remove from pinned tasks' : 'Keep at top of planner list'}
-              </p>
-            </div>
-          </button>
+          {isPinnedOrManual ? (
+            <button
+              onClick={handleUnpin}
+              className="w-full bg-[#2A2A2A] border border-[#333333] rounded-lg p-4 flex items-center gap-4 hover:bg-[#333333] transition-colors"
+            >
+              <div className="w-12 h-12 bg-accent-yellow rounded-lg flex items-center justify-center">
+                <Pin className="w-6 h-6 text-black fill-black" />
+              </div>
+              <div className="flex-1 text-left">
+                <h4 className="text-white font-semibold">Unpin from Planner</h4>
+                <p className="text-[#666666] text-sm">Remove from pinned tasks</p>
+              </div>
+            </button>
+          ) : (
+            <>
+              <button
+                onClick={handlePinToggle}
+                className="w-full bg-[#2A2A2A] border border-[#333333] rounded-lg p-4 flex items-center gap-4 hover:bg-[#333333] transition-colors"
+              >
+                <div className={`w-12 h-12 ${pinned ? 'bg-accent-yellow' : 'bg-[#FFD233]'} rounded-lg flex items-center justify-center`}>
+                  <Pin className={`w-6 h-6 ${pinned ? 'text-black fill-black' : 'text-black'}`} />
+                </div>
+                <div className="flex-1 text-left">
+                  <h4 className="text-white font-semibold">
+                    {pinned ? 'Unpin from Planner' : 'Pin to Planner'}
+                  </h4>
+                  <p className="text-[#666666] text-sm">
+                    {pinned ? 'Remove from pinned tasks' : 'Keep at top of planner list'}
+                  </p>
+                </div>
+              </button>
 
-          <button
-            onClick={handleDefer}
-            className="w-full bg-[#2A2A2A] border border-[#333333] rounded-lg p-4 flex items-center gap-4 hover:bg-[#333333] transition-colors"
-          >
-            <div className="w-12 h-12 bg-[#FFD233] rounded-lg flex items-center justify-center">
-              <Calendar className="w-6 h-6 text-black" />
-            </div>
-            <div className="flex-1 text-left">
-              <h4 className="text-white font-semibold">Defer Task</h4>
-              <p className="text-[#666666] text-sm">Move to a different date</p>
-            </div>
-          </button>
+              <button
+                onClick={handleDefer}
+                className="w-full bg-[#2A2A2A] border border-[#333333] rounded-lg p-4 flex items-center gap-4 hover:bg-[#333333] transition-colors"
+              >
+                <div className="w-12 h-12 bg-[#FFD233] rounded-lg flex items-center justify-center">
+                  <Calendar className="w-6 h-6 text-black" />
+                </div>
+                <div className="flex-1 text-left">
+                  <h4 className="text-white font-semibold">Defer Task</h4>
+                  <p className="text-[#666666] text-sm">Move to a different date</p>
+                </div>
+              </button>
+            </>
+          )}
         </div>
 
         <div className="px-4 pt-2">

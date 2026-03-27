@@ -67,7 +67,7 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
         {/* Center content */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 min-w-0">
-            {task.isPinned && (
+            {(task.isPinned || task.isManual) && (
               <Pin className="w-4 h-4 text-accent-yellow flex-shrink-0 fill-accent-yellow" />
             )}
             {task.priority && (

@@ -814,6 +814,9 @@ export default function Home() {
           taskId={selectedTask.taskId}
           taskTitle={selectedTask.title}
           onDeferClick={handleDeferClick}
+          isPinnedTask={selectedTask.isPinned}
+          isManualTask={selectedTask.isManual}
+          onReplan={planSessionData}
         />
       )}
 
