@@ -1,5 +1,6 @@
 import { AvatarImage } from '@/components/ui/AvatarImage'
 import { ChevronDoubleUpIcon, CalendarIcon } from '@heroicons/react/24/outline'
+import { Pin } from 'lucide-react'
 import { formatLocalSmart } from '@/lib/dates'
 
 interface PlannedTask {
@@ -16,6 +17,8 @@ interface PlannedTask {
   partial?: boolean
   priority?: boolean
   deadline?: string
+  isPinned?: boolean
+  isManual?: boolean
 }
 
 interface TaskCardProps {
@@ -64,6 +67,9 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
         {/* Center content */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 min-w-0">
+            {task.isPinned && (
+              <Pin className="w-4 h-4 text-accent-yellow flex-shrink-0 fill-accent-yellow" />
+            )}
             {task.priority && (
               <ChevronDoubleUpIcon className="w-4 h-4 text-accent-yellow flex-shrink-0" />
             )}

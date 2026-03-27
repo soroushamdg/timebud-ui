@@ -45,12 +45,12 @@ export function PartialTaskCompletionDialog({
       <div className="bg-bg-card rounded-2xl p-6 max-w-sm w-full mx-4">
         <h2 className="text-xl font-semibold mb-2">Task Progress</h2>
         <p className="text-gray-400 mb-6">
-          You scheduled {task.scheduledMinutes}min for this task. How much more time do you need to finish it?
+          You scheduled {task.scheduledMinutes}min for this task. What is your new estimate for the remaining work?
         </p>
         
         <div className="mb-6">
           <label className="block text-sm font-medium text-gray-300 mb-2">
-            Additional time needed (minutes)
+            Estimated time remaining (minutes)
           </label>
           <input
             type="number"

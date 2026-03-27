@@ -19,6 +19,8 @@ export interface PlannedTask {
   done: boolean;
   estimatedMinutes?: number;
   deadline?: string;
+  isPinned?: boolean;
+  isManual?: boolean;
 }
 
 interface FocusSessionStore {

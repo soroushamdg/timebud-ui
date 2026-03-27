@@ -7,6 +7,10 @@ import { TaskCard } from "@/components/tasks/TaskCard";
 import { TaskCardSkeleton } from "@/components/tasks/TaskCardSkeleton";
 import { UnfinishedSessionModal } from "@/components/sessions/UnfinishedSessionModal";
 import { ChangeSessionTimeDialog } from "@/components/sessions/ChangeSessionTimeDialog";
+import { TaskActionMenu } from "@/components/tasks/TaskActionMenu";
+import { DeferTaskDialog } from "@/components/dialogs/DeferTaskDialog";
+import { AddTaskToPlannerDialog } from "@/components/dialogs/AddTaskToPlannerDialog";
+import { SimpleToast } from "@/components/ui/SimpleToast";
 import { useLatestUnfinishedFocusSession } from '@/hooks/useSessions'
 import { useProjects } from '@/hooks/useProjects'
 import { useTasks } from '@/hooks/useTasks'
@@ -21,6 +25,7 @@ import { isValidUuid } from '@/lib/utils'
 import { DbFocusSession, DbTask } from '@/types/database'
 import { useFocusSessionGuard } from '@/hooks/useSessionGuard'
 import { ArrowsRightLeftIcon } from '@heroicons/react/24/outline'
+import { Plus } from 'lucide-react'
 import { AvatarImage } from '@/components/ui/AvatarImage'
 import { useCurrentUser } from '@/hooks/useAuth'
 import { useQuery } from '@tanstack/react-query'
@@ -41,6 +46,8 @@ interface PlannedTask {
   priority?: boolean;
   deadline?: string;
   description?: string;
+  isPinned?: boolean;
+  isManual?: boolean;
 }
 
 export default function Home() {
@@ -56,6 +63,25 @@ export default function Home() {
   const [showTimeDialog, setShowTimeDialog] = useState(false)
   const [isLoading, setIsLoading] = useState(true);
   const { setLoadingProgress, setLoadingComplete } = useLoading();
+
+  // Swipe/Long-press states
+  const [swipedTask, setSwipedTask] = useState<PlannedTask | null>(null);
+  const [longPressTask, setLongPressTask] = useState<PlannedTask | null>(null);
+  const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null);
+  const [startX, setStartX] = useState(0);
+  const [startY, setStartY] = useState(0);
+  const [swipeDistance, setSwipeDistance] = useState(0);
+
+  // Dialog states
+  const [showActionMenu, setShowActionMenu] = useState(false);
+  const [showDeferDialog, setShowDeferDialog] = useState(false);
+  const [showAddTaskDialog, setShowAddTaskDialog] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<PlannedTask | null>(null);
+
+  // Toast states
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState<'info' | 'warning' | 'error' | 'success'>('info');
 
   // Query for user profile data
   const { data: userProfile } = useQuery({
@@ -157,7 +183,15 @@ export default function Home() {
   
   const createFocusSession = useCreateFocusSession();
   const deleteFocusSession = useDeleteFocusSession();
-  const { preferredBudgetMinutes, allowPartialTasks } = useUIStore();
+  const { 
+    preferredBudgetMinutes, 
+    allowPartialTasks,
+    pinnedTaskIds,
+    manualTaskIds,
+    clearCompletedTasks,
+    isPinned,
+    isManual
+  } = useUIStore();
   const { registerReplanFunction } = useReplan();
   const setFocusSession = useFocusSessionStore((state) => state.setFocusSession);
   const markTaskDone = useFocusSessionStore((state) => state.markTaskDone);
@@ -225,9 +259,31 @@ export default function Home() {
       return;
     }
 
+    // Auto-cleanup completed tasks from pinned/manual lists
+    const completedTaskIds = tasks.filter(t => t.status === 'completed').map(t => t.id);
+    clearCompletedTasks(completedTaskIds);
+
+    // Get pinned and manual tasks (only incomplete ones)
+    const pinnedTasks = tasks.filter(t => 
+      pinnedTaskIds.includes(t.id) && 
+      t.status === 'pending' &&
+      t.item_type === 'task'
+    );
+    const manualTasks = tasks.filter(t => 
+      manualTaskIds.includes(t.id) && 
+      t.status === 'pending' &&
+      t.item_type === 'task' &&
+      !pinnedTaskIds.includes(t.id)
+    );
+
+    // Calculate time used by pinned and manual tasks
+    const pinnedTime = pinnedTasks.reduce((sum, t) => sum + (t.estimated_minutes || 0), 0);
+    const manualTime = manualTasks.reduce((sum, t) => sum + (t.estimated_minutes || 0), 0);
+    const remainingBudget = preferredBudgetMinutes - pinnedTime - manualTime;
+
     // Check if there are any pending tasks
     const pendingTasks = tasks.filter((task) => task.status === "pending");
-    if (pendingTasks.length === 0) {
+    if (pendingTasks.length === 0 && pinnedTasks.length === 0 && manualTasks.length === 0) {
       setPlannedTasks([]);
       setIsLoading(false);
       setLoadingComplete();
@@ -235,67 +291,125 @@ export default function Home() {
     }
 
     try {
-      // Transform DbTask[] to PlannerTask[] for the planner
-      // Include all tasks (even completed ones) so dependency checks can find them
-      const plannerTasks: PlannerTask[] = tasks.map(task => ({
-        ...task,
-        estimated_minutes: task.estimated_minutes || 0,
-        status: task.status || 'pending',
-      }));
+      let algorithmTasks: PlannedTask[] = [];
 
-      const plan = planSession({
-        projects,
-        milestones: [],
-        tasks: plannerTasks,
-        budgetMinutes: preferredBudgetMinutes,
-        allowPartial: allowPartialTasks,
-      });
+      // Only run algorithm if there's remaining budget
+      if (remainingBudget > 0) {
+        // Transform DbTask[] to PlannerTask[] for the planner
+        // Include all tasks (even completed ones) so dependency checks can find them
+        const plannerTasks: PlannerTask[] = tasks.map(task => ({
+          ...task,
+          estimated_minutes: task.estimated_minutes || 0,
+          status: task.status || 'pending',
+        }));
 
-      if (plan.tasks.length === 0) {
-        setPlannedTasks([]);
-        setIsLoading(false);
-        return;
+        const plan = planSession({
+          projects,
+          milestones: [],
+          tasks: plannerTasks,
+          budgetMinutes: remainingBudget,
+          allowPartial: allowPartialTasks,
+        });
+
+        // Convert PlannedTaskResult to PlannedTask for TaskCard
+        algorithmTasks = plan.tasks
+          .filter(task => !pinnedTaskIds.includes(task.taskId) && !manualTaskIds.includes(task.taskId))
+          .map((task) => {
+            const dbTask = tasks.find((t) => t.id === task.taskId);
+            const project = task.projectId ? projects?.find((p) => p.id === task.projectId) : undefined;
+            return {
+              taskId: task.taskId,
+              title: task.title,
+              projectId: task.projectId || undefined,
+              projectName: project?.name || undefined,
+              projectColor: project?.color || undefined,
+              projectAvatarUrl: project?.project_avatar_url || undefined,
+              done: false,
+              estimatedMinutes: dbTask?.estimated_minutes || undefined,
+              scheduledMinutes: task.scheduledMinutes,
+              partial: task.partial,
+              priority: dbTask?.priority,
+              deadline: dbTask?.due_date || undefined,
+              description: dbTask?.description || undefined,
+              isPinned: false,
+              isManual: false,
+            };
+          });
       }
 
-      // Convert PlannedTaskResult to PlannedTask for TaskCard
-      const tasksWithDone = plan.tasks.map((task) => {
-        const dbTask = tasks.find((t) => t.id === task.taskId);
-        const project = task.projectId ? projects?.find((p) => p.id === task.projectId) : undefined;
+      // Convert pinned tasks to PlannedTask format
+      const pinnedPlannedTasks: PlannedTask[] = pinnedTasks.map((task) => {
+        const project = task.project_id ? projects?.find((p) => p.id === task.project_id) : undefined;
         return {
-          taskId: task.taskId,
+          taskId: task.id,
           title: task.title,
-          projectId: task.projectId || undefined,
+          projectId: task.project_id || undefined,
           projectName: project?.name || undefined,
           projectColor: project?.color || undefined,
           projectAvatarUrl: project?.project_avatar_url || undefined,
           done: false,
-          estimatedMinutes: dbTask?.estimated_minutes || undefined,
-          scheduledMinutes: task.scheduledMinutes,
-          partial: task.partial,
-          priority: dbTask?.priority,
-          deadline: dbTask?.due_date || undefined,
-          description: dbTask?.description || undefined,
+          estimatedMinutes: task.estimated_minutes || undefined,
+          scheduledMinutes: task.estimated_minutes || 0,
+          partial: false,
+          priority: task.priority,
+          deadline: task.due_date || undefined,
+          description: task.description || undefined,
+          isPinned: true,
+          isManual: false,
         };
       });
+
+      // Convert manual tasks to PlannedTask format
+      const manualPlannedTasks: PlannedTask[] = manualTasks.map((task) => {
+        const project = task.project_id ? projects?.find((p) => p.id === task.project_id) : undefined;
+        return {
+          taskId: task.id,
+          title: task.title,
+          projectId: task.project_id || undefined,
+          projectName: project?.name || undefined,
+          projectColor: project?.color || undefined,
+          projectAvatarUrl: project?.project_avatar_url || undefined,
+          done: false,
+          estimatedMinutes: task.estimated_minutes || undefined,
+          scheduledMinutes: task.estimated_minutes || 0,
+          partial: false,
+          priority: task.priority,
+          deadline: task.due_date || undefined,
+          description: task.description || undefined,
+          isPinned: false,
+          isManual: true,
+        };
+      });
+
+      // Merge: pinned first, then manual, then algorithm
+      const tasksWithDone = [...pinnedPlannedTasks, ...manualPlannedTasks, ...algorithmTasks];
 
       // Store session locally only (no database save)
       const localSessionId = `local-${Date.now()}`;
       setFocusSession(
         localSessionId,
-        plan.tasks.map((t) => { 
-          const project = t.projectId ? projects?.find((p) => p.id === t.projectId) : undefined;
-          const dbTask = tasks.find(task => task.id === t.taskId);
-          return { 
-            ...t, 
-            done: false,
-            projectName: project?.name || undefined,
-            projectColor: project?.color || undefined,
-            projectAvatarUrl: project?.project_avatar_url || undefined,
-            estimatedMinutes: dbTask?.estimated_minutes,
-            deadline: dbTask?.due_date || undefined,
-          };
-        }) as any,
-        plan.budgetMinutes,
+        tasksWithDone.map((t) => ({ 
+          position: 0,
+          taskId: t.taskId,
+          projectId: t.projectId || null,
+          projectName: t.projectName,
+          projectColor: t.projectColor,
+          projectAvatarUrl: t.projectAvatarUrl,
+          isSolo: !t.projectId,
+          tier1: false,
+          milestoneTitle: null,
+          title: t.title,
+          priority: t.priority || false,
+          scheduledMinutes: t.scheduledMinutes || 0,
+          partial: t.partial || false,
+          carryOverMinutes: 0,
+          done: false,
+          estimatedMinutes: t.estimatedMinutes,
+          deadline: t.deadline,
+          isPinned: t.isPinned,
+          isManual: t.isManual,
+        })) as any,
+        preferredBudgetMinutes,
       );
       setPlannedTasks(tasksWithDone);
       setIsLoading(false);
@@ -407,6 +521,101 @@ export default function Home() {
     }
   };
 
+  // Swipe/Long-press handlers
+  const handleTouchStart = (e: React.TouchEvent, task: PlannedTask) => {
+    const touch = e.touches[0];
+    setStartX(touch.clientX);
+    setStartY(touch.clientY);
+    setSwipeDistance(0);
+    
+    // Start long-press timer
+    const timer = setTimeout(() => {
+      setLongPressTask(task);
+      setSelectedTask(task);
+      setShowActionMenu(true);
+    }, 500);
+    setLongPressTimer(timer);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      setLongPressTimer(null);
+    }
+
+    const touch = e.touches[0];
+    const deltaX = touch.clientX - startX;
+    const deltaY = touch.clientY - startY;
+    
+    // Only consider horizontal swipes
+    if (Math.abs(deltaX) > Math.abs(deltaY)) {
+      setSwipeDistance(Math.abs(deltaX));
+    }
+  };
+
+  const handleTouchEnd = (task: PlannedTask) => {
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      setLongPressTimer(null);
+    }
+
+    // If swipe distance is significant, show action menu
+    if (swipeDistance > 50) {
+      setSelectedTask(task);
+      setShowActionMenu(true);
+    }
+
+    setSwipeDistance(0);
+  };
+
+  const handleMouseDown = (e: React.MouseEvent, task: PlannedTask) => {
+    // Desktop long-press simulation
+    const timer = setTimeout(() => {
+      setSelectedTask(task);
+      setShowActionMenu(true);
+    }, 500);
+    setLongPressTimer(timer);
+  };
+
+  const handleMouseUp = () => {
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      setLongPressTimer(null);
+    }
+  };
+
+  const handleMouseLeave = () => {
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      setLongPressTimer(null);
+    }
+  };
+
+  // Dialog handlers
+  const handleDeferClick = () => {
+    setShowDeferDialog(true);
+  };
+
+  const handleTaskDeferred = () => {
+    setShowToast(true);
+    setToastMessage('Task deadline updated');
+    setToastType('success');
+    planSessionData();
+  };
+
+  const handleTaskAdded = () => {
+    setShowToast(true);
+    setToastMessage('Task added to planner');
+    setToastType('success');
+    planSessionData();
+  };
+
+  const handleBudgetExceeded = () => {
+    setShowToast(true);
+    setToastMessage('Cannot add task - would exceed time budget');
+    setToastType('warning');
+  };
+
   if (unfinishedFocusSession) {
     return (
       <AppShell>
@@ -500,11 +709,20 @@ export default function Home() {
             )}
           </div>
 
-          {/* Tasks Header with Time Button */}
+          {/* Tasks Header with Time Button and Add Button */}
           <div className="flex items-center justify-between px-6 mb-4">
-            <h3 className="text-white text-lg font-semibold">
-              {isLoading ? "..." : plannedTasks.length} Tasks
-            </h3>
+            <div className="flex items-center gap-3">
+              <h3 className="text-white text-lg font-semibold">
+                {isLoading ? "..." : plannedTasks.length} Tasks
+              </h3>
+              <button
+                onClick={() => setShowAddTaskDialog(true)}
+                className="w-8 h-8 bg-accent-yellow rounded-full flex items-center justify-center hover:bg-yellow-400 transition-colors"
+                title="Add task to planner"
+              >
+                <Plus className="w-5 h-5 text-black" />
+              </button>
+            </div>
             <button
               onClick={() => setShowTimeDialog(true)}
               className="bg-[#2A2A2A] rounded-full px-4 py-2 flex items-center gap-2 hover:bg-[#2A2A2A]/80 transition-colors"
@@ -542,11 +760,20 @@ export default function Home() {
           ) : (
             <div className="space-y-3 pb-4">
               {plannedTasks.map((task) => (
-                <TaskCard
+                <div
                   key={task.taskId}
-                  task={task}
-                  onClick={() => handleTaskClick(task)}
-                />
+                  onTouchStart={(e) => handleTouchStart(e, task)}
+                  onTouchMove={handleTouchMove}
+                  onTouchEnd={() => handleTouchEnd(task)}
+                  onMouseDown={(e) => handleMouseDown(e, task)}
+                  onMouseUp={handleMouseUp}
+                  onMouseLeave={handleMouseLeave}
+                >
+                  <TaskCard
+                    task={task}
+                    onClick={() => handleTaskClick(task)}
+                  />
+                </div>
               ))}
             </div>
           )}
@@ -576,6 +803,54 @@ export default function Home() {
           }}
         />
       )}
+
+      {showActionMenu && selectedTask && (
+        <TaskActionMenu
+          isOpen={showActionMenu}
+          onClose={() => {
+            setShowActionMenu(false);
+            setSelectedTask(null);
+          }}
+          taskId={selectedTask.taskId}
+          taskTitle={selectedTask.title}
+          onDeferClick={handleDeferClick}
+        />
+      )}
+
+      {showDeferDialog && selectedTask && (
+        <DeferTaskDialog
+          isOpen={showDeferDialog}
+          onClose={() => {
+            setShowDeferDialog(false);
+            setSelectedTask(null);
+          }}
+          taskId={selectedTask.taskId}
+          taskTitle={selectedTask.title}
+          currentDeadline={selectedTask.deadline}
+          onDeferred={handleTaskDeferred}
+        />
+      )}
+
+      {showAddTaskDialog && tasks && projects && (
+        <AddTaskToPlannerDialog
+          isOpen={showAddTaskDialog}
+          onClose={() => setShowAddTaskDialog(false)}
+          tasks={tasks}
+          projects={projects}
+          budgetMinutes={preferredBudgetMinutes}
+          currentPinnedTaskIds={pinnedTaskIds}
+          currentManualTaskIds={manualTaskIds}
+          onTaskAdded={handleTaskAdded}
+          onBudgetExceeded={handleBudgetExceeded}
+        />
+      )}
+
+      <SimpleToast
+        isVisible={showToast}
+        message={toastMessage}
+        type={toastType}
+        onDismiss={() => setShowToast(false)}
+      />
     </AppShell>
   );
 }

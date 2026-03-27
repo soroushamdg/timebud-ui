@@ -164,7 +164,7 @@ export default function FocusSession() {
   const handleUpdateEstimatedTime = async (remainingMinutes: number) => {
     if (!selectedTask) return
     
-    const newEstimatedMinutes = selectedTask.scheduledMinutes + remainingMinutes
+    const newEstimatedMinutes = remainingMinutes
     
     try {
       await updateTask.mutateAsync({ 
