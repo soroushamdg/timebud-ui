@@ -128,9 +128,8 @@ export default function ProjectOverviewPage({
   // Task highlighting
   const searchParams = useSearchParams();
   const highlightedTaskId = searchParams?.get("taskId");
-  const [shouldScrollToTask, setShouldScrollToTask] = useState(false);
   const taskRefs = useRef<Record<string, HTMLDivElement | null>>({});
-  const animationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const highlightedTasksRef = useRef<Set<string>>(new Set());
   const glowStylesAddedRef = useRef(false);
 
   // Close dropdown when clicking outside
@@ -177,17 +176,6 @@ export default function ProjectOverviewPage({
     }
   }, [creatingTask, creatingMilestone]);
 
-  // Scroll to highlighted task when component mounts or taskId changes
-  useEffect(() => {
-    if (highlightedTaskId && !shouldScrollToTask) {
-      // Small delay to ensure DOM is rendered
-      const timer = setTimeout(() => {
-        setShouldScrollToTask(true);
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [highlightedTaskId, shouldScrollToTask]);
-
   // Inject glow keyframes once
   const ensureGlowStyles = () => {
     if (glowStylesAddedRef.current) return;
@@ -205,46 +193,43 @@ export default function ProjectOverviewPage({
     glowStylesAddedRef.current = true;
   };
 
-  // Perform scroll and highlighting
+  // Scroll to and highlight task (one-time execution per task)
   useEffect(() => {
-    // Clean up any existing animation timeout
-    if (animationTimeoutRef.current) {
-      clearTimeout(animationTimeoutRef.current);
-      animationTimeoutRef.current = null;
-    }
-
-    if (
-      shouldScrollToTask &&
-      highlightedTaskId &&
-      taskRefs.current[highlightedTaskId]
-    ) {
-      ensureGlowStyles();
-      const element = taskRefs.current[highlightedTaskId];
-      if (element) {
-        element.scrollIntoView({ behavior: "smooth", block: "center" });
-
-        element.style.animation = "taskGlowPulse 2s ease-in-out forwards";
-
-        // Cleanup after animation completes
-        animationTimeoutRef.current = setTimeout(() => {
-          element.style.animation = "";
-          element.style.boxShadow = "";
-          element.style.opacity = "";
-          element.style.transition = "";
-          animationTimeoutRef.current = null;
-        }, 2000);
-
-        setShouldScrollToTask(false);
-      }
-    }
-
-    return () => {
-      if (animationTimeoutRef.current) {
-        clearTimeout(animationTimeoutRef.current);
-        animationTimeoutRef.current = null;
-      }
-    };
-  }, [shouldScrollToTask, highlightedTaskId]);
+    if (!highlightedTaskId) return;
+    
+    // Check if we've already highlighted this task
+    if (highlightedTasksRef.current.has(highlightedTaskId)) return;
+    
+    // Check if the element exists
+    const element = taskRefs.current[highlightedTaskId];
+    if (!element) return;
+    
+    // Mark as highlighted immediately to prevent re-execution
+    highlightedTasksRef.current.add(highlightedTaskId);
+    
+    // Remove taskId from URL immediately
+    const currentParams = new URLSearchParams(window.location.search);
+    currentParams.delete('taskId');
+    const newUrl = currentParams.toString() 
+      ? `${window.location.pathname}?${currentParams.toString()}`
+      : window.location.pathname;
+    router.replace(newUrl, { scroll: false });
+    
+    // Perform scroll and animation
+    ensureGlowStyles();
+    element.scrollIntoView({ behavior: "smooth", block: "center" });
+    element.style.animation = "taskGlowPulse 2s ease-in-out forwards";
+    
+    // Cleanup after animation completes
+    const timeout = setTimeout(() => {
+      element.style.animation = "";
+      element.style.boxShadow = "";
+      element.style.opacity = "";
+      element.style.transition = "";
+    }, 2000);
+    
+    return () => clearTimeout(timeout);
+  }, [highlightedTaskId, router]);
 
   // Handle click outside to finish creation
   useEffect(() => {
