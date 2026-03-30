@@ -7,6 +7,7 @@ interface PartialTaskCompletionDialogProps {
   onClose: () => void
   onUpdateEstimatedTime: (remainingMinutes: number) => void
   onMarkComplete: () => void
+  onPartialCompletionForNonPartialTask?: (remainingMinutes: number) => void
 }
 
 export function PartialTaskCompletionDialog({ 
@@ -14,7 +15,8 @@ export function PartialTaskCompletionDialog({
   isOpen, 
   onClose, 
   onUpdateEstimatedTime, 
-  onMarkComplete 
+  onMarkComplete,
+  onPartialCompletionForNonPartialTask 
 }: PartialTaskCompletionDialogProps) {
   const [remainingMinutes, setRemainingMinutes] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -25,7 +27,13 @@ export function PartialTaskCompletionDialog({
     setIsSubmitting(true)
     const minutes = parseInt(remainingMinutes)
     if (!isNaN(minutes) && minutes > 0) {
-      await onUpdateEstimatedTime(minutes)
+      if (!task.partial && onPartialCompletionForNonPartialTask) {
+        // Handle non-partial task partial completion
+        await onPartialCompletionForNonPartialTask(minutes)
+      } else {
+        // Handle regular partial task
+        await onUpdateEstimatedTime(minutes)
+      }
       onClose()
     }
     setIsSubmitting(false)
@@ -45,7 +53,10 @@ export function PartialTaskCompletionDialog({
       <div className="bg-bg-card rounded-2xl p-6 max-w-sm w-full mx-4">
         <h2 className="text-xl font-semibold mb-2">Task Progress</h2>
         <p className="text-gray-400 mb-6">
-          You scheduled {task.scheduledMinutes}min for this task. What is your new estimate for the remaining work?
+          {task.partial 
+            ? `You scheduled ${task.scheduledMinutes}min for this task. What is your new estimate for the remaining work?`
+            : `You're marking this task as partially complete. What is your new estimate for the remaining work?`
+          }
         </p>
         
         <div className="mb-6">

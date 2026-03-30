@@ -99,6 +99,17 @@ export default function FocusSession() {
     }
   }
 
+  const handleTaskHold = async (taskId: string) => {
+    const task = focusSessionStore.plannedTasks.find(t => t.taskId === taskId)
+    
+    if (!task || task.partial || task.done) return
+    
+    // For non-partial tasks, we want to open the partial completion dialog
+    // but we need to modify the task to act like a partial task temporarily
+    setSelectedTask(task)
+    setShowPartialCompletionDialog(true)
+  }
+
   const handleTaskClick = (task: PlannedTask) => {
     setSelectedTask(task);
     setShowTaskOverview(true);
@@ -197,6 +208,25 @@ export default function FocusSession() {
     }
   }
 
+  const handlePartialCompletionForNonPartialTask = async (remainingMinutes: number) => {
+    if (!selectedTask) return
+    
+    const newEstimatedMinutes = remainingMinutes
+    
+    try {
+      // Update the task's estimated time
+      await updateTask.mutateAsync({ 
+        id: selectedTask.taskId, 
+        estimated_minutes: newEstimatedMinutes 
+      })
+      
+      // Mark the task as done in the current session (but not completed in the database)
+      focusSessionStore.markTaskDone(selectedTask.taskId)
+    } catch (error) {
+      console.error('Failed to update task estimated time:', error)
+    }
+  }
+
   useEffect(() => {
     // Resume timer if session was running
     if (focusSessionStore.timerRunning && focusSessionStore.sessionStartTime) {
@@ -244,6 +274,7 @@ export default function FocusSession() {
               task={task}
               onCheckmark={() => handleTaskCheckmark(task.taskId)}
               onClick={() => handleTaskClick(task)}
+              onHold={() => handleTaskHold(task.taskId)}
               isLoading={loadingTaskIds.has(task.taskId)}
             />
           ))}
@@ -317,6 +348,7 @@ export default function FocusSession() {
           }}
           onUpdateEstimatedTime={handleUpdateEstimatedTime}
           onMarkComplete={handleMarkTaskComplete}
+          onPartialCompletionForNonPartialTask={handlePartialCompletionForNonPartialTask}
         />
       )}
 

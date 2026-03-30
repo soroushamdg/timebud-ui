@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { AvatarImage } from '@/components/ui/AvatarImage'
 import { PlannedTask } from '@/stores/sessionStore'
 import { CalendarIcon } from '@heroicons/react/24/outline'
@@ -7,10 +8,14 @@ interface FocusTaskCardProps {
   task: PlannedTask
   onCheckmark?: () => void
   onClick?: () => void
+  onHold?: () => void
   isLoading?: boolean
 }
 
-export function FocusTaskCard({ task, onCheckmark, onClick, isLoading }: FocusTaskCardProps) {
+export function FocusTaskCard({ task, onCheckmark, onClick, onHold, isLoading }: FocusTaskCardProps) {
+  const [holdTimeout, setHoldTimeout] = useState<NodeJS.Timeout | null>(null)
+  const [showPartialOption, setShowPartialOption] = useState(false)
+
   const handleCardClick = () => {
     onClick?.()
   }
@@ -18,6 +23,45 @@ export function FocusTaskCard({ task, onCheckmark, onClick, isLoading }: FocusTa
   const handleCheckmarkClick = (e: React.MouseEvent) => {
     e.stopPropagation()
     onCheckmark?.()
+  }
+
+  const handleMouseDown = () => {
+    // Only show partial option for non-partial tasks that aren't done
+    if (!task.partial && !task.done && onHold) {
+      const timeout = setTimeout(() => {
+        setShowPartialOption(true)
+      }, 500) // 500ms hold time
+      setHoldTimeout(timeout)
+    }
+  }
+
+  const handleMouseUp = () => {
+    if (holdTimeout) {
+      clearTimeout(holdTimeout)
+      setHoldTimeout(null)
+    }
+  }
+
+  const handleTouchStart = () => {
+    // Only show partial option for non-partial tasks that aren't done
+    if (!task.partial && !task.done && onHold) {
+      const timeout = setTimeout(() => {
+        setShowPartialOption(true)
+      }, 500) // 500ms hold time
+      setHoldTimeout(timeout)
+    }
+  }
+
+  const handleTouchEnd = () => {
+    if (holdTimeout) {
+      clearTimeout(holdTimeout)
+      setHoldTimeout(null)
+    }
+  }
+
+  const handlePartialOptionClick = () => {
+    setShowPartialOption(false)
+    onHold?.()
   }
 
   const isOverdue = (deadline: string | undefined): boolean => {
@@ -55,7 +99,12 @@ export function FocusTaskCard({ task, onCheckmark, onClick, isLoading }: FocusTa
       {/* Task Card */}
       <div
         onClick={handleCardClick}
-        className={`flex-1 min-w-0 bg-bg-card rounded-none px-4 py-3 flex items-center gap-3 border border-[#ffffff] cursor-pointer transition-colors hover:bg-bg-card-hover ${
+        onMouseDown={handleMouseDown}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        className={`flex-1 min-w-0 bg-bg-card rounded-none px-4 py-3 flex items-center gap-3 border border-[#ffffff] cursor-pointer transition-colors hover:bg-bg-card-hover relative ${
           task.done ? 'bg-bg-card-done border-accent-green/30' : ''
         }`}
       >
@@ -115,6 +164,18 @@ export function FocusTaskCard({ task, onCheckmark, onClick, isLoading }: FocusTa
               ? `${task.scheduledMinutes}min/${task.estimatedMinutes}min`
               : `${task.estimatedMinutes}min`
             }
+          </div>
+        )}
+
+        {/* Partial completion option overlay */}
+        {showPartialOption && !task.partial && !task.done && (
+          <div className="absolute inset-0 bg-black/80 flex items-center justify-center rounded-none">
+            <button
+              onClick={handlePartialOptionClick}
+              className="px-4 py-2 bg-accent-pink text-white font-bold rounded-lg hover:bg-accent-pink/90 transition-colors"
+            >
+              Mark as done partially
+            </button>
           </div>
         )}
       </div>
