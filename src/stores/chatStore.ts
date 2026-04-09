@@ -11,7 +11,8 @@ interface ChatStore {
     content: string,
     suggestions?: string[],
     metadata?: ResponseMetadata,
-    confirmationPayload?: ConfirmationPayload
+    confirmationPayload?: ConfirmationPayload,
+    aiResponse?: any
   ) => void
   addStatusMessage: (content: string, type: 'loading' | 'success' | 'error') => void
   setLoading: (isLoading: boolean) => void
@@ -20,6 +21,8 @@ interface ChatStore {
   unpinMessage: (id: string) => void
   updateMessageOptimistic: (id: string, isOptimistic: boolean) => void
   clearConfirmationPayload: (id: string) => void
+  removeActionButton: (messageId: string, buttonId: string) => void
+  dismissLearningOpportunity: (messageId: string) => void
   searchMessages: (query: string) => ChatMessage[]
 }
 
@@ -42,7 +45,7 @@ export const useChatStore = create<ChatStore>()(
         }))
       },
 
-      addAssistantMessage: (content, suggestions, metadata, confirmationPayload) => {
+      addAssistantMessage: (content, suggestions, metadata, confirmationPayload, aiResponse) => {
         const message: ChatMessage = {
           id: crypto.randomUUID(),
           role: 'assistant',
@@ -51,6 +54,11 @@ export const useChatStore = create<ChatStore>()(
           metadata,
           confirmationPayload,
           timestamp: Date.now(),
+          actionButtons: aiResponse?.action_buttons,
+          suggestedNextActions: aiResponse?.suggested_next_actions,
+          sessionPlan: aiResponse?.session_plan,
+          warnings: aiResponse?.warnings,
+          learningOpportunity: aiResponse?.learning_opportunity,
         }
         set((state) => ({
           messages: [...state.messages, message],
@@ -105,6 +113,27 @@ export const useChatStore = create<ChatStore>()(
         set((state) => ({
           messages: state.messages.map((msg) =>
             msg.id === id ? { ...msg, confirmationPayload: undefined } : msg
+          ),
+        }))
+      },
+
+      removeActionButton: (messageId: string, buttonId: string) => {
+        set((state) => ({
+          messages: state.messages.map((msg) =>
+            msg.id === messageId
+              ? {
+                  ...msg,
+                  actionButtons: msg.actionButtons?.filter((btn) => btn.id !== buttonId),
+                }
+              : msg
+          ),
+        }))
+      },
+
+      dismissLearningOpportunity: (messageId: string) => {
+        set((state) => ({
+          messages: state.messages.map((msg) =>
+            msg.id === messageId ? { ...msg, learningOpportunity: undefined } : msg
           ),
         }))
       },

@@ -8,6 +8,8 @@ export const CREDIT_COSTS: Record<ActionType, number> = {
   project_from_file: 50,
   bulk_tasks: 30,
   avatar_generation: 15,
+  perplexity_research: 100,
+  plan_session: 5,
   purchase: 0,
   renewal: 0,
   subscription: 0,

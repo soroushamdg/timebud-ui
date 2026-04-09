@@ -40,6 +40,8 @@ export type ActionType =
   | 'project_from_file'
   | 'bulk_tasks'
   | 'avatar_generation'
+  | 'perplexity_research'
+  | 'plan_session'
   | 'purchase'
   | 'renewal'
   | 'subscription'

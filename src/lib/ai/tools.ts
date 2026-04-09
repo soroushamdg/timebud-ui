@@ -1,287 +1,309 @@
 export const TOOL_SCHEMAS = {
   load_project_context: {
-    name: 'load_project_context',
-    description: 'Load full task list and memories for a project',
+    name: "load_project_context",
+    description: "Load full task list and memories for a project",
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
         projectId: {
-          type: 'string',
-          description: 'The ID of the project to load context for',
+          type: "string",
+          description: "The ID of the project to load context for",
         },
       },
-      required: ['projectId'],
+      required: ["projectId"],
     },
   },
-  
+
   create_task: {
-    name: 'create_task',
-    description: 'Create a single task',
+    name: "create_task",
+    description: "Create a single task",
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
         projectId: {
-          type: 'string',
-          description: 'The ID of the project this task belongs to',
+          type: "string",
+          description: "The ID of the project this task belongs to",
         },
         title: {
-          type: 'string',
-          description: 'The task title',
+          type: "string",
+          description: "The task title",
         },
         description: {
-          type: 'string',
-          description: 'Optional task description',
+          type: "string",
+          description: "Optional task description",
         },
         estimatedMinutes: {
-          type: 'number',
-          description: 'Estimated time in minutes',
+          type: "number",
+          description: "Estimated time in minutes",
         },
         dueDate: {
-          type: 'string',
-          description: 'Due date in ISO 8601 UTC string format (YYYY-MM-DDTHH:mm:ssZ)',
+          type: "string",
+          description:
+            "Due date in ISO 8601 UTC string format (YYYY-MM-DDTHH:mm:ssZ)",
         },
         priority: {
-          type: 'boolean',
-          description: 'Whether this is a high priority task',
+          type: "boolean",
+          description: "Whether this is a high priority task",
         },
         dependsOnTask: {
-          type: 'string',
-          description: 'ID of task this depends on',
+          type: "string",
+          description: "ID of task this depends on",
         },
       },
-      required: ['projectId', 'title'],
+      required: ["projectId", "title"],
     },
   },
 
   edit_task: {
-    name: 'edit_task',
-    description: 'Update fields of an existing task',
+    name: "edit_task",
+    description: "Update fields of an existing task",
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
         taskId: {
-          type: 'string',
-          description: 'The ID of the task to edit',
+          type: "string",
+          description: "The ID of the task to edit",
         },
         updates: {
-          type: 'object',
-          description: 'Fields to update',
+          type: "object",
+          description: "Fields to update",
           properties: {
-            title: { type: 'string' },
-            description: { type: 'string' },
-            estimatedMinutes: { type: 'number' },
-            dueDate: { type: 'string', description: 'ISO 8601 UTC string format' },
-            priority: { type: 'boolean' },
-            dependsOnTask: { type: 'string' },
+            title: { type: "string" },
+            description: { type: "string" },
+            estimatedMinutes: { type: "number" },
+            dueDate: {
+              type: "string",
+              description: "ISO 8601 UTC string format",
+            },
+            priority: { type: "boolean" },
+            dependsOnTask: { type: "string" },
           },
         },
       },
-      required: ['taskId', 'updates'],
+      required: ["taskId", "updates"],
     },
   },
 
   delete_task: {
-    name: 'delete_task',
-    description: 'Delete a task (requires confirmation)',
+    name: "delete_task",
+    description: "Delete a task (requires confirmation)",
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
         taskId: {
-          type: 'string',
-          description: 'The ID of the task to delete',
+          type: "string",
+          description: "The ID of the task to delete",
         },
       },
-      required: ['taskId'],
+      required: ["taskId"],
     },
   },
 
   bulk_create_tasks: {
-    name: 'bulk_create_tasks',
-    description: 'Create multiple tasks at once',
+    name: "bulk_create_tasks",
+    description:
+      "Create multiple tasks at once. Supports setting dependencies between tasks using either dependsOnTaskIndex (for tasks in the same batch, 0-based index) or dependsOnTaskId (UUID of an existing task). Use dependsOnTaskIndex when creating task chains (e.g., task 2 depends on task 1).",
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
         projectId: {
-          type: 'string',
-          description: 'The ID of the project',
+          type: "string",
+          description: "The ID of the project",
         },
         tasks: {
-          type: 'array',
-          description: 'Array of tasks to create',
+          type: "array",
+          description: "Array of tasks to create",
           items: {
-            type: 'object',
+            type: "object",
             properties: {
-              title: { type: 'string' },
-              description: { type: 'string' },
-              estimatedMinutes: { type: 'number' },
-              dueDate: { type: 'string', description: 'ISO 8601 UTC string format' },
-              priority: { type: 'boolean' },
+              title: { type: "string" },
+              description: { type: "string" },
+              estimatedMinutes: { type: "number" },
+              dueDate: {
+                type: "string",
+                description: "ISO 8601 UTC string format",
+              },
+              priority: { type: "boolean" },
+              dependsOnTaskIndex: {
+                type: "number",
+                description:
+                  "0-based index of a task in this same array that this task depends on",
+              },
+              dependsOnTaskId: {
+                type: "string",
+                description:
+                  "UUID of an existing task that this task depends on",
+              },
             },
-            required: ['title'],
+            required: ["title"],
           },
         },
       },
-      required: ['projectId', 'tasks'],
+      required: ["projectId", "tasks"],
     },
   },
 
   create_milestone: {
-    name: 'create_milestone',
-    description: 'Create a milestone',
+    name: "create_milestone",
+    description: "Create a milestone",
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
         projectId: {
-          type: 'string',
-          description: 'The ID of the project',
+          type: "string",
+          description: "The ID of the project",
         },
         title: {
-          type: 'string',
-          description: 'The milestone title',
+          type: "string",
+          description: "The milestone title",
         },
         dueDate: {
-          type: 'string',
-          description: 'Due date in ISO 8601 UTC string format',
+          type: "string",
+          description: "Due date in ISO 8601 UTC string format",
         },
         priority: {
-          type: 'boolean',
-          description: 'Whether this is high priority',
+          type: "boolean",
+          description: "Whether this is high priority",
         },
       },
-      required: ['projectId', 'title'],
+      required: ["projectId", "title"],
     },
   },
 
   edit_milestone: {
-    name: 'edit_milestone',
-    description: 'Edit a milestone',
+    name: "edit_milestone",
+    description: "Edit a milestone",
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
         milestoneId: {
-          type: 'string',
-          description: 'The ID of the milestone to edit',
+          type: "string",
+          description: "The ID of the milestone to edit",
         },
         updates: {
-          type: 'object',
+          type: "object",
           properties: {
-            title: { type: 'string' },
-            dueDate: { type: 'string', description: 'ISO 8601 UTC string format' },
-            priority: { type: 'boolean' },
+            title: { type: "string" },
+            dueDate: {
+              type: "string",
+              description: "ISO 8601 UTC string format",
+            },
+            priority: { type: "boolean" },
           },
         },
       },
-      required: ['milestoneId', 'updates'],
+      required: ["milestoneId", "updates"],
     },
   },
 
   delete_milestone: {
-    name: 'delete_milestone',
-    description: 'Delete a milestone (requires confirmation)',
+    name: "delete_milestone",
+    description: "Delete a milestone (requires confirmation)",
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
         milestoneId: {
-          type: 'string',
-          description: 'The ID of the milestone to delete',
+          type: "string",
+          description: "The ID of the milestone to delete",
         },
       },
-      required: ['milestoneId'],
+      required: ["milestoneId"],
     },
   },
 
   create_project: {
-    name: 'create_project',
-    description: 'Create a new project (requires confirmation via preview_creation)',
+    name: "create_project",
+    description:
+      "Create a new project (requires confirmation via preview_creation)",
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
         name: {
-          type: 'string',
-          description: 'Project name',
+          type: "string",
+          description: "Project name",
         },
         description: {
-          type: 'string',
-          description: 'Project description',
+          type: "string",
+          description: "Project description",
         },
         deadline: {
-          type: 'string',
-          description: 'Project deadline in ISO 8601 UTC string format',
+          type: "string",
+          description: "Project deadline in ISO 8601 UTC string format",
         },
         color: {
-          type: 'string',
-          description: 'Project color hex code',
+          type: "string",
+          description: "Project color hex code",
         },
       },
-      required: ['name'],
+      required: ["name"],
     },
   },
 
   add_memory: {
-    name: 'add_memory',
-    description: 'Save important context to project memories',
+    name: "add_memory",
+    description: "Save important context to project memories",
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
         projectId: {
-          type: 'string',
-          description: 'The ID of the project',
+          type: "string",
+          description: "The ID of the project",
         },
         content: {
-          type: 'string',
-          description: 'The memory content to save',
+          type: "string",
+          description: "The memory content to save",
         },
       },
-      required: ['projectId', 'content'],
+      required: ["projectId", "content"],
     },
   },
 
   remove_memory: {
-    name: 'remove_memory',
-    description: 'Delete a memory (requires confirmation)',
+    name: "remove_memory",
+    description: "Delete a memory (requires confirmation)",
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
         memoryId: {
-          type: 'string',
-          description: 'The ID of the memory to delete',
+          type: "string",
+          description: "The ID of the memory to delete",
         },
       },
-      required: ['memoryId'],
+      required: ["memoryId"],
     },
   },
 
   mark_task_complete: {
-    name: 'mark_task_complete',
-    description: 'Mark a task as completed',
+    name: "mark_task_complete",
+    description: "Mark a task as completed",
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
         taskId: {
-          type: 'string',
-          description: 'The ID of the task to mark complete',
+          type: "string",
+          description: "The ID of the task to mark complete",
         },
       },
-      required: ['taskId'],
+      required: ["taskId"],
     },
   },
 
   set_task_dependency: {
-    name: 'set_task_dependency',
-    description: 'Set or clear task dependency',
+    name: "set_task_dependency",
+    description: "Set or clear task dependency",
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
         taskId: {
-          type: 'string',
-          description: 'The ID of the task',
+          type: "string",
+          description: "The ID of the task",
         },
         dependsOnTaskId: {
-          type: 'string',
-          description: 'The ID of the task this depends on (null to clear)',
+          type: "string",
+          description: "The ID of the task this depends on (null to clear)",
         },
       },
-      required: ['taskId'],
+      required: ["taskId"],
     },
   },
-}
+};

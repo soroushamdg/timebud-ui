@@ -56,6 +56,10 @@ export default function ProfilePage() {
   const [selectedProvider, setSelectedProvider] = useState<AIProvider>(aiSettings?.provider || 'anthropic')
   const [selectedModel, setSelectedModel] = useState(aiSettings?.model || 'claude-sonnet-4-20250514')
   const [thinkingMode, setThinkingMode] = useState(aiSettings?.thinking_mode || false)
+  const [timezone, setTimezone] = useState(aiSettings?.timezone || 'UTC')
+  const [firstDayOfWeek, setFirstDayOfWeek] = useState(aiSettings?.first_day_of_week || 'Monday')
+  const [preferredSessionMinutes, setPreferredSessionMinutes] = useState(aiSettings?.preferred_session_minutes || 60)
+  const [allowResearch, setAllowResearch] = useState(aiSettings?.allow_research ?? true)
   const [saveSuccess, setSaveSuccess] = useState(false)
 
   // Focus session guard - auto-redirect to running focus session
@@ -119,6 +123,10 @@ export default function ProfilePage() {
         provider: selectedProvider,
         model: selectedModel,
         thinking_mode: thinkingMode,
+        timezone,
+        first_day_of_week: firstDayOfWeek,
+        preferred_session_minutes: preferredSessionMinutes,
+        allow_research: allowResearch,
       })
       setSaveSuccess(true)
       setTimeout(() => setSaveSuccess(false), 3000)
@@ -349,6 +357,66 @@ export default function ProfilePage() {
                   </button>
                 </div>
               )}
+
+              {/* First day of week */}
+              <div>
+                <label className="text-sm text-text-sec mb-2 block">First Day of Week</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {['Monday', 'Sunday'].map(day => (
+                    <button
+                      key={day}
+                      onClick={() => setFirstDayOfWeek(day)}
+                      className={`${
+                        firstDayOfWeek === day
+                          ? 'bg-accent-yellow text-black'
+                          : 'bg-bg-card text-white border border-border-card'
+                      } px-4 py-2 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity`}
+                    >
+                      {day}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Preferred session length */}
+              <div>
+                <label className="text-sm text-text-sec mb-2 block">
+                  Default Session Length: {preferredSessionMinutes} minutes
+                </label>
+                <input
+                  type="range"
+                  min="15"
+                  max="180"
+                  step="15"
+                  value={preferredSessionMinutes}
+                  onChange={(e) => setPreferredSessionMinutes(parseInt(e.target.value))}
+                  className="w-full h-2 bg-border-card rounded-lg appearance-none cursor-pointer accent-accent-yellow"
+                />
+                <div className="flex justify-between text-xs text-text-sec mt-1">
+                  <span>15 min</span>
+                  <span>180 min</span>
+                </div>
+              </div>
+
+              {/* Allow web research toggle */}
+              <div className="flex items-center justify-between bg-bg-card border border-border-card rounded-lg p-4">
+                <div>
+                  <p className="text-white font-medium">Allow Web Research</p>
+                  <p className="text-xs text-text-sec">AI can search the web (100 credits per search)</p>
+                </div>
+                <button
+                  onClick={() => setAllowResearch(!allowResearch)}
+                  className={`w-12 h-6 rounded-full transition-colors ${
+                    allowResearch ? 'bg-accent-yellow' : 'bg-border-card'
+                  }`}
+                >
+                  <div
+                    className={`w-5 h-5 rounded-full bg-white transition-transform ${
+                      allowResearch ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
 
               {/* Action button */}
               <div>

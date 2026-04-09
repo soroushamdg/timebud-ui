@@ -33,6 +33,9 @@ export async function executeTool(
       case 'create_project':
         return await createProject(input, supabase, userId)
       
+      case 'edit_project':
+        return await editProject(input, supabase, userId)
+      
       case 'add_memory':
         return await addMemory(input, supabase, userId)
       
@@ -188,7 +191,34 @@ async function bulkCreateTasks(
 
   let nextOrder = maxOrderData && maxOrderData.length > 0 ? maxOrderData[0].order + 1.0 : 1.0
 
-  const tasksToInsert = tasks.map((task: any) => {
+  // Pre-generate UUIDs for all tasks
+  const taskIds = tasks.map(() => crypto.randomUUID())
+
+  // Validate dependencies
+  let dependencyCount = 0
+  for (let i = 0; i < tasks.length; i++) {
+    const task = tasks[i]
+    
+    if (task.dependsOnTaskIndex !== undefined && task.dependsOnTaskIndex !== null) {
+      const depIndex = task.dependsOnTaskIndex
+      
+      // Validate index is within bounds
+      if (depIndex < 0 || depIndex >= tasks.length) {
+        throw new Error(`Task "${task.title}" has invalid dependsOnTaskIndex: ${depIndex}. Must be between 0 and ${tasks.length - 1}`)
+      }
+      
+      // Prevent self-reference
+      if (depIndex === i) {
+        throw new Error(`Task "${task.title}" cannot depend on itself`)
+      }
+      
+      dependencyCount++
+    } else if (task.dependsOnTaskId) {
+      dependencyCount++
+    }
+  }
+
+  const tasksToInsert = tasks.map((task: any, index: number) => {
     // Convert priority to boolean if it's a string
     let priority = false
     if (typeof task.priority === 'boolean') {
@@ -197,8 +227,18 @@ async function bulkCreateTasks(
       priority = task.priority.toLowerCase() === 'high' || task.priority.toLowerCase() === 'true'
     }
 
+    // Resolve dependency
+    let dependsOnTask = null
+    if (task.dependsOnTaskId) {
+      // Direct UUID reference takes precedence
+      dependsOnTask = task.dependsOnTaskId
+    } else if (task.dependsOnTaskIndex !== undefined && task.dependsOnTaskIndex !== null) {
+      // Resolve index to UUID
+      dependsOnTask = taskIds[task.dependsOnTaskIndex]
+    }
+
     return {
-      id: crypto.randomUUID(),
+      id: taskIds[index],
       user_id: userId,
       project_id: projectId,
       item_type: 'task',
@@ -209,7 +249,7 @@ async function bulkCreateTasks(
       due_date: task.dueDate || null,
       order: nextOrder++,
       priority,
-      depends_on_task: null,
+      depends_on_task: dependsOnTask,
     }
   })
 
@@ -220,9 +260,13 @@ async function bulkCreateTasks(
 
   if (error) throw error
 
+  const summary = dependencyCount > 0 
+    ? `Created ${tasks.length} tasks with ${dependencyCount} ${dependencyCount === 1 ? 'dependency' : 'dependencies'}`
+    : `Created ${tasks.length} tasks`
+
   return {
     success: true,
-    summary: `Created ${tasks.length} tasks`,
+    summary,
     data,
   }
 }
@@ -366,6 +410,39 @@ async function createProject(
   return {
     success: true,
     summary: `Created project: ${name}`,
+    data,
+  }
+}
+
+async function editProject(
+  input: Record<string, any>,
+  supabase: SupabaseClient,
+  userId: string
+): Promise<ToolExecutionResult> {
+  const { projectId, updates } = input
+
+  const updateData: Record<string, any> = {}
+  
+  if (updates.name !== undefined) updateData.name = updates.name
+  if (updates.description !== undefined) updateData.description = updates.description
+  if (updates.deadline !== undefined) updateData.deadline = updates.deadline
+  if (updates.status !== undefined) updateData.status = updates.status
+  if (updates.color !== undefined) updateData.color = updates.color
+  if (updates.priority !== undefined) updateData.priority = updates.priority
+
+  const { data, error } = await supabase
+    .from('projects')
+    .update(updateData)
+    .eq('id', projectId)
+    .eq('user_id', userId)
+    .select()
+    .single()
+
+  if (error) throw error
+
+  return {
+    success: true,
+    summary: `Updated project: ${data.name}`,
     data,
   }
 }

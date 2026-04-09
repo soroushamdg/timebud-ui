@@ -5,6 +5,11 @@ import { Check, Loader2, Pin } from 'lucide-react'
 import { useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { WarningBanner } from './WarningBanner'
+import { SessionPlanPreview } from './SessionPlanPreview'
+import { LearningOpportunity } from './LearningOpportunity'
+import { ActionButtonGroup } from './ActionButtonGroup'
+import { SuggestedActions } from './SuggestedActions'
 
 interface MessageBubbleProps {
   message: ChatMessage
@@ -12,6 +17,9 @@ interface MessageBubbleProps {
   onConfirm?: (tools: any[]) => void
   onCancel?: () => void
   onLongPress?: (messageId: string) => void
+  onButtonExecuted?: (messageId: string, buttonId: string) => void
+  onDismissLearning?: (messageId: string) => void
+  onStartSession?: (sessionPlan: any) => void
 }
 
 export function MessageBubble({
@@ -20,6 +28,9 @@ export function MessageBubble({
   onConfirm,
   onCancel,
   onLongPress,
+  onButtonExecuted,
+  onDismissLearning,
+  onStartSession,
 }: MessageBubbleProps) {
   const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null)
 
@@ -109,6 +120,20 @@ export function MessageBubble({
               {message.content}
             </ReactMarkdown>
           </div>
+
+          {/* Warnings */}
+          {message.warnings && message.warnings.length > 0 && (
+            <WarningBanner warnings={message.warnings} />
+          )}
+
+          {/* Session Plan Preview */}
+          {message.sessionPlan && (
+            <SessionPlanPreview
+              plan={message.sessionPlan}
+              onStartSession={() => onStartSession?.(message.sessionPlan)}
+              onAdjustTime={() => onSuggestionClick?.('Plan a different session time')}
+            />
+          )}
 
           {/* Confirmation payload */}
           {message.confirmationPayload && (
@@ -204,7 +229,34 @@ export function MessageBubble({
           )}
         </div>
 
-        {/* Suggestion chips */}
+        {/* Learning Opportunity */}
+        {message.learningOpportunity && (
+          <LearningOpportunity
+            opportunity={message.learningOpportunity}
+            messageId={message.id}
+            onDismiss={() => onDismissLearning?.(message.id)}
+          />
+        )}
+
+        {/* Action Buttons */}
+        {message.actionButtons && message.actionButtons.length > 0 && (
+          <ActionButtonGroup
+            buttons={message.actionButtons}
+            messageId={message.id}
+            onButtonExecuted={(buttonId) => onButtonExecuted?.(message.id, buttonId)}
+            onError={(msg) => console.error('Button error:', msg)}
+          />
+        )}
+
+        {/* Suggested Next Actions */}
+        {message.suggestedNextActions && message.suggestedNextActions.length > 0 && (
+          <SuggestedActions
+            suggestions={message.suggestedNextActions}
+            onSelect={(prompt) => onSuggestionClick?.(prompt)}
+          />
+        )}
+
+        {/* Suggestion chips (legacy) */}
         {message.suggestions && message.suggestions.length > 0 && (
           <div className="flex gap-2 mt-2 overflow-x-auto scrollbar-hide pb-1 -mx-1 px-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}>
             {message.suggestions.map((suggestion, idx) => (

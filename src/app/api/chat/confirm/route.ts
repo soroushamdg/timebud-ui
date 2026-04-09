@@ -38,14 +38,29 @@ export async function POST(request: NextRequest) {
     // Execute tools
     const serviceSupabase = createServiceClient()
     const toolsExecuted: Array<{ tool: string; success: boolean; summary: string }> = []
+    let createdProjectId: string | null = null
 
     for (const tool of tools) {
+      // Replace {{PROJECT_ID}} placeholder if we've created a project
+      let toolInput = tool.input
+      if (createdProjectId && JSON.stringify(toolInput).includes('{{PROJECT_ID}}')) {
+        const inputStr = JSON.stringify(toolInput)
+        const replacedStr = inputStr.replace(/\{\{PROJECT_ID\}\}/g, createdProjectId)
+        toolInput = JSON.parse(replacedStr)
+      }
+
       const result = await executeTool(
         tool.name,
-        tool.input,
+        toolInput,
         serviceSupabase,
         user.id
       )
+      
+      // Capture project ID if this was a create_project call
+      if (tool.name === 'create_project' && result.success && result.data?.id) {
+        createdProjectId = result.data.id
+      }
+
       toolsExecuted.push({
         tool: tool.name,
         success: result.success,

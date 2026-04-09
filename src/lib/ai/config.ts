@@ -74,7 +74,16 @@ export function buildSystemPrompt(
   firstName: string,
   date: string,
   projects: ProjectSummary[],
-  template?: string
+  template?: string,
+  temporalContext?: {
+    currentUtcTime?: string
+    currentLocalTime?: string
+    userTimezone?: string
+    weekStart?: string
+    weekEnd?: string
+    endOfWeek?: string
+    humanReadable?: string
+  }
 ): string {
   const projectList = projects
     .map(p => `- ${p.name} (${p.status}, ${p.taskCount} tasks) [ID: ${p.id}]`)
@@ -86,10 +95,17 @@ export function buildSystemPrompt(
   
   // Replace variables in template
   let result = template
-  const variables = {
+  const variables: Record<string, string> = {
     firstName,
     date,
-    projectList: projectList || '(No projects yet)'
+    projectList: projectList || '(No projects yet)',
+    currentUtcTime: temporalContext?.currentUtcTime || new Date().toISOString(),
+    currentLocalTime: temporalContext?.currentLocalTime || date,
+    userTimezone: temporalContext?.userTimezone || 'UTC',
+    weekStart: temporalContext?.weekStart || date,
+    weekEnd: temporalContext?.weekEnd || date,
+    endOfWeek: temporalContext?.endOfWeek || date,
+    humanReadable: temporalContext?.humanReadable || `Today is ${date}`,
   }
   
   for (const [key, value] of Object.entries(variables)) {

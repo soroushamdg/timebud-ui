@@ -47,4 +47,10 @@ export interface DbUserAISettings {
   provider: AIProvider
   model: string
   thinking_mode: boolean
+  timezone?: string
+  first_day_of_week?: string
+  preferred_session_minutes?: number
+  allow_partial_tasks?: boolean
+  allow_research?: boolean
+  auto_estimate_tasks?: boolean
 }

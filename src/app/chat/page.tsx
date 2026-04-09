@@ -32,6 +32,8 @@ export default function ChatPage() {
     unpinMessage,
     clearHistory,
     clearConfirmationPayload,
+    removeActionButton,
+    dismissLearningOpportunity,
   } = useChatStore();
 
   const [error, setError] = useState<{ code: string; message: string } | null>(
@@ -157,7 +159,16 @@ export default function ChatPage() {
         if (lastCreditsDeducted) {
           metadata.creditsUsed = lastCreditsDeducted;
         }
-        addAssistantMessage(messageContent, aiResponse.suggestions, metadata);
+        addAssistantMessage(messageContent, aiResponse.suggestions, metadata, undefined, aiResponse);
+        setLastCreditsDeducted(null);
+      } else if (aiResponse.action === "plan_session" || aiResponse.action === "research_required") {
+        // New AI agent actions
+        const messageContent = aiResponse.message || "";
+        const metadata = aiResponse.metadata || {};
+        if (lastCreditsDeducted) {
+          metadata.creditsUsed = lastCreditsDeducted;
+        }
+        addAssistantMessage(messageContent, aiResponse.suggestions, metadata, undefined, aiResponse);
         setLastCreditsDeducted(null);
       } else if (
         aiResponse.action === "execute_tools" &&
@@ -179,6 +190,7 @@ export default function ChatPage() {
             confirmationSummary:
               aiResponse.confirmationSummary || "Confirm this action?",
           },
+          aiResponse
         );
       } else if (
         aiResponse.action === "execute_tools" &&
@@ -190,7 +202,7 @@ export default function ChatPage() {
         if (lastCreditsDeducted) {
           metadata.creditsUsed = lastCreditsDeducted;
         }
-        addAssistantMessage(messageContent, aiResponse.suggestions, metadata);
+        addAssistantMessage(messageContent, aiResponse.suggestions, metadata, undefined, aiResponse);
         setLastCreditsDeducted(null);
       } else if (aiResponse.action === "preview_creation") {
         addAssistantMessage(
@@ -203,6 +215,7 @@ export default function ChatPage() {
             confirmationSummary: aiResponse.message || "Review and confirm",
             preview: aiResponse.preview,
           },
+          aiResponse
         );
       }
 
@@ -325,6 +338,34 @@ export default function ChatPage() {
 
   const handleUndo = async () => {
     console.log("Undo action");
+  };
+
+  const handleButtonExecuted = (messageId: string, buttonId: string) => {
+    removeActionButton(messageId, buttonId);
+  };
+
+  const handleDismissLearning = (messageId: string) => {
+    dismissLearningOpportunity(messageId);
+  };
+
+  const handleStartSession = async (sessionPlan: any) => {
+    try {
+      const response = await fetch('/api/ai/action-button', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'start_focus_session',
+          context: { sessionPlan },
+        }),
+      });
+
+      const data = await response.json();
+      if (data.success && data.url) {
+        router.push(data.url);
+      }
+    } catch (error) {
+      console.error('Failed to start session:', error);
+    }
   };
 
   const handleClearChat = () => {
@@ -451,6 +492,9 @@ export default function ChatPage() {
                       onConfirm={handleConfirm}
                       onCancel={handleCancel}
                       onLongPress={handleLongPress}
+                      onButtonExecuted={handleButtonExecuted}
+                      onDismissLearning={handleDismissLearning}
+                      onStartSession={handleStartSession}
                     />
                   ))}
                 </div>
@@ -464,6 +508,9 @@ export default function ChatPage() {
                   onConfirm={handleConfirm}
                   onCancel={handleCancel}
                   onLongPress={handleLongPress}
+                  onButtonExecuted={handleButtonExecuted}
+                  onDismissLearning={handleDismissLearning}
+                  onStartSession={handleStartSession}
                 />
               ))}
 

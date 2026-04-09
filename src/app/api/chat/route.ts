@@ -8,6 +8,9 @@ import { executeTool } from '@/lib/ai/execute'
 import { ChatAPIRequest, ChatAPIResponse } from '@/types/ai'
 import { getActionType } from '@/lib/credits/config'
 import { deductCreditsForAction, refundCreditsForAction } from '@/lib/credits/deduct'
+import { buildTemporalContext } from '@/lib/ai/temporal'
+import { performResearch } from '@/lib/ai/perplexity'
+import { planSessionFromAI } from '@/lib/ai/session-planner'
 
 export async function POST(request: NextRequest) {
   try {
@@ -73,11 +76,15 @@ export async function POST(request: NextRequest) {
       })
     )
 
-    // 4. Build system prompt
+    // 4. Build temporal context and system prompt
     const firstName = (user as any).first_name || 'there'
     const today = new Date().toISOString().split('T')[0]
+    const timezone = settings.timezone || 'UTC'
+    const firstDayOfWeek = settings.first_day_of_week || 'Monday'
+    
+    const temporalContext = buildTemporalContext(timezone, firstDayOfWeek)
     const promptTemplate = loadSystemPromptTemplate()
-    const systemPrompt = buildSystemPrompt(firstName, today, projectSummaries, promptTemplate)
+    const systemPrompt = buildSystemPrompt(firstName, today, projectSummaries, promptTemplate, temporalContext)
 
     // 5. Run AI loop (max 4 iterations)
     const conversationHistory = [...messages]
@@ -275,6 +282,27 @@ export async function POST(request: NextRequest) {
           })
         }
 
+        // Check if any tools failed
+        const failedTools = toolsExecuted.filter(t => !t.success)
+        if (failedTools.length > 0) {
+          // Return error response if any tool failed
+          return NextResponse.json({
+            success: true,
+            response: {
+              action: 'respond',
+              message: `I encountered an error: ${failedTools[0].summary}`,
+              suggestions: ['Try again', 'Rephrase your request'],
+            },
+            contextLoaded,
+            toolsExecuted,
+            credits: creditDeductionResult ? {
+              deducted: creditsDeducted,
+              free_remaining: creditDeductionResult.balance?.free_credits || 0,
+              purchased_remaining: creditDeductionResult.balance?.purchased_credits || 0,
+            } : undefined,
+          } as ChatAPIResponse, { status: 200 })
+        }
+
         return NextResponse.json({
           success: true,
           response: aiResponse,
@@ -288,7 +316,133 @@ export async function POST(request: NextRequest) {
         } as ChatAPIResponse, { status: 200 })
       }
 
+      if (aiResponse.action === 'research_required') {
+        // Check if user allows research
+        if (!settings.allow_research) {
+          conversationHistory.push({
+            role: 'user',
+            content: 'Research is disabled in your settings. Please answer without web research.',
+          })
+          continue
+        }
+
+        // Perform Perplexity research
+        const serviceSupabase = createServiceClient()
+        const researchQuery = aiResponse.research_query || aiResponse.message || ''
+        
+        // Deduct research credits
+        const researchCreditResult = await deductCreditsForAction({
+          userId: user.id,
+          actionType: 'perplexity_research',
+          description: 'Web research via Perplexity',
+          supabase: serviceSupabase,
+        })
+
+        if (!researchCreditResult.success) {
+          conversationHistory.push({
+            role: 'user',
+            content: 'Insufficient credits for research (requires 100 credits). Please answer without research.',
+          })
+          continue
+        }
+
+        creditsDeducted += 100
+
+        const researchResult = await performResearch(researchQuery, {
+          userContext: `User: ${firstName}, Projects: ${projectSummaries.map(p => p.name).join(', ')}`,
+        })
+
+        if (researchResult.creditsUsed === 0) {
+          // Research failed, refund credits
+          await refundCreditsForAction({
+            userId: user.id,
+            actionType: 'perplexity_research',
+            supabase: serviceSupabase,
+          })
+          creditsDeducted -= 100
+        }
+
+        // Inject research results into conversation
+        const researchContext = `
+RESEARCH RESULTS:
+Query: ${researchQuery}
+Summary: ${researchResult.summary}
+Key Findings:
+${researchResult.keyFindings.map((f, i) => `${i + 1}. ${f}`).join('\n')}
+${researchResult.sources.length > 0 ? `\nSources: ${researchResult.sources.join(', ')}` : ''}
+
+Please use this research to answer the user's question.
+`
+        conversationHistory.push({
+          role: 'user',
+          content: researchContext,
+        })
+
+        // Update metadata
+        if (aiResponse.metadata) {
+          aiResponse.metadata.researchPerformed = true
+        }
+
+        continue
+      }
+
+      if (aiResponse.action === 'plan_session') {
+        // Extract budget from AI response or use default
+        const budgetMinutes = settings.preferred_session_minutes || 60
+        
+        try {
+          const sessionPlan = await planSessionFromAI(
+            user.id,
+            { budgetMinutes },
+            supabase
+          )
+
+          // Attach session plan to response
+          aiResponse.session_plan = sessionPlan
+          
+          if (aiResponse.metadata) {
+            aiResponse.metadata.plannerExecuted = true
+          }
+
+          return NextResponse.json({
+            success: true,
+            response: aiResponse,
+            contextLoaded,
+            credits: creditDeductionResult ? {
+              deducted: creditsDeducted + 5, // Include session planning cost
+              free_remaining: creditDeductionResult.balance?.free_credits || 0,
+              purchased_remaining: creditDeductionResult.balance?.purchased_credits || 0,
+            } : undefined,
+          } as ChatAPIResponse, { status: 200 })
+        } catch (error: any) {
+          console.error('Session planning error:', error)
+          // Fall through to respond action
+          aiResponse.action = 'respond'
+          aiResponse.message = 'I encountered an issue planning your session. Please try again or specify your time budget.'
+        }
+      }
+
       if (aiResponse.action === 'preview_creation' || aiResponse.action === 'respond') {
+        // Log AI interaction
+        const serviceSupabase = createServiceClient()
+        await serviceSupabase.from('ai_interactions').insert({
+          user_id: user.id,
+          action_type: messages[messages.length - 1]?.content?.substring(0, 50) || 'chat',
+          thinking_mode: settings.thinking_mode ? settings.model : null,
+          research_performed: aiResponse.metadata?.researchPerformed || false,
+          credits_used: creditsDeducted,
+          response_action: aiResponse.action,
+        })
+
+        // Log task estimations if present
+        if (aiResponse.tools) {
+          for (const tool of aiResponse.tools) {
+            if (tool.name === 'createTask' && tool.input.estimatedMinutes) {
+              // Will be logged after tool execution in execute_tools handler
+            }
+          }
+        }
+
         // Final response with credit info
         return NextResponse.json({
           success: true,
