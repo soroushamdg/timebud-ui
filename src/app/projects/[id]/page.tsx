@@ -48,6 +48,16 @@ const isOverdue = (deadline: string | null | undefined): boolean => {
   return dueDate < today;
 };
 
+// Today detection helper
+const isToday = (deadline: string | null | undefined): boolean => {
+  if (!deadline) return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const dueDate = new Date(deadline);
+  dueDate.setHours(0, 0, 0, 0);
+  return dueDate.getTime() === today.getTime();
+};
+
 type SortMode = "manual" | "deadline";
 
 export default function ProjectOverviewPage({
@@ -1219,12 +1229,17 @@ export default function ProjectOverviewPage({
             {/* Deadline in trailing position */}
             {item.due_date && (
               <div className="flex-shrink-0 flex items-center gap-2 ml-3">
-                <span className={`text-sm font-medium ${isOverdue(item.due_date) && !completed ? 'text-red-500 font-semibold' : 'text-text-sec'}`}>
+                <span className={`text-sm font-medium ${isOverdue(item.due_date) && !completed ? 'text-red-500 font-semibold' : isToday(item.due_date) && !completed ? 'text-blue-500 font-semibold' : 'text-text-sec'}`}>
                   {formatLocalSmart(item.due_date)}
                 </span>
                 {isOverdue(item.due_date) && !completed && (
                   <span className="px-1.5 py-0.5 bg-red-500 text-white text-xs font-bold rounded">
                     OVERDUE
+                  </span>
+                )}
+                {!isOverdue(item.due_date) && isToday(item.due_date) && !completed && (
+                  <span className="px-1.5 py-0.5 bg-blue-500 text-white text-xs font-bold rounded">
+                    TODAY
                   </span>
                 )}
               </div>
