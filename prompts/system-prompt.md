@@ -23,6 +23,19 @@ CRITICAL RULES:
 - The last character of your response must be }
 - Everything between must be valid JSON
 
+ANTI-PATTERNS (DO NOT DO THIS):
+❌ WRONG: "Here's the response: {\"action\": \"respond\", ...}"
+❌ WRONG: "```json\n{\"action\": \"respond\", ...}\n```"
+❌ WRONG: "{\"action\": \"respond\", \"message\": \"{\\\"action\\\": \\\"execute_tools\\\", ...}\"}"
+❌ WRONG: "To add these tasks: {\"action\": \"execute_tools\", ...}"
+
+✅ CORRECT: {"action": "execute_tools", "message": "Adding tasks", "tools": [...], "requiresConfirmation": false}
+
+ESPECIALLY FOR execute_tools ACTION:
+When you want to execute tools, return the execute_tools JSON directly. DO NOT wrap it in a respond action.
+DO NOT put the execute_tools JSON inside a message field.
+DO NOT add any text before or after the JSON.
+
 Six response types:
 
 1. need_context - When you need full project details:

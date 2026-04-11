@@ -179,6 +179,11 @@ export async function POST(request: NextRequest) {
           settings.thinking_mode,
           maxTokens
         )
+        
+        // Log raw response for debugging
+        console.log('[Chat API] AI raw response length:', rawResponse.length)
+        console.log('[Chat API] AI raw response preview:', rawResponse.substring(0, 300))
+        
       } catch (aiError) {
         // Refund credits on AI failure
         if (iterations === 1 && creditsDeducted > 0) {
@@ -199,6 +204,16 @@ export async function POST(request: NextRequest) {
 
       // Parse response
       const aiResponse = parseAIResponse(rawResponse)
+      console.log('[Chat API] Parsed AI action:', aiResponse.action)
+      
+      // Detect if AI violated response format
+      if (aiResponse.action === 'respond' && aiResponse.message) {
+        const msgPreview = aiResponse.message.substring(0, 100)
+        if (msgPreview.includes('"action"') && msgPreview.includes('"execute_tools"')) {
+          console.error('[Chat API] ⚠️ AI VIOLATED FORMAT: Returned execute_tools wrapped in respond action')
+          console.error('[Chat API] Message preview:', msgPreview)
+        }
+      }
 
       // Handle based on action type
       if (aiResponse.action === 'need_context') {
