@@ -35,6 +35,7 @@ interface FocusSessionStore {
   stopTimer: () => void;
   tickTimer: () => void;
   markTaskDone: (taskId: string) => void;
+  markTaskUndone: (taskId: string) => void;
   clearFocusSession: () => void;
   getElapsedTime: () => number;
   resumeTimer: () => void;
@@ -93,6 +94,13 @@ export const useFocusSessionStore = create<FocusSessionStore>()(
         set((state) => ({
           plannedTasks: state.plannedTasks.map((task) =>
             task.taskId === taskId ? { ...task, done: true } : task
+          ),
+        })),
+
+      markTaskUndone: (taskId: string) =>
+        set((state) => ({
+          plannedTasks: state.plannedTasks.map((task) =>
+            task.taskId === taskId ? { ...task, done: false } : task
           ),
         })),
 

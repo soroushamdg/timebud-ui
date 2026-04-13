@@ -77,12 +77,35 @@ export default function FocusSession() {
   const handleTaskCheckmark = async (taskId: string) => {
     const task = focusSessionStore.plannedTasks.find(t => t.taskId === taskId)
     
-    if (task?.partial && !task.done) {
+    if (!task) return
+    
+    // If task is already done, undo it
+    if (task.done) {
+      setLoadingTaskIds(prev => new Set(prev).add(taskId))
+      
+      try {
+        await updateTask.mutateAsync({ id: taskId, status: 'pending' })
+        focusSessionStore.markTaskUndone(taskId)
+      } catch (error) {
+        console.error('Failed to undo task:', error)
+      } finally {
+        setLoadingTaskIds(prev => {
+          const newSet = new Set(prev)
+          newSet.delete(taskId)
+          return newSet
+        })
+      }
+      return
+    }
+    
+    // If task is partial and not done, show partial completion dialog
+    if (task.partial && !task.done) {
       setSelectedTask(task)
       setShowPartialCompletionDialog(true)
       return
     }
     
+    // Mark task as done
     setLoadingTaskIds(prev => new Set(prev).add(taskId))
     
     try {
