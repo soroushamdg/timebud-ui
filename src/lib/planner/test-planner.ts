@@ -359,3 +359,69 @@ partialChainResult.tasks.forEach((task, index) => {
   const chainInfo = task.isPartOfChain ? ` [Chain pos: ${task.chainPosition}, Locked: ${task.isLocked}]` : '';
   console.log(`${index + 1}. ${task.title} (${task.scheduledMinutes}min${task.partial ? ' - PARTIAL' : ''})${chainInfo}`);
 });
+
+// Test 5: Tasks without estimated time (should use 60-minute default)
+console.log('\n\n=== TEST 5: TASKS WITHOUT ESTIMATED TIME ===');
+const noEstimateTestTasks: PlannerTask[] = [
+  {
+    id: 'task-with-estimate',
+    project_id: 'test-project',
+    milestone_id: null,
+    title: 'Task with 30min estimate',
+    estimated_minutes: 30,
+    status: 'pending',
+    due_date: '2026-03-26',
+    order: 1,
+    priority: false,
+    depends_on_task: null
+  },
+  {
+    id: 'task-no-estimate',
+    project_id: 'test-project',
+    milestone_id: null,
+    title: 'Task without estimate (should use 60min)',
+    estimated_minutes: 0, // No estimate
+    status: 'pending',
+    due_date: '2026-03-26',
+    order: 2,
+    priority: false,
+    depends_on_task: null
+  },
+  {
+    id: 'task-with-estimate-2',
+    project_id: 'test-project',
+    milestone_id: null,
+    title: 'Another task with 20min estimate',
+    estimated_minutes: 20,
+    status: 'pending',
+    due_date: '2026-03-27',
+    order: 3,
+    priority: false,
+    depends_on_task: null
+  }
+];
+
+const noEstimateInput: PlannerInput = {
+  projects: [{
+    id: 'test-project',
+    name: 'Test Project',
+    deadline: null,
+    priority: false,
+    status: 'active'
+  }],
+  milestones: [],
+  tasks: noEstimateTestTasks,
+  budgetMinutes: 120, // Enough for all tasks (30 + 60 + 20 = 110)
+  today: testToday,
+  allowPartial: true
+};
+
+const noEstimateResult = planSession(noEstimateInput);
+console.log('Tasks scheduled:', noEstimateResult.taskCount);
+console.log('Total used minutes:', noEstimateResult.totalUsedMinutes);
+console.log('Slack minutes:', noEstimateResult.slackMinutes);
+console.log('\n=== SCHEDULED TASKS (NO ESTIMATE TEST) ===');
+noEstimateResult.tasks.forEach((task, index) => {
+  console.log(`${index + 1}. ${task.title} (${task.scheduledMinutes}min${task.partial ? ' - PARTIAL' : ''})`);
+});
+console.log('\nExpected: Task without estimate should be scheduled with 60 minutes');

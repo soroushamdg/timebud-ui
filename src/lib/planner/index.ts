@@ -76,9 +76,19 @@ const URGENT_DEADLINE_DAYS = 2;
 const PARTIAL_FLOOR = 5;
 const NO_DEADLINE_DAYS = 30;
 const OVERDUE_BOOST = 50.0;
+const DEFAULT_ESTIMATE_MINUTES = 60;
 
 interface TaskWithMeta extends PlannerTask {
   _inherited?: boolean;
+}
+
+/**
+ * Get the effective estimated minutes for a task.
+ * Returns the task's estimated_minutes if > 0, otherwise returns 60 minutes as default.
+ * This allows tasks without estimates to be included in planning.
+ */
+function getEffectiveEstimate(task: TaskWithMeta): number {
+  return task.estimated_minutes > 0 ? task.estimated_minutes : DEFAULT_ESTIMATE_MINUTES;
 }
 
 export function daysUntil(dateStr: string, today: Date): number {
@@ -259,10 +269,11 @@ export function planSession(input: PlannerInput): PlannerOutput {
       t.project_id === null || activeProjectIds.has(t.project_id)
     );
     
-    // Filter out completed tasks and tasks with no estimated minutes
-    // Keep all tasks (including locked ones) for scoring
+    // Filter out completed tasks
+    // Keep all tasks (including locked ones and those without estimates) for scoring
+    // Tasks without estimates will use DEFAULT_ESTIMATE_MINUTES (60 min) via getEffectiveEstimate()
     const schedulableTasks = tasksWithDeadlines.filter(t => 
-      t.status !== 'completed' && t.estimated_minutes > 0
+      t.status !== 'completed'
     );
     
     if (schedulableTasks.length === 0) {
@@ -311,7 +322,7 @@ export function planSession(input: PlannerInput): PlannerOutput {
       if (locked) {
         // Build dependency chain
         const chain = buildDependencyChain(task.id, schedulableTasks);
-        const chainTime = chain.reduce((sum, t) => sum + t.estimated_minutes, 0);
+        const chainTime = chain.reduce((sum, t) => sum + getEffectiveEstimate(t), 0);
         
         if (chainTime <= remainingBudget) {
           // Schedule entire chain
@@ -330,7 +341,7 @@ export function planSession(input: PlannerInput): PlannerOutput {
               milestoneTitle: null,
               title: chainTask.title,
               priority: chainTask.priority,
-              scheduledMinutes: chainTask.estimated_minutes,
+              scheduledMinutes: getEffectiveEstimate(chainTask),
               partial: false,
               carryOverMinutes: 0,
               isPartOfChain: chain.length > 1,
@@ -339,7 +350,7 @@ export function planSession(input: PlannerInput): PlannerOutput {
               isLocked: i > 0
             });
             scheduledTaskIds.add(chainTask.id);
-            remainingBudget -= chainTask.estimated_minutes;
+            remainingBudget -= getEffectiveEstimate(chainTask);
           }
         } else if (allowPartial && remainingBudget >= PARTIAL_FLOOR) {
           // Schedule as much of the chain as possible
@@ -348,7 +359,7 @@ export function planSession(input: PlannerInput): PlannerOutput {
             const chainTask = chain[i];
             if (scheduledTaskIds.has(chainTask.id)) continue;
             
-            const estimate = chainTask.estimated_minutes;
+            const estimate = getEffectiveEstimate(chainTask);
             if (estimate <= budgetLeft) {
               scheduledTasks.push({
                 position: position++,
@@ -401,7 +412,7 @@ export function planSession(input: PlannerInput): PlannerOutput {
         }
       } else {
         // Task is not locked, schedule normally
-        const estimate = task.estimated_minutes;
+        const estimate = getEffectiveEstimate(task);
         
         if (estimate <= remainingBudget) {
           scheduledTasks.push({
@@ -462,7 +473,7 @@ export function planSession(input: PlannerInput): PlannerOutput {
       
       if (!hasUrgentTask) {
         const quickWinCandidates = nonOverdueTasks
-          .filter(st => st.task.estimated_minutes && st.task.estimated_minutes <= QUICK_WIN_THRESHOLD_MIN)
+          .filter(st => getEffectiveEstimate(st.task) <= QUICK_WIN_THRESHOLD_MIN)
           .sort((a, b) => b.score - a.score);
         
         if (quickWinCandidates.length > 0) {
@@ -481,7 +492,7 @@ export function planSession(input: PlannerInput): PlannerOutput {
               milestoneTitle: null,
               title: task.title,
               priority: task.priority,
-              scheduledMinutes: task.estimated_minutes,
+              scheduledMinutes: getEffectiveEstimate(task),
               partial: false,
               carryOverMinutes: 0,
               isPartOfChain: false,
@@ -490,7 +501,7 @@ export function planSession(input: PlannerInput): PlannerOutput {
               isLocked: false
             });
             scheduledTaskIds.add(task.id);
-            remainingBudget -= task.estimated_minutes;
+            remainingBudget -= getEffectiveEstimate(task);
           }
         }
       }
@@ -536,7 +547,7 @@ export function planSession(input: PlannerInput): PlannerOutput {
           if (locked) {
             // Build dependency chain
             const chain = buildDependencyChain(task.id, schedulableTasks);
-            const chainTime = chain.reduce((sum, t) => sum + t.estimated_minutes, 0);
+            const chainTime = chain.reduce((sum, t) => sum + getEffectiveEstimate(t), 0);
             
             if (chainTime <= remainingBudget) {
               // Schedule entire chain
@@ -555,7 +566,7 @@ export function planSession(input: PlannerInput): PlannerOutput {
                   milestoneTitle: null,
                   title: chainTask.title,
                   priority: chainTask.priority,
-                  scheduledMinutes: chainTask.estimated_minutes,
+                  scheduledMinutes: getEffectiveEstimate(chainTask),
                   partial: false,
                   carryOverMinutes: 0,
                   isPartOfChain: chain.length > 1,
@@ -564,7 +575,7 @@ export function planSession(input: PlannerInput): PlannerOutput {
                   isLocked: i > 0
                 });
                 scheduledTaskIds.add(chainTask.id);
-                remainingBudget -= chainTask.estimated_minutes;
+                remainingBudget -= getEffectiveEstimate(chainTask);
               }
             } else if (allowPartial && remainingBudget >= PARTIAL_FLOOR) {
               // Schedule as much of the chain as possible
@@ -573,7 +584,7 @@ export function planSession(input: PlannerInput): PlannerOutput {
                 const chainTask = chain[i];
                 if (scheduledTaskIds.has(chainTask.id)) continue;
                 
-                const estimate = chainTask.estimated_minutes;
+                const estimate = getEffectiveEstimate(chainTask);
                 if (estimate <= budgetLeft) {
                   scheduledTasks.push({
                     position: position++,
@@ -627,7 +638,7 @@ export function planSession(input: PlannerInput): PlannerOutput {
             }
           } else {
             // Task is not locked, schedule normally
-            const estimate = task.estimated_minutes;
+            const estimate = getEffectiveEstimate(task);
             
             if (estimate <= remainingBudget) {
               scheduledTasks.push({
