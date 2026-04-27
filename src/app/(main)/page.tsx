@@ -48,6 +48,10 @@ interface PlannedTask {
   description?: string;
   isPinned?: boolean;
   isManual?: boolean;
+  isPartOfChain?: boolean;
+  chainPosition?: number;
+  dependsOnTaskId?: string | null;
+  isLocked?: boolean;
 }
 
 export default function Home() {
@@ -333,6 +337,10 @@ export default function Home() {
               description: dbTask?.description || undefined,
               isPinned: false,
               isManual: false,
+              isPartOfChain: task.isPartOfChain,
+              chainPosition: task.chainPosition,
+              dependsOnTaskId: task.dependsOnTaskId,
+              isLocked: task.isLocked,
             };
           });
       }
@@ -384,6 +392,15 @@ export default function Home() {
       // Merge: pinned first, then manual, then algorithm
       const tasksWithDone = [...pinnedPlannedTasks, ...manualPlannedTasks, ...algorithmTasks];
 
+      // Debug: Log chain metadata
+      console.log('[Planner] Tasks with chain metadata:', tasksWithDone.map(t => ({
+        title: t.title,
+        isPartOfChain: t.isPartOfChain,
+        chainPosition: t.chainPosition,
+        isLocked: t.isLocked,
+        dependsOnTaskId: t.dependsOnTaskId
+      })));
+
       // Store session locally only (no database save)
       const localSessionId = `local-${Date.now()}`;
       setFocusSession(
@@ -408,6 +425,10 @@ export default function Home() {
           deadline: t.deadline,
           isPinned: t.isPinned,
           isManual: t.isManual,
+          isPartOfChain: t.isPartOfChain,
+          chainPosition: t.chainPosition,
+          dependsOnTaskId: t.dependsOnTaskId,
+          isLocked: t.isLocked,
         })) as any,
         preferredBudgetMinutes,
       );

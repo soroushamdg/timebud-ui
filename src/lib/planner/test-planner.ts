@@ -264,3 +264,98 @@ console.log('\n=== SCHEDULED TASKS (60 MIN) ===');
 result60.tasks.forEach((task, index) => {
   console.log(`${index + 1}. ${task.title} (${task.scheduledMinutes}min${task.partial ? ' - PARTIAL' : ''})`);
 });
+
+// Test 3: Dependency Chain Test
+console.log('\n\n=== TEST 3: DEPENDENCY CHAIN ===');
+const chainTestTasks: PlannerTask[] = [
+  {
+    id: 'chain-task-1',
+    project_id: 'test-project',
+    milestone_id: null,
+    title: 'Task 1 (Root)',
+    estimated_minutes: 30,
+    status: 'pending',
+    due_date: '2026-03-26', // Today - high urgency
+    order: 1,
+    priority: false,
+    depends_on_task: null
+  },
+  {
+    id: 'chain-task-2',
+    project_id: 'test-project',
+    milestone_id: null,
+    title: 'Task 2 (Depends on Task 1)',
+    estimated_minutes: 30,
+    status: 'pending',
+    due_date: '2026-03-26', // Today - high urgency
+    order: 2,
+    priority: false,
+    depends_on_task: 'chain-task-1'
+  },
+  {
+    id: 'chain-task-3',
+    project_id: 'test-project',
+    milestone_id: null,
+    title: 'Task 3 (Depends on Task 2)',
+    estimated_minutes: 30,
+    status: 'pending',
+    due_date: '2026-03-26', // Today - high urgency
+    order: 3,
+    priority: false,
+    depends_on_task: 'chain-task-2'
+  },
+  {
+    id: 'independent-task',
+    project_id: 'test-project',
+    milestone_id: null,
+    title: 'Independent Task',
+    estimated_minutes: 20,
+    status: 'pending',
+    due_date: '2026-03-27', // Tomorrow - lower urgency
+    order: 4,
+    priority: false,
+    depends_on_task: null
+  }
+];
+
+const chainInput: PlannerInput = {
+  projects: [{
+    id: 'test-project',
+    name: 'Test Project',
+    deadline: null,
+    priority: false,
+    status: 'active'
+  }],
+  milestones: [],
+  tasks: chainTestTasks,
+  budgetMinutes: 100, // Enough for full chain + independent
+  today: testToday,
+  allowPartial: true
+};
+
+const chainResult = planSession(chainInput);
+console.log('Tasks scheduled:', chainResult.taskCount);
+console.log('Total used minutes:', chainResult.totalUsedMinutes);
+console.log('Slack minutes:', chainResult.slackMinutes);
+console.log('\n=== SCHEDULED TASKS (CHAIN TEST) ===');
+chainResult.tasks.forEach((task, index) => {
+  const chainInfo = task.isPartOfChain ? ` [Chain pos: ${task.chainPosition}, Locked: ${task.isLocked}]` : '';
+  console.log(`${index + 1}. ${task.title} (${task.scheduledMinutes}min${task.partial ? ' - PARTIAL' : ''})${chainInfo}`);
+});
+
+// Test 4: Partial Chain Test (insufficient budget)
+console.log('\n\n=== TEST 4: PARTIAL CHAIN (INSUFFICIENT BUDGET) ===');
+const partialChainInput: PlannerInput = {
+  ...chainInput,
+  budgetMinutes: 50 // Only enough for first 2 tasks
+};
+
+const partialChainResult = planSession(partialChainInput);
+console.log('Tasks scheduled:', partialChainResult.taskCount);
+console.log('Total used minutes:', partialChainResult.totalUsedMinutes);
+console.log('Slack minutes:', partialChainResult.slackMinutes);
+console.log('\n=== SCHEDULED TASKS (PARTIAL CHAIN) ===');
+partialChainResult.tasks.forEach((task, index) => {
+  const chainInfo = task.isPartOfChain ? ` [Chain pos: ${task.chainPosition}, Locked: ${task.isLocked}]` : '';
+  console.log(`${index + 1}. ${task.title} (${task.scheduledMinutes}min${task.partial ? ' - PARTIAL' : ''})${chainInfo}`);
+});

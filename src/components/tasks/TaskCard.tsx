@@ -1,5 +1,5 @@
 import { AvatarImage } from '@/components/ui/AvatarImage'
-import { ChevronDoubleUpIcon, CalendarIcon } from '@heroicons/react/24/outline'
+import { ChevronDoubleUpIcon, CalendarIcon, LockClosedIcon } from '@heroicons/react/24/outline'
 import { Pin } from 'lucide-react'
 import { formatLocalSmart } from '@/lib/dates'
 
@@ -19,6 +19,10 @@ interface PlannedTask {
   deadline?: string
   isPinned?: boolean
   isManual?: boolean
+  isPartOfChain?: boolean
+  chainPosition?: number
+  dependsOnTaskId?: string | null
+  isLocked?: boolean
 }
 
 interface TaskCardProps {
@@ -27,6 +31,17 @@ interface TaskCardProps {
 }
 
 export function TaskCard({ task, onClick }: TaskCardProps) {
+  // Debug: Log chain metadata for tasks
+  if (task.isPartOfChain || task.isLocked) {
+    console.log('[TaskCard] Chain task:', {
+      title: task.title,
+      isPartOfChain: task.isPartOfChain,
+      chainPosition: task.chainPosition,
+      isLocked: task.isLocked,
+      dependsOnTaskId: task.dependsOnTaskId
+    });
+  }
+
   const handleCardClick = () => {
     onClick?.()
   }
@@ -51,16 +66,32 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
 
   const taskIsOverdue = isOverdue(task.deadline)
   const taskIsToday = isToday(task.deadline)
+  const isLocked = task.isLocked && !task.done
 
   return (
-    <div className="flex items-center gap-3 min-w-0">
+    <div className="flex items-center gap-3 min-w-0 relative">
+      {/* Connection line for chain tasks */}
+      {task.isPartOfChain && task.chainPosition && task.chainPosition > 0 && (
+        <div className="absolute left-0 -top-3 w-px h-6 bg-gray-600" />
+      )}
+      
       {/* Task Card */}
       <div
         onClick={handleCardClick}
-        className={`flex-1 min-w-0 bg-bg-card rounded-none px-4 py-3 flex items-center gap-3 border border-[#ffffff] cursor-pointer transition-colors hover:bg-bg-card-hover ${
+        style={{
+          paddingLeft: task.isPartOfChain && task.chainPosition && task.chainPosition > 0 ? '28px' : '16px',
+          opacity: isLocked ? 0.6 : 1,
+        }}
+        className={`flex-1 min-w-0 bg-bg-card rounded-none py-3 pr-4 flex items-center gap-3 border border-[#ffffff] cursor-pointer transition-all hover:bg-bg-card-hover relative ${
           task.done ? 'bg-bg-card-done border-accent-green/30' : ''
         }`}
       >
+        {/* Lock icon for locked tasks */}
+        {isLocked && (
+          <div className="absolute top-2 right-2">
+            <LockClosedIcon className="w-4 h-4 text-gray-500" />
+          </div>
+        )}
         {/* Avatar */}
         {task.projectId && (
           <AvatarImage
@@ -83,7 +114,9 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
             {task.priority && (
               <ChevronDoubleUpIcon className="w-4 h-4 text-accent-yellow flex-shrink-0" />
             )}
-            <h4 className="text-white text-base font-semibold truncate min-w-0">
+            <h4 className={`text-base font-semibold truncate min-w-0 ${
+              isLocked ? 'text-gray-400' : 'text-white'
+            }`}>
               {task.title}
             </h4>
           </div>

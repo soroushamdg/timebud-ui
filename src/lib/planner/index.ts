@@ -50,6 +50,10 @@ export interface PlannedTaskResult {
   scheduledMinutes: number;
   partial: boolean;
   carryOverMinutes: number;
+  isPartOfChain: boolean;
+  chainPosition: number;
+  dependsOnTaskId: string | null;
+  isLocked: boolean;
 }
 
 export interface PlannerOutput {
@@ -158,13 +162,37 @@ function buildUnlockMap(tasks: TaskWithMeta[]): Map<string, number> {
   return unlockMap;
 }
 
-function gateDependencies(tasks: TaskWithMeta[]): TaskWithMeta[] {
-  return tasks.filter(task => {
-    if (!task.depends_on_task) return true;
+function isTaskLocked(task: TaskWithMeta, allTasks: TaskWithMeta[]): boolean {
+  if (!task.depends_on_task) return false;
+  
+  const dependency = allTasks.find(t => t.id === task.depends_on_task);
+  return dependency?.status !== 'completed';
+}
+
+function buildDependencyChain(taskId: string, allTasks: TaskWithMeta[]): TaskWithMeta[] {
+  const chain: TaskWithMeta[] = [];
+  const visited = new Set<string>();
+  let currentId: string | null = taskId;
+  
+  while (currentId !== null) {
+    if (visited.has(currentId)) {
+      // Circular dependency detected, break the cycle
+      break;
+    }
     
-    const dependency = tasks.find(t => t.id === task.depends_on_task);
-    return dependency?.status === 'completed';
-  });
+    const task = allTasks.find(t => t.id === currentId);
+    if (!task) break;
+    
+    // Don't include completed tasks in the chain
+    if (task.status !== 'completed') {
+      chain.unshift(task);
+    }
+    
+    visited.add(currentId);
+    currentId = task.depends_on_task;
+  }
+  
+  return chain;
 }
 
 function scoreTask(
@@ -231,11 +259,9 @@ export function planSession(input: PlannerInput): PlannerOutput {
       t.project_id === null || activeProjectIds.has(t.project_id)
     );
     
-    // Check dependencies first (needs completed tasks to be present)
-    const eligibleTasks = gateDependencies(tasksWithDeadlines);
-    
-    // Now filter out completed tasks and tasks with no estimated minutes
-    const schedulableTasks = eligibleTasks.filter(t => 
+    // Filter out completed tasks and tasks with no estimated minutes
+    // Keep all tasks (including locked ones) for scoring
+    const schedulableTasks = tasksWithDeadlines.filter(t => 
       t.status !== 'completed' && t.estimated_minutes > 0
     );
     
@@ -275,45 +301,154 @@ export function planSession(input: PlannerInput): PlannerOutput {
       if (remainingBudget <= 0) break;
       
       const task = st.task;
-      const estimate = task.estimated_minutes;
       
-      if (estimate <= remainingBudget) {
-        scheduledTasks.push({
-          position: position++,
-          taskId: task.id,
-          projectId: task.project_id,
-          isSolo: task.project_id === null,
-          tier1: false,
-          isOpener: false,
-          inheritedDeadline: task._inherited ?? false,
-          milestoneTitle: null,
-          title: task.title,
-          priority: task.priority,
-          scheduledMinutes: estimate,
-          partial: false,
-          carryOverMinutes: 0
-        });
-        scheduledTaskIds.add(task.id);
-        remainingBudget -= estimate;
-      } else if (allowPartial && remainingBudget >= PARTIAL_FLOOR) {
-        scheduledTasks.push({
-          position: position++,
-          taskId: task.id,
-          projectId: task.project_id,
-          isSolo: task.project_id === null,
-          tier1: false,
-          isOpener: false,
-          inheritedDeadline: task._inherited ?? false,
-          milestoneTitle: null,
-          title: task.title,
-          priority: task.priority,
-          scheduledMinutes: remainingBudget,
-          partial: true,
-          carryOverMinutes: estimate - remainingBudget
-        });
-        scheduledTaskIds.add(task.id);
-        remainingBudget = 0;
-        break;
+      // Skip if already scheduled
+      if (scheduledTaskIds.has(task.id)) continue;
+      
+      // Check if task is locked (has incomplete dependency)
+      const locked = isTaskLocked(task, schedulableTasks);
+      
+      if (locked) {
+        // Build dependency chain
+        const chain = buildDependencyChain(task.id, schedulableTasks);
+        const chainTime = chain.reduce((sum, t) => sum + t.estimated_minutes, 0);
+        
+        if (chainTime <= remainingBudget) {
+          // Schedule entire chain
+          for (let i = 0; i < chain.length; i++) {
+            const chainTask = chain[i];
+            if (scheduledTaskIds.has(chainTask.id)) continue;
+            
+            scheduledTasks.push({
+              position: position++,
+              taskId: chainTask.id,
+              projectId: chainTask.project_id,
+              isSolo: chainTask.project_id === null,
+              tier1: false,
+              isOpener: false,
+              inheritedDeadline: chainTask._inherited ?? false,
+              milestoneTitle: null,
+              title: chainTask.title,
+              priority: chainTask.priority,
+              scheduledMinutes: chainTask.estimated_minutes,
+              partial: false,
+              carryOverMinutes: 0,
+              isPartOfChain: chain.length > 1,
+              chainPosition: i,
+              dependsOnTaskId: chainTask.depends_on_task,
+              isLocked: i > 0
+            });
+            scheduledTaskIds.add(chainTask.id);
+            remainingBudget -= chainTask.estimated_minutes;
+          }
+        } else if (allowPartial && remainingBudget >= PARTIAL_FLOOR) {
+          // Schedule as much of the chain as possible
+          let budgetLeft = remainingBudget;
+          for (let i = 0; i < chain.length; i++) {
+            const chainTask = chain[i];
+            if (scheduledTaskIds.has(chainTask.id)) continue;
+            
+            const estimate = chainTask.estimated_minutes;
+            if (estimate <= budgetLeft) {
+              scheduledTasks.push({
+                position: position++,
+                taskId: chainTask.id,
+                projectId: chainTask.project_id,
+                isSolo: chainTask.project_id === null,
+                tier1: false,
+                isOpener: false,
+                inheritedDeadline: chainTask._inherited ?? false,
+                milestoneTitle: null,
+                title: chainTask.title,
+                priority: chainTask.priority,
+                scheduledMinutes: estimate,
+                partial: false,
+                carryOverMinutes: 0,
+                isPartOfChain: chain.length > 1,
+                chainPosition: i,
+                dependsOnTaskId: chainTask.depends_on_task,
+                isLocked: i > 0
+              });
+              scheduledTaskIds.add(chainTask.id);
+              budgetLeft -= estimate;
+            } else if (budgetLeft >= PARTIAL_FLOOR) {
+              // Partial last task in chain
+              scheduledTasks.push({
+                position: position++,
+                taskId: chainTask.id,
+                projectId: chainTask.project_id,
+                isSolo: chainTask.project_id === null,
+                tier1: false,
+                isOpener: false,
+                inheritedDeadline: chainTask._inherited ?? false,
+                milestoneTitle: null,
+                title: chainTask.title,
+                priority: chainTask.priority,
+                scheduledMinutes: budgetLeft,
+                partial: true,
+                carryOverMinutes: estimate - budgetLeft,
+                isPartOfChain: chain.length > 1,
+                chainPosition: i,
+                dependsOnTaskId: chainTask.depends_on_task,
+                isLocked: i > 0
+              });
+              scheduledTaskIds.add(chainTask.id);
+              budgetLeft = 0;
+              break;
+            }
+          }
+          remainingBudget = budgetLeft;
+        }
+      } else {
+        // Task is not locked, schedule normally
+        const estimate = task.estimated_minutes;
+        
+        if (estimate <= remainingBudget) {
+          scheduledTasks.push({
+            position: position++,
+            taskId: task.id,
+            projectId: task.project_id,
+            isSolo: task.project_id === null,
+            tier1: false,
+            isOpener: false,
+            inheritedDeadline: task._inherited ?? false,
+            milestoneTitle: null,
+            title: task.title,
+            priority: task.priority,
+            scheduledMinutes: estimate,
+            partial: false,
+            carryOverMinutes: 0,
+            isPartOfChain: false,
+            chainPosition: 0,
+            dependsOnTaskId: task.depends_on_task,
+            isLocked: false
+          });
+          scheduledTaskIds.add(task.id);
+          remainingBudget -= estimate;
+        } else if (allowPartial && remainingBudget >= PARTIAL_FLOOR) {
+          scheduledTasks.push({
+            position: position++,
+            taskId: task.id,
+            projectId: task.project_id,
+            isSolo: task.project_id === null,
+            tier1: false,
+            isOpener: false,
+            inheritedDeadline: task._inherited ?? false,
+            milestoneTitle: null,
+            title: task.title,
+            priority: task.priority,
+            scheduledMinutes: remainingBudget,
+            partial: true,
+            carryOverMinutes: estimate - remainingBudget,
+            isPartOfChain: false,
+            chainPosition: 0,
+            dependsOnTaskId: task.depends_on_task,
+            isLocked: false
+          });
+          scheduledTaskIds.add(task.id);
+          remainingBudget = 0;
+          break;
+        }
       }
     }
     
@@ -334,23 +469,29 @@ export function planSession(input: PlannerInput): PlannerOutput {
           quickWinOpener = quickWinCandidates[0];
           const task = quickWinOpener.task;
           
-          scheduledTasks.push({
-            position: position++,
-            taskId: task.id,
-            projectId: task.project_id,
-            isSolo: task.project_id === null,
-            tier1: false,
-            isOpener: true,
-            inheritedDeadline: task._inherited ?? false,
-            milestoneTitle: null,
-            title: task.title,
-            priority: task.priority,
-            scheduledMinutes: task.estimated_minutes,
-            partial: false,
-            carryOverMinutes: 0
-          });
-          scheduledTaskIds.add(task.id);
-          remainingBudget -= task.estimated_minutes;
+          if (!scheduledTaskIds.has(task.id)) {
+            scheduledTasks.push({
+              position: position++,
+              taskId: task.id,
+              projectId: task.project_id,
+              isSolo: task.project_id === null,
+              tier1: false,
+              isOpener: true,
+              inheritedDeadline: task._inherited ?? false,
+              milestoneTitle: null,
+              title: task.title,
+              priority: task.priority,
+              scheduledMinutes: task.estimated_minutes,
+              partial: false,
+              carryOverMinutes: 0,
+              isPartOfChain: false,
+              chainPosition: 0,
+              dependsOnTaskId: task.depends_on_task,
+              isLocked: false
+            });
+            scheduledTaskIds.add(task.id);
+            remainingBudget -= task.estimated_minutes;
+          }
         }
       }
       
@@ -385,45 +526,155 @@ export function planSession(input: PlannerInput): PlannerOutput {
         
         for (const st of projectTasks) {
           const task = st.task;
-          const estimate = task.estimated_minutes;
           
-          if (estimate <= remainingBudget) {
-            scheduledTasks.push({
-              position: position++,
-              taskId: task.id,
-              projectId: task.project_id,
-              isSolo: task.project_id === null,
-              tier1: false,
-              isOpener: false,
-              inheritedDeadline: task._inherited ?? false,
-              milestoneTitle: null,
-              title: task.title,
-              priority: task.priority,
-              scheduledMinutes: estimate,
-              partial: false,
-              carryOverMinutes: 0
-            });
-            scheduledTaskIds.add(task.id);
-            remainingBudget -= estimate;
-          } else if (allowPartial && remainingBudget >= PARTIAL_FLOOR) {
-            scheduledTasks.push({
-              position: position++,
-              taskId: task.id,
-              projectId: task.project_id,
-              isSolo: task.project_id === null,
-              tier1: false,
-              isOpener: false,
-              inheritedDeadline: task._inherited ?? false,
-              milestoneTitle: null,
-              title: task.title,
-              priority: task.priority,
-              scheduledMinutes: remainingBudget,
-              partial: true,
-              carryOverMinutes: estimate - remainingBudget
-            });
-            scheduledTaskIds.add(task.id);
-            remainingBudget = 0;
-            break;
+          // Skip if already scheduled
+          if (scheduledTaskIds.has(task.id)) continue;
+          
+          // Check if task is locked
+          const locked = isTaskLocked(task, schedulableTasks);
+          
+          if (locked) {
+            // Build dependency chain
+            const chain = buildDependencyChain(task.id, schedulableTasks);
+            const chainTime = chain.reduce((sum, t) => sum + t.estimated_minutes, 0);
+            
+            if (chainTime <= remainingBudget) {
+              // Schedule entire chain
+              for (let i = 0; i < chain.length; i++) {
+                const chainTask = chain[i];
+                if (scheduledTaskIds.has(chainTask.id)) continue;
+                
+                scheduledTasks.push({
+                  position: position++,
+                  taskId: chainTask.id,
+                  projectId: chainTask.project_id,
+                  isSolo: chainTask.project_id === null,
+                  tier1: false,
+                  isOpener: false,
+                  inheritedDeadline: chainTask._inherited ?? false,
+                  milestoneTitle: null,
+                  title: chainTask.title,
+                  priority: chainTask.priority,
+                  scheduledMinutes: chainTask.estimated_minutes,
+                  partial: false,
+                  carryOverMinutes: 0,
+                  isPartOfChain: chain.length > 1,
+                  chainPosition: i,
+                  dependsOnTaskId: chainTask.depends_on_task,
+                  isLocked: i > 0
+                });
+                scheduledTaskIds.add(chainTask.id);
+                remainingBudget -= chainTask.estimated_minutes;
+              }
+            } else if (allowPartial && remainingBudget >= PARTIAL_FLOOR) {
+              // Schedule as much of the chain as possible
+              let budgetLeft = remainingBudget;
+              for (let i = 0; i < chain.length; i++) {
+                const chainTask = chain[i];
+                if (scheduledTaskIds.has(chainTask.id)) continue;
+                
+                const estimate = chainTask.estimated_minutes;
+                if (estimate <= budgetLeft) {
+                  scheduledTasks.push({
+                    position: position++,
+                    taskId: chainTask.id,
+                    projectId: chainTask.project_id,
+                    isSolo: chainTask.project_id === null,
+                    tier1: false,
+                    isOpener: false,
+                    inheritedDeadline: chainTask._inherited ?? false,
+                    milestoneTitle: null,
+                    title: chainTask.title,
+                    priority: chainTask.priority,
+                    scheduledMinutes: estimate,
+                    partial: false,
+                    carryOverMinutes: 0,
+                    isPartOfChain: chain.length > 1,
+                    chainPosition: i,
+                    dependsOnTaskId: chainTask.depends_on_task,
+                    isLocked: i > 0
+                  });
+                  scheduledTaskIds.add(chainTask.id);
+                  budgetLeft -= estimate;
+                } else if (budgetLeft >= PARTIAL_FLOOR) {
+                  // Partial last task in chain
+                  scheduledTasks.push({
+                    position: position++,
+                    taskId: chainTask.id,
+                    projectId: chainTask.project_id,
+                    isSolo: chainTask.project_id === null,
+                    tier1: false,
+                    isOpener: false,
+                    inheritedDeadline: chainTask._inherited ?? false,
+                    milestoneTitle: null,
+                    title: chainTask.title,
+                    priority: chainTask.priority,
+                    scheduledMinutes: budgetLeft,
+                    partial: true,
+                    carryOverMinutes: estimate - budgetLeft,
+                    isPartOfChain: chain.length > 1,
+                    chainPosition: i,
+                    dependsOnTaskId: chainTask.depends_on_task,
+                    isLocked: i > 0
+                  });
+                  scheduledTaskIds.add(chainTask.id);
+                  budgetLeft = 0;
+                  break;
+                }
+              }
+              remainingBudget = budgetLeft;
+              if (remainingBudget <= 0) break;
+            }
+          } else {
+            // Task is not locked, schedule normally
+            const estimate = task.estimated_minutes;
+            
+            if (estimate <= remainingBudget) {
+              scheduledTasks.push({
+                position: position++,
+                taskId: task.id,
+                projectId: task.project_id,
+                isSolo: task.project_id === null,
+                tier1: false,
+                isOpener: false,
+                inheritedDeadline: task._inherited ?? false,
+                milestoneTitle: null,
+                title: task.title,
+                priority: task.priority,
+                scheduledMinutes: estimate,
+                partial: false,
+                carryOverMinutes: 0,
+                isPartOfChain: false,
+                chainPosition: 0,
+                dependsOnTaskId: task.depends_on_task,
+                isLocked: false
+              });
+              scheduledTaskIds.add(task.id);
+              remainingBudget -= estimate;
+            } else if (allowPartial && remainingBudget >= PARTIAL_FLOOR) {
+              scheduledTasks.push({
+                position: position++,
+                taskId: task.id,
+                projectId: task.project_id,
+                isSolo: task.project_id === null,
+                tier1: false,
+                isOpener: false,
+                inheritedDeadline: task._inherited ?? false,
+                milestoneTitle: null,
+                title: task.title,
+                priority: task.priority,
+                scheduledMinutes: remainingBudget,
+                partial: true,
+                carryOverMinutes: estimate - remainingBudget,
+                isPartOfChain: false,
+                chainPosition: 0,
+                dependsOnTaskId: task.depends_on_task,
+                isLocked: false
+              });
+              scheduledTaskIds.add(task.id);
+              remainingBudget = 0;
+              break;
+            }
           }
           
           if (remainingBudget <= 0) break;

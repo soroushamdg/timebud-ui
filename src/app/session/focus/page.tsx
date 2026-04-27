@@ -23,6 +23,18 @@ export default function FocusSession() {
   const createCompletedFocusSession = useCreateCompletedFocusSession()
   const { triggerReplan } = useReplan()
   
+  // Debug: Log session data
+  console.log('[FocusSession] Session data:', {
+    taskCount: focusSessionStore.plannedTasks.length,
+    tasks: focusSessionStore.plannedTasks.map(t => ({
+      title: t.title,
+      dependsOnTaskId: t.dependsOnTaskId,
+      isPartOfChain: t.isPartOfChain,
+      chainPosition: t.chainPosition,
+      isLocked: t.isLocked
+    }))
+  });
+  
   // Focus session guard - allow this page but redirect if no active focus session
   useFocusSessionGuard(true);
   
@@ -111,6 +123,8 @@ export default function FocusSession() {
     try {
       await updateTask.mutateAsync({ id: taskId, status: 'completed' })
       focusSessionStore.markTaskDone(taskId)
+      // Unlock any tasks that depend on this one
+      focusSessionStore.unlockDependentTasks(taskId)
     } catch (error) {
       console.error('Failed to update task:', error)
     } finally {
@@ -207,6 +221,8 @@ export default function FocusSession() {
       })
       
       focusSessionStore.markTaskDone(selectedTask.taskId)
+      // Unlock any tasks that depend on this one
+      focusSessionStore.unlockDependentTasks(selectedTask.taskId)
     } catch (error) {
       console.error('Failed to update task estimated time:', error)
     }
@@ -220,6 +236,8 @@ export default function FocusSession() {
     try {
       await updateTask.mutateAsync({ id: selectedTask.taskId, status: 'completed' })
       focusSessionStore.markTaskDone(selectedTask.taskId)
+      // Unlock any tasks that depend on this one
+      focusSessionStore.unlockDependentTasks(selectedTask.taskId)
     } catch (error) {
       console.error('Failed to update task:', error)
     } finally {
@@ -291,16 +309,26 @@ export default function FocusSession() {
       {/* Task list */}
       <div className="px-4 mt-12 max-h-[calc(100vh-300px)] overflow-y-auto">
         <div className="space-y-3 max-w-full">
-          {focusSessionStore.plannedTasks.map((task) => (
-            <FocusTaskCard
-              key={task.taskId}
-              task={task}
-              onCheckmark={() => handleTaskCheckmark(task.taskId)}
-              onClick={() => handleTaskClick(task)}
-              onHold={() => handleTaskHold(task.taskId)}
-              isLoading={loadingTaskIds.has(task.taskId)}
-            />
-          ))}
+          {focusSessionStore.plannedTasks.map((task, index) => {
+            // Compute chain metadata on-the-fly if missing (for backward compatibility)
+            const enhancedTask = {
+              ...task,
+              isPartOfChain: task.isPartOfChain ?? (task.dependsOnTaskId != null || focusSessionStore.plannedTasks.some(t => t.dependsOnTaskId === task.taskId)),
+              chainPosition: task.chainPosition ?? (task.dependsOnTaskId != null ? index : 0),
+              isLocked: task.isLocked ?? (task.dependsOnTaskId != null && focusSessionStore.plannedTasks.find(t => t.taskId === task.dependsOnTaskId)?.done !== true),
+            };
+            
+            return (
+              <FocusTaskCard
+                key={task.taskId}
+                task={enhancedTask}
+                onCheckmark={() => handleTaskCheckmark(task.taskId)}
+                onClick={() => handleTaskClick(task)}
+                onHold={() => handleTaskHold(task.taskId)}
+                isLoading={loadingTaskIds.has(task.taskId)}
+              />
+            );
+          })}
         </div>
       </div>
 

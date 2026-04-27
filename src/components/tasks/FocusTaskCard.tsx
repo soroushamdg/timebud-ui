@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { AvatarImage } from "@/components/ui/AvatarImage";
 import { PlannedTask } from "@/stores/sessionStore";
-import { CalendarIcon } from "@heroicons/react/24/outline";
+import { CalendarIcon, LockClosedIcon } from "@heroicons/react/24/outline";
 import { formatLocalSmart } from "@/lib/dates";
 
 interface FocusTaskCardProps {
@@ -19,6 +19,17 @@ export function FocusTaskCard({
   onHold,
   isLoading,
 }: FocusTaskCardProps) {
+  // Debug: Log chain metadata for tasks
+  if (task.isPartOfChain || task.isLocked) {
+    console.log('[FocusTaskCard] Chain task:', {
+      title: task.title,
+      isPartOfChain: task.isPartOfChain,
+      chainPosition: task.chainPosition,
+      isLocked: task.isLocked,
+      dependsOnTaskId: task.dependsOnTaskId
+    });
+  }
+
   const [holdTimeout, setHoldTimeout] = useState<NodeJS.Timeout | null>(null);
   const [showPartialOption, setShowPartialOption] = useState(false);
 
@@ -91,13 +102,21 @@ export function FocusTaskCard({
   const taskIsOverdue = isOverdue(task.deadline);
   const taskIsToday = isToday(task.deadline);
 
+  const isLocked = task.isLocked && !task.done;
+
   return (
-    <div className="flex items-center gap-3 min-w-0 max-w-full">
+    <div className="flex items-center gap-3 min-w-0 max-w-full relative">
+      {/* Connection line for chain tasks */}
+      {task.isPartOfChain && task.chainPosition && task.chainPosition > 0 && (
+        <div className="absolute left-3 -top-3 w-px h-6 bg-gray-600" />
+      )}
+      
       {/* Checkmark - Outside the card on the leading side */}
       <button
         onClick={handleCheckmarkClick}
         className="flex-shrink-0 w-6 h-6 rounded-none flex items-center justify-center transition-colors"
-        disabled={isLoading}
+        disabled={isLoading || isLocked}
+        title={isLocked ? "Complete the previous task first" : undefined}
       >
         {isLoading ? (
           <div className="w-4 h-4 border-2 border-accent-pink border-t-transparent rounded-full animate-spin"></div>
@@ -118,7 +137,11 @@ export function FocusTaskCard({
             </svg>
           </div>
         ) : (
-          <div className="w-6 h-6 rounded-none border-2 border-border-card hover:border-accent-yellow transition-colors" />
+          <div className={`w-6 h-6 rounded-none border-2 transition-colors ${
+            isLocked 
+              ? "border-gray-600 cursor-not-allowed" 
+              : "border-border-card hover:border-accent-yellow cursor-pointer"
+          }`} />
         )}
       </button>
 
@@ -130,10 +153,20 @@ export function FocusTaskCard({
         onMouseLeave={handleMouseUp}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
-        className={`flex-1 min-w-0 bg-bg-card rounded-none px-4 py-3 flex items-center gap-3 border border-[#ffffff] cursor-pointer transition-colors hover:bg-bg-card-hover relative ${
+        style={{
+          paddingLeft: task.isPartOfChain && task.chainPosition && task.chainPosition > 0 ? '28px' : '16px',
+          opacity: isLocked ? 0.6 : 1,
+        }}
+        className={`flex-1 min-w-0 bg-bg-card rounded-none py-3 pr-4 flex items-center gap-3 border border-[#ffffff] cursor-pointer transition-all hover:bg-bg-card-hover relative ${
           task.done ? "bg-bg-card-done border-accent-green/30" : ""
         }`}
       >
+        {/* Lock icon for locked tasks */}
+        {isLocked && (
+          <div className="absolute top-2 right-2">
+            <LockClosedIcon className="w-4 h-4 text-gray-500" />
+          </div>
+        )}
         {/* Project Avatar or Solo Task Avatar */}
         {task.projectId && task.projectName ? (
           <AvatarImage
@@ -153,7 +186,9 @@ export function FocusTaskCard({
 
         {/* Center content */}
         <div className="flex-1 min-w-0">
-          <h4 className="text-white text-base font-semibold truncate">
+          <h4 className={`text-base font-semibold truncate ${
+            isLocked ? "text-gray-400" : "text-white"
+          }`}>
             {task.title}
           </h4>
           <div className="flex items-center gap-2 mt-1">

@@ -21,6 +21,10 @@ export interface PlannedTask {
   deadline?: string;
   isPinned?: boolean;
   isManual?: boolean;
+  isPartOfChain?: boolean;
+  chainPosition?: number;
+  dependsOnTaskId?: string | null;
+  isLocked?: boolean;
 }
 
 interface FocusSessionStore {
@@ -36,6 +40,7 @@ interface FocusSessionStore {
   tickTimer: () => void;
   markTaskDone: (taskId: string) => void;
   markTaskUndone: (taskId: string) => void;
+  unlockDependentTasks: (completedTaskId: string) => void;
   clearFocusSession: () => void;
   getElapsedTime: () => number;
   resumeTimer: () => void;
@@ -101,6 +106,15 @@ export const useFocusSessionStore = create<FocusSessionStore>()(
         set((state) => ({
           plannedTasks: state.plannedTasks.map((task) =>
             task.taskId === taskId ? { ...task, done: false } : task
+          ),
+        })),
+
+      unlockDependentTasks: (completedTaskId: string) =>
+        set((state) => ({
+          plannedTasks: state.plannedTasks.map((task) =>
+            task.dependsOnTaskId === completedTaskId
+              ? { ...task, isLocked: false }
+              : task
           ),
         })),
 
