@@ -62,7 +62,7 @@ export function EditTaskDialog({
         title: formData.title.trim(),
         description: formData.description.trim() || null,
         estimated_minutes: formData.estimated_minutes ? parseInt(formData.estimated_minutes) : null,
-        due_date: formData.due_date || null,
+        due_date: formData.due_date.trim() ? formData.due_date.trim() : null,
         priority: formData.priority,
         project_id: formData.project_id,
       });
