@@ -44,7 +44,7 @@ const testTasks: PlannerTask[] = [
     due_date: '2026-03-14',
     order: 1,
     priority: false,
-    depends_on_task: null
+    dependencies: []
   },
   {
     id: 'task-2',
@@ -56,7 +56,7 @@ const testTasks: PlannerTask[] = [
     due_date: '2026-03-15',
     order: 2,
     priority: false,
-    depends_on_task: null
+    dependencies: []
   },
   {
     id: 'task-3',
@@ -68,7 +68,7 @@ const testTasks: PlannerTask[] = [
     due_date: '2026-03-25',
     order: 3,
     priority: false,
-    depends_on_task: null
+    dependencies: []
   },
   {
     id: 'task-4',
@@ -80,7 +80,7 @@ const testTasks: PlannerTask[] = [
     due_date: '2026-03-29',
     order: 4,
     priority: false,
-    depends_on_task: null
+    dependencies: []
   },
   // FINA 210 tasks
   {
@@ -93,7 +93,7 @@ const testTasks: PlannerTask[] = [
     due_date: '2026-03-20',
     order: 1,
     priority: false,
-    depends_on_task: null
+    dependencies: []
   },
   {
     id: 'task-6',
@@ -105,7 +105,7 @@ const testTasks: PlannerTask[] = [
     due_date: null,
     order: 2,
     priority: false,
-    depends_on_task: null
+    dependencies: []
   },
   {
     id: 'task-7',
@@ -117,7 +117,7 @@ const testTasks: PlannerTask[] = [
     due_date: null,
     order: 3,
     priority: false,
-    depends_on_task: null
+    dependencies: []
   },
   {
     id: 'task-8',
@@ -129,7 +129,7 @@ const testTasks: PlannerTask[] = [
     due_date: '2026-03-24',
     order: 4,
     priority: false,
-    depends_on_task: null
+    dependencies: []
   },
   {
     id: 'task-9',
@@ -141,7 +141,7 @@ const testTasks: PlannerTask[] = [
     due_date: '2026-03-26',
     order: 5,
     priority: false,
-    depends_on_task: null
+    dependencies: []
   },
   // COMP 474 tasks
   {
@@ -154,7 +154,7 @@ const testTasks: PlannerTask[] = [
     due_date: '2026-03-28',
     order: 1,
     priority: false,
-    depends_on_task: null
+    dependencies: []
   },
   {
     id: 'task-11',
@@ -166,7 +166,7 @@ const testTasks: PlannerTask[] = [
     due_date: '2026-04-10',
     order: 2,
     priority: false,
-    depends_on_task: null
+    dependencies: []
   },
   // 425 hw2 tasks
   {
@@ -179,7 +179,7 @@ const testTasks: PlannerTask[] = [
     due_date: '2026-03-23',
     order: 1,
     priority: false,
-    depends_on_task: null
+    dependencies: []
   }
 ];
 
@@ -278,7 +278,7 @@ const chainTestTasks: PlannerTask[] = [
     due_date: '2026-03-26', // Today - high urgency
     order: 1,
     priority: false,
-    depends_on_task: null
+    dependencies: []
   },
   {
     id: 'chain-task-2',
@@ -290,7 +290,7 @@ const chainTestTasks: PlannerTask[] = [
     due_date: '2026-03-26', // Today - high urgency
     order: 2,
     priority: false,
-    depends_on_task: 'chain-task-1'
+    dependencies: ['chain-task-1']
   },
   {
     id: 'chain-task-3',
@@ -302,7 +302,7 @@ const chainTestTasks: PlannerTask[] = [
     due_date: '2026-03-26', // Today - high urgency
     order: 3,
     priority: false,
-    depends_on_task: 'chain-task-2'
+    dependencies: ['chain-task-2']
   },
   {
     id: 'independent-task',
@@ -314,7 +314,7 @@ const chainTestTasks: PlannerTask[] = [
     due_date: '2026-03-27', // Tomorrow - lower urgency
     order: 4,
     priority: false,
-    depends_on_task: null
+    dependencies: []
   }
 ];
 
@@ -373,7 +373,7 @@ const noEstimateTestTasks: PlannerTask[] = [
     due_date: '2026-03-26',
     order: 1,
     priority: false,
-    depends_on_task: null
+    dependencies: []
   },
   {
     id: 'task-no-estimate',
@@ -385,7 +385,7 @@ const noEstimateTestTasks: PlannerTask[] = [
     due_date: '2026-03-26',
     order: 2,
     priority: false,
-    depends_on_task: null
+    dependencies: []
   },
   {
     id: 'task-with-estimate-2',
@@ -397,7 +397,7 @@ const noEstimateTestTasks: PlannerTask[] = [
     due_date: '2026-03-27',
     order: 3,
     priority: false,
-    depends_on_task: null
+    dependencies: []
   }
 ];
 

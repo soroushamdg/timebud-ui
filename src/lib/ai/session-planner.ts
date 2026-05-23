@@ -45,11 +45,33 @@ export async function planSessionFromAI(
 
   if (tasksError) throw tasksError
 
+  // Fetch all dependencies
+  const { data: dependencies, error: depsError } = await supabase
+    .from('task_dependencies')
+    .select('task_id, depends_on_id')
+
+  if (depsError) throw depsError
+
+  // Build a map of task_id -> array of depends_on_ids
+  const depsMap = new Map<string, string[]>()
+  for (const dep of dependencies || []) {
+    if (!depsMap.has(dep.task_id)) {
+      depsMap.set(dep.task_id, [])
+    }
+    depsMap.get(dep.task_id)!.push(dep.depends_on_id)
+  }
+
+  // Attach dependencies to each task
+  const tasksWithDeps = tasks.map(task => ({
+    ...task,
+    dependencies: depsMap.get(task.id) || []
+  }))
+
   // Filter out excluded tasks and apply pinned logic
   const { pinnedTaskIds = [], excludedTaskIds = [] } = options
   
   // Get pinned tasks
-  const pinnedTasks = tasks.filter(t => 
+  const pinnedTasks = tasksWithDeps.filter(t => 
     pinnedTaskIds.includes(t.id) && 
     t.status === 'pending' &&
     t.item_type === 'task'
@@ -60,7 +82,7 @@ export async function planSessionFromAI(
   const remainingBudget = Math.max(0, options.budgetMinutes - pinnedTime)
 
   // Filter tasks for planner (exclude pinned and excluded)
-  const plannerTasks: PlannerTask[] = tasks
+  const plannerTasks: PlannerTask[] = tasksWithDeps
     .filter(t => !pinnedTaskIds.includes(t.id) && !excludedTaskIds.includes(t.id))
     .map(task => ({
       ...task,
@@ -99,7 +121,7 @@ export async function planSessionFromAI(
     }),
     // Add algorithm-selected tasks
     ...plan.tasks.map(plannedTask => {
-      const task = tasks.find(t => t.id === plannedTask.taskId)
+      const task = tasksWithDeps.find(t => t.id === plannedTask.taskId)
       const project = projects?.find(p => p.id === plannedTask.projectId)
       
       let reasoning = ''

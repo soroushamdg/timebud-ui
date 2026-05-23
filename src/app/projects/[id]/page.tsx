@@ -15,9 +15,14 @@ import {
   CalendarIcon,
   ChevronLeft,
   Camera,
+  Search,
+  PauseCircle,
+  BarChart2,
+  RefreshCw,
+  StopCircle,
 } from "lucide-react";
 import { ChevronDoubleUpIcon } from "@heroicons/react/24/outline";
-import { useTasks, useUpdateTask } from "@/hooks/useTasks";
+import { useTasks, useUpdateTask, useCompleteTask } from "@/hooks/useTasks";
 import { useProject, useDeleteProject } from "@/hooks/useProjects";
 import { AvatarImage } from "@/components/ui/AvatarImage";
 import { ProjectAvatarPicker } from "@/components/avatars/ProjectAvatarPicker";
@@ -28,6 +33,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { useMemories, useDeleteMemory } from "@/hooks/useMemories";
 import { formatDistanceToNow } from "date-fns";
+import { GanttChart } from "@/components/gantt/GanttChart";
 
 // Mobile device detection
 const isMobileDevice = () => {
@@ -111,10 +117,41 @@ export default function ProjectOverviewPage({
     estimated_minutes: "",
     due_date: "",
     priority: false,
-    depends_on_task: "",
     item_type: "task" as "task" | "milestone",
   });
   const [editFormError, setEditFormError] = useState("");
+
+  // Dependency picker state (edit modal)
+  const [editDependencies, setEditDependencies] = useState<string[]>([]);
+  const [showDepPicker, setShowDepPicker] = useState(false);
+  const [depSearch, setDepSearch] = useState("");
+
+  // On Hold state (edit modal)
+  const [editOnHold, setEditOnHold] = useState(false);
+  const [editOnHoldType, setEditOnHoldType] = useState<'external' | 'person' | 'date' | ''>('');
+  const [editOnHoldReason, setEditOnHoldReason] = useState('');
+  const [editOnHoldUntil, setEditOnHoldUntil] = useState('');
+  const [editOnHoldError, setEditOnHoldError] = useState('');
+
+  // Recurrence info sheet state
+  const [recurrenceSheetTask, setRecurrenceSheetTask] = useState<DbTask | null>(null);
+  const [recurrenceTemplate, setRecurrenceTemplate] = useState<DbTask | null>(null);
+  const [showStopRecurringConfirm, setShowStopRecurringConfirm] = useState(false);
+
+  // Fetch template when recurrence sheet opens
+  useEffect(() => {
+    if (!recurrenceSheetTask?.recurrence_parent_id) {
+      setRecurrenceTemplate(null);
+      return;
+    }
+    const supabase = createClient();
+    supabase
+      .from('tasks')
+      .select('*')
+      .eq('id', recurrenceSheetTask.recurrence_parent_id)
+      .single()
+      .then(({ data }) => setRecurrenceTemplate(data ?? null));
+  }, [recurrenceSheetTask]);
 
   // Project edit state
   const [projectFormData, setProjectFormData] = useState({
@@ -276,7 +313,9 @@ export default function ProjectOverviewPage({
   const deleteProject = useDeleteProject();
   const [deletingMemoryId, setDeletingMemoryId] = useState<string | null>(null);
   const updateTask = useUpdateTask();
+  const completeTask = useCompleteTask();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showGantt, setShowGantt] = useState(false);
 
   // Load sort mode from localStorage on mount
   useEffect(() => {
@@ -307,6 +346,35 @@ export default function ProjectOverviewPage({
     localStorage.setItem(`project-${projectId}-sort-mode`, sortMode);
   }, [projectId, sortMode]);
 
+  // Auto-lift expired date-hold tasks
+  useEffect(() => {
+    if (!tasks || tasks.length === 0) return
+
+    const now = new Date()
+    const expired = tasks.filter(
+      t =>
+        t.on_hold === true &&
+        t.on_hold_type === 'until_date' &&
+        t.on_hold_until != null &&
+        new Date(t.on_hold_until) <= now,
+    )
+    if (expired.length === 0) return
+
+    const expiredIds = expired.map(t => t.id)
+    const supabase = createClient()
+    supabase
+      .from('tasks')
+      .update({ on_hold: false, on_hold_reason: null, on_hold_type: null, on_hold_until: null })
+      .in('id', expiredIds)
+      .then(({ error }) => {
+        if (error) {
+          console.error('Failed to auto-lift expired on-hold tasks:', error)
+          return
+        }
+        queryClient.invalidateQueries({ queryKey: ['tasks'] })
+      })
+  }, [tasks, queryClient])
+
   // Parallax scroll effect
   useEffect(() => {
     const handleScroll = () => {
@@ -317,24 +385,45 @@ export default function ProjectOverviewPage({
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Sort items based on selected mode
+  // Circular dependency check: returns true if adding candidateDepId as a dep of taskId would create a cycle
+  const wouldCreateCycle = useCallback((candidateDepId: string, taskId: string): boolean => {
+    const visited = new Set<string>();
+    const queue = [candidateDepId];
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      if (current === taskId) return true;
+      if (visited.has(current)) continue;
+      visited.add(current);
+      const task = tasks.find(t => t.id === current);
+      if (task?.dependencies) {
+        queue.push(...task.dependencies);
+      }
+    }
+    return false;
+  }, [tasks]);
+
+  // Sort items based on selected mode, with on-hold tasks at the bottom
   const sortedItems = useCallback(() => {
+    const activeAndCompleted = tasks.filter((item: DbTask) => !item.on_hold);
+    const onHoldItems = tasks.filter((item: DbTask) => item.on_hold);
+
+    let sortedActive: DbTask[];
     if (sortMode === "deadline") {
-      // Sort by deadline: items with deadlines first (by due_date), then items without deadlines (by order)
-      const withDeadlines = tasks
+      const withDeadlines = activeAndCompleted
         .filter((item: DbTask) => item.due_date)
         .sort(
           (a: DbTask, b: DbTask) =>
             new Date(a.due_date!).getTime() - new Date(b.due_date!).getTime(),
         );
-      const withoutDeadlines = tasks
+      const withoutDeadlines = activeAndCompleted
         .filter((item: DbTask) => !item.due_date)
         .sort((a: DbTask, b: DbTask) => a.order - b.order);
-      return [...withDeadlines, ...withoutDeadlines];
+      sortedActive = [...withDeadlines, ...withoutDeadlines];
     } else {
-      // Sort by manual (order field)
-      return [...tasks].sort((a: DbTask, b: DbTask) => a.order - b.order);
+      sortedActive = [...activeAndCompleted].sort((a: DbTask, b: DbTask) => a.order - b.order);
     }
+
+    return [...sortedActive, ...onHoldItems.sort((a, b) => a.order - b.order)];
   }, [tasks, sortMode])();
 
   const taskItems = sortedItems.filter((item) => item.item_type === "task");
@@ -353,10 +442,16 @@ export default function ProjectOverviewPage({
   // Check if task is locked (only for completion)
   const isLocked = useCallback(
     (task: DbTask) => {
-      return (
-        task.depends_on_task !== null &&
-        taskStatusMap[task.depends_on_task] !== "completed"
-      );
+      // Task is locked if ANY of its dependencies are not completed
+      if (!task.dependencies || task.dependencies.length === 0) return false;
+      
+      for (const depId of task.dependencies) {
+        if (taskStatusMap[depId] !== "completed") {
+          return true;
+        }
+      }
+      
+      return false;
     },
     [taskStatusMap],
   );
@@ -371,11 +466,17 @@ export default function ProjectOverviewPage({
     return task.item_type === "task"; // All tasks can be swiped, including completed ones
   }, []);
 
-  // Calculate progress - only count tasks, not milestones
-  const completedTaskCount = tasks.filter(
+  // Calculate progress — exclude milestones, on_hold, and skipped tasks
+  const activeTasks = tasks.filter(
+    (t) => t.item_type === "task" && !t.on_hold && t.status !== "skipped",
+  );
+  const completedTaskCount = activeTasks.filter(
     (t) => t.status === "completed",
   ).length;
-  const totalTaskCount = tasks.length;
+  const totalTaskCount = activeTasks.length;
+  const onHoldCount = tasks.filter(
+    (t) => t.item_type === "task" && t.on_hold,
+  ).length;
   const progressPercentage =
     totalTaskCount > 0
       ? Math.round((completedTaskCount / totalTaskCount) * 100)
@@ -501,10 +602,7 @@ export default function ProjectOverviewPage({
             // Complete task - check if locked
             if (!isLocked(swipedTask)) {
               console.log('Completing task via swipe:', swipedTask.title);
-              await updateTask.mutateAsync({
-                id: swipedTask.id,
-                status: "completed",
-              });
+              await completeTask.mutateAsync(swipedTask);
             } else {
               console.log('Task is locked, cannot complete:', swipedTask.title);
             }
@@ -525,7 +623,7 @@ export default function ProjectOverviewPage({
     setSwipedTask(null);
     setSwipeDirection(null);
     setSwipeDistance(0);
-  }, [swipedTask, swipeDirection, swipeDistance, updateTask, queryClient, longPressTimer, isLocked]);
+  }, [swipedTask, swipeDirection, swipeDistance, updateTask, completeTask, queryClient, longPressTimer, isLocked]);
 
   // Long-press handlers
   const handleLongPressAction = useCallback(async (action: 'complete' | 'priority' | 'delete', task: DbTask) => {
@@ -534,10 +632,7 @@ export default function ProjectOverviewPage({
     try {
       if (action === 'complete') {
         if (!isLocked(task)) {
-          await updateTask.mutateAsync({
-            id: task.id,
-            status: "completed",
-          });
+          await completeTask.mutateAsync(task);
         }
       } else if (action === 'priority') {
         await updateTask.mutateAsync({
@@ -569,10 +664,7 @@ export default function ProjectOverviewPage({
   const handleCompleteTask = useCallback(
     async (task: DbTask) => {
       try {
-        await updateTask.mutateAsync({
-          id: task.id,
-          status: "completed",
-        });
+        await completeTask.mutateAsync(task);
         setSwipedTask(null);
         setSwipeDirection(null);
         setSwipeDistance(0);
@@ -580,7 +672,7 @@ export default function ProjectOverviewPage({
         console.error("Failed to complete task:", error);
       }
     },
-    [updateTask],
+    [completeTask],
   );
 
   const handleTogglePriority = useCallback(
@@ -607,15 +699,16 @@ export default function ProjectOverviewPage({
       if (isLocked(task) || task.item_type === "milestone") return;
 
       try {
-        await updateTask.mutateAsync({
-          id: task.id,
-          status: task.status === "completed" ? "pending" : "completed",
-        });
+        if (task.status === "completed") {
+          await updateTask.mutateAsync({ id: task.id, status: "pending" });
+        } else {
+          await completeTask.mutateAsync(task);
+        }
       } catch (error) {
         console.error("Failed to toggle task status:", error);
       }
     },
-    [isLocked, updateTask],
+    [isLocked, updateTask, completeTask],
   );
 
   const handleTaskMenuToggle = useCallback(
@@ -731,16 +824,32 @@ export default function ProjectOverviewPage({
       estimated_minutes: item.estimated_minutes?.toString() || "",
       due_date: formatDateForInput(item.due_date),
       priority: item.priority,
-      depends_on_task: item.depends_on_task || "",
       item_type: item.item_type,
     });
-  }, []);
+    // Populate dependency state
+    setEditDependencies(item.dependencies || []);
+    setShowDepPicker(false);
+    setDepSearch("");
+    // Populate on-hold state
+    setEditOnHold(item.on_hold || false);
+    setEditOnHoldType((item.on_hold_type === 'until_date' ? 'date' : item.on_hold_type === 'indefinite' ? 'external' : '') as 'external' | 'person' | 'date' | '');
+    setEditOnHoldReason(item.on_hold_reason || '');
+    setEditOnHoldUntil(item.on_hold_until || '');
+    setEditOnHoldError('');
+  }, [])
 
   const handleSaveEditItem = useCallback(async () => {
     if (!editingItem || !editFormData.title.trim()) return;
 
     // Clear previous errors
     setEditFormError("");
+    setEditOnHoldError('');
+
+    // On-hold validation
+    if (editOnHold && !editOnHoldReason.trim()) {
+      setEditOnHoldError('Please describe what you are waiting for.');
+      return;
+    }
 
     // Deadline validation: task/milestone deadline cannot be after project deadline
     if (project && editFormData.due_date && project.deadline) {
@@ -774,18 +883,25 @@ export default function ProjectOverviewPage({
         updateData.estimated_minutes = editFormData.estimated_minutes
           ? parseInt(editFormData.estimated_minutes)
           : null;
-        updateData.depends_on_task = editFormData.depends_on_task || null;
+        // On hold fields
+        updateData.on_hold = editOnHold;
+        if (editOnHold) {
+          updateData.on_hold_reason = editOnHoldReason.trim() || null;
+          updateData.on_hold_type = editOnHoldType === 'date' ? 'until_date' : editOnHoldType === 'person' ? 'indefinite' : 'indefinite';
+          updateData.on_hold_until = editOnHoldType === 'date' ? (editOnHoldUntil || null) : null;
+        } else {
+          updateData.on_hold_reason = null;
+          updateData.on_hold_type = null;
+          updateData.on_hold_until = null;
+        }
       } else {
         // Milestone-specific
         updateData.status = null;
         updateData.estimated_minutes = null;
-        updateData.depends_on_task = null;
       }
 
-      // Add due date if provided
-      if (editFormData.due_date) {
-        updateData.due_date = editFormData.due_date;
-      }
+      // Add due date (null if cleared)
+      updateData.due_date = editFormData.due_date.trim() || null;
 
       const { error } = await supabase
         .from("tasks")
@@ -794,13 +910,35 @@ export default function ProjectOverviewPage({
 
       if (error) throw error;
 
+      // Sync dependencies: diff old vs new
+      if (editFormData.item_type === "task") {
+        const originalDeps = editingItem.dependencies || [];
+        const toAdd = editDependencies.filter(id => !originalDeps.includes(id));
+        const toRemove = originalDeps.filter(id => !editDependencies.includes(id));
+
+        if (toRemove.length > 0) {
+          for (const depId of toRemove) {
+            await supabase
+              .from('task_dependencies')
+              .delete()
+              .eq('task_id', editingItem.id)
+              .eq('depends_on_id', depId);
+          }
+        }
+        if (toAdd.length > 0) {
+          await supabase
+            .from('task_dependencies')
+            .insert(toAdd.map(depId => ({ task_id: editingItem.id, depends_on_id: depId })));
+        }
+      }
+
       // Refresh the data
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
       setEditingItem(null);
     } catch (error) {
       console.error("Failed to update item:", error);
     }
-  }, [editingItem, editFormData, project, queryClient]);
+  }, [editingItem, editFormData, project, queryClient, editDependencies, editOnHold, editOnHoldType, editOnHoldReason, editOnHoldUntil]);
 
   const handleCancelEditItem = useCallback(() => {
     setEditingItem(null);
@@ -811,7 +949,6 @@ export default function ProjectOverviewPage({
       estimated_minutes: "",
       due_date: "",
       priority: false,
-      depends_on_task: "",
       item_type: "task",
     });
   }, []);
@@ -1065,7 +1202,16 @@ export default function ProjectOverviewPage({
       const taskNumber = getTaskNumber(item);
       const locked = isLocked(item);
       const completed = item.status === "completed";
+      const onHold = item.on_hold || false;
       const canEdit = canInteract(item); // Allow editing for all tasks, including completed ones
+
+      // Blocked-by names (incomplete deps)
+      const blockedByNames = locked
+        ? (item.dependencies || [])
+            .filter(depId => taskStatusMap[depId] !== 'completed')
+            .map(depId => tasks.find(t => t.id === depId)?.title)
+            .filter(Boolean) as string[]
+        : [];
 
       return (
         <div key={item.id} className="relative">
@@ -1166,8 +1312,10 @@ export default function ProjectOverviewPage({
               ${
                 completed
                   ? "bg-bg-card-done border-accent-green/30"
+                  : onHold
+                  ? "bg-bg-card border-amber-500/30 opacity-70"
                   : locked
-                  ? "bg-bg-card-locked"
+                  ? "bg-bg-card-locked opacity-60"
                   : "bg-bg-card border-border-card"
               }
               ${canEdit ? "cursor-pointer" : ""}
@@ -1213,12 +1361,33 @@ export default function ProjectOverviewPage({
                 )}
                 <h3
                   className={`text-base font-semibold truncate min-w-0 ${
-                    locked ? "text-text-sec" : "text-white"
+                    locked || onHold ? "text-text-sec" : "text-white"
                   }`}
                 >
                   {item.title}
                 </h3>
+                {item.recurrence_parent_id && (
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); setRecurrenceSheetTask(item); }}
+                    className="flex-shrink-0 text-text-sec hover:text-accent-yellow transition-colors"
+                    title="Recurring task"
+                  >
+                    <RefreshCw size={13} />
+                  </button>
+                )}
+                {onHold && (
+                  <span className="flex-shrink-0 flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-amber-500/20 text-amber-400">
+                    <PauseCircle size={11} />
+                    On Hold
+                  </span>
+                )}
               </div>
+              {locked && blockedByNames.length > 0 && (
+                <p className="text-text-sec text-xs mt-0.5 truncate">
+                  Blocked by: {blockedByNames.join(', ')}
+                </p>
+              )}
               {item.estimated_minutes && (
                 <p className="text-text-sec text-sm mt-1">
                   Estimated: {item.estimated_minutes} min
@@ -1387,23 +1556,38 @@ export default function ProjectOverviewPage({
           <ChevronLeft size={20} />
         </button>
 
-        {/* Sort button */}
+        {/* Gantt toggle button */}
         <button
-          onClick={() => setShowSortOptions(true)}
-          className="absolute top-4 right-4 z-10 px-3 py-1 bg-bg-card text-text-sec rounded-full text-sm flex items-center gap-1"
+          onClick={() => setShowGantt(g => !g)}
+          className={`absolute top-4 right-4 z-10 px-3 py-1 bg-bg-card rounded-full text-sm flex items-center gap-1 transition-colors ${
+            showGantt ? 'text-accent-yellow border border-accent-yellow/40' : 'text-text-sec'
+          }`}
+          title={showGantt ? 'Show task list' : 'Show timeline'}
         >
-          <ArrowUpDown size={14} />
-          Sort
+          <BarChart2 size={14} />
         </button>
 
+        {/* Sort button */}
+        {!showGantt && (
+          <button
+            onClick={() => setShowSortOptions(true)}
+            className="absolute top-4 right-16 z-10 px-3 py-1 bg-bg-card text-text-sec rounded-full text-sm flex items-center gap-1"
+          >
+            <ArrowUpDown size={14} />
+            Sort
+          </button>
+        )}
+
         {/* Edit button */}
-        <button
-          onClick={handleStartEditProject}
-          className="absolute top-4 right-24 z-10 px-3 py-1 bg-bg-card text-text-sec rounded-full text-sm flex items-center gap-1"
-        >
-          <Edit size={14} />
-          Edit
-        </button>
+        {!showGantt && (
+          <button
+            onClick={handleStartEditProject}
+            className="absolute top-4 right-36 z-10 px-3 py-1 bg-bg-card text-text-sec rounded-full text-sm flex items-center gap-1"
+          >
+            <Edit size={14} />
+            Edit
+          </button>
+        )}
 
         {/* Hero */}
         <div className="relative h-64 overflow-hidden">
@@ -1436,11 +1620,18 @@ export default function ProjectOverviewPage({
               {project.name}
             </h1>
             <div className="flex justify-between items-end">
-              {totalTaskCount > 0 && (
-                <div className="text-4xl font-bold text-white">
-                  {progressPercentage}%
-                </div>
-              )}
+              <div className="flex flex-col gap-0.5">
+                {totalTaskCount > 0 && (
+                  <div className="text-4xl font-bold text-white">
+                    {progressPercentage}%
+                  </div>
+                )}
+                {onHoldCount > 0 && (
+                  <div className="text-xs text-text-sec">
+                    {onHoldCount} on hold
+                  </div>
+                )}
+              </div>
               <div className="text-right">
                 <div className="text-text-sec text-xs uppercase">DUE DATE</div>
                 <div className="text-white text-sm">
@@ -1540,8 +1731,15 @@ export default function ProjectOverviewPage({
         </div>
       )}
 
+      {/* Gantt Chart View */}
+      {showGantt && (
+        <div className="pb-20">
+          <GanttChart tasks={sortedItems} projects={project ? [project] : []} />
+        </div>
+      )}
+
       {/* Content */}
-      <div className="pb-20">
+      <div className={`pb-20 ${showGantt ? 'hidden' : ''}`}>
         {sortedItems.length === 0 ? (
           /* Empty State */
           <div className="flex flex-col items-center justify-center px-4 py-16">
@@ -1763,8 +1961,8 @@ export default function ProjectOverviewPage({
         )}
       </div>
 
-      {/* Floating Action Button - only show when there are items */}
-      {sortedItems.length > 0 && (
+      {/* Floating Action Button - only show when there are items and not in gantt view */}
+      {sortedItems.length > 0 && !showGantt && (
         <button
           onClick={handleAddTask}
           className="fixed bottom-24 right-4 bg-accent-yellow text-black rounded-full w-12 h-12 text-2xl font-bold flex items-center justify-center shadow-lg"
@@ -1890,29 +2088,159 @@ export default function ProjectOverviewPage({
                       />
                     </div>
 
-                    <div>
-                      <label className="text-text-sec text-sm mb-2 block">
-                        Depends on task (optional)
-                      </label>
-                      <select
-                        value={editFormData.depends_on_task}
-                        onChange={(e) =>
-                          setEditFormData((prev) => ({
-                            ...prev,
-                            depends_on_task: e.target.value,
-                          }))
-                        }
-                        className="w-full px-4 py-2 bg-bg-card border border-border-card rounded-lg text-white outline-none focus:border-accent-yellow transition-colors"
-                      >
-                        <option value="">No dependency</option>
-                        {tasks
-                          .filter((task) => task.id !== editingItem?.id) // Don't allow self-dependency
-                          .map((task) => (
-                            <option key={task.id} value={task.id}>
-                              {task.title}
-                            </option>
-                          ))}
-                      </select>
+                    {/* Dependencies — only shown for project tasks */}
+                    {editingItem?.project_id && (
+                      <div>
+                        <label className="text-text-sec text-sm mb-2 block">Dependencies</label>
+                        {/* Current deps list */}
+                        <div className="space-y-1 mb-2">
+                          {editDependencies.length === 0 ? (
+                            <p className="text-text-sec text-xs py-1">No dependencies added.</p>
+                          ) : (
+                            editDependencies.map(depId => {
+                              const depTask = tasks.find(t => t.id === depId);
+                              return (
+                                <div key={depId} className="flex items-center justify-between gap-2 px-3 py-1.5 bg-bg-card border border-border-card rounded-lg">
+                                  <span className="text-white text-sm truncate">{depTask?.title ?? depId}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => setEditDependencies(prev => prev.filter(id => id !== depId))}
+                                    className="flex-shrink-0 text-text-sec hover:text-accent-pink transition-colors"
+                                  >
+                                    <X size={14} />
+                                  </button>
+                                </div>
+                              );
+                            })
+                          )}
+                        </div>
+                        {/* Add dep button / picker */}
+                        <div className="relative">
+                          {!showDepPicker ? (
+                            <button
+                              type="button"
+                              onClick={() => { setShowDepPicker(true); setDepSearch(''); }}
+                              className="flex items-center gap-1.5 text-sm text-text-sec hover:text-white transition-colors py-1"
+                            >
+                              <Plus size={14} />
+                              Add dependency
+                            </button>
+                          ) : (
+                            <div className="border border-border-card rounded-lg bg-bg-primary overflow-hidden">
+                              <div className="flex items-center gap-2 px-3 py-2 border-b border-border-card">
+                                <Search size={14} className="text-text-sec flex-shrink-0" />
+                                <input
+                                  autoFocus
+                                  type="text"
+                                  value={depSearch}
+                                  onChange={e => setDepSearch(e.target.value)}
+                                  placeholder="Search tasks..."
+                                  className="flex-1 bg-transparent text-white text-sm outline-none placeholder-text-sec"
+                                />
+                                <button type="button" onClick={() => setShowDepPicker(false)} className="text-text-sec hover:text-white">
+                                  <X size={14} />
+                                </button>
+                              </div>
+                              <div className="max-h-40 overflow-y-auto">
+                                {tasks
+                                  .filter(t =>
+                                    t.id !== editingItem?.id &&
+                                    t.item_type === 'task' &&
+                                    t.project_id === editingItem?.project_id &&
+                                    !editDependencies.includes(t.id) &&
+                                    !wouldCreateCycle(t.id, editingItem?.id ?? '')
+                                  )
+                                  .filter(t => t.title.toLowerCase().includes(depSearch.toLowerCase()))
+                                  .map(t => (
+                                    <button
+                                      key={t.id}
+                                      type="button"
+                                      onClick={() => { setEditDependencies(prev => [...prev, t.id]); setShowDepPicker(false); setDepSearch(''); }}
+                                      className="w-full text-left px-3 py-2 text-sm text-white hover:bg-bg-card transition-colors"
+                                    >
+                                      {t.title}
+                                    </button>
+                                  ))
+                                }
+                                {tasks.filter(t =>
+                                  t.id !== editingItem?.id &&
+                                  t.item_type === 'task' &&
+                                  t.project_id === editingItem?.project_id &&
+                                  !editDependencies.includes(t.id) &&
+                                  !wouldCreateCycle(t.id, editingItem?.id ?? '')
+                                ).filter(t => t.title.toLowerCase().includes(depSearch.toLowerCase())).length === 0 && (
+                                  <p className="px-3 py-2 text-text-sec text-sm">No tasks available.</p>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* On Hold section */}
+                    <div className="border-t border-border-card pt-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <PauseCircle size={16} className={editOnHold ? 'text-amber-400' : 'text-text-sec'} />
+                          <label className="text-sm font-medium text-white">On Hold</label>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => { setEditOnHold(prev => !prev); setEditOnHoldError(''); }}
+                          className={`w-12 h-6 rounded-full transition-colors relative ${editOnHold ? 'bg-amber-500' : 'bg-bg-card border border-border-card'}`}
+                        >
+                          <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-transform shadow-sm ${editOnHold ? 'translate-x-6' : 'translate-x-0.5'}`} />
+                        </button>
+                      </div>
+                      {editOnHold && (
+                        <div className="space-y-3">
+                          {/* Type selector */}
+                          <div className="flex gap-1.5">
+                            {([
+                              { value: 'external', label: 'Waiting for something' },
+                              { value: 'person', label: 'Waiting for someone' },
+                              { value: 'date', label: 'Until a date' },
+                            ] as const).map(opt => (
+                              <button
+                                key={opt.value}
+                                type="button"
+                                onClick={() => setEditOnHoldType(opt.value)}
+                                className={`flex-1 px-2 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                                  editOnHoldType === opt.value
+                                    ? 'bg-amber-500 text-white'
+                                    : 'bg-bg-card text-text-sec hover:text-white border border-border-card'
+                                }`}
+                              >
+                                {opt.label}
+                              </button>
+                            ))}
+                          </div>
+                          {/* Reason */}
+                          <div>
+                            <input
+                              type="text"
+                              value={editOnHoldReason}
+                              onChange={e => { setEditOnHoldReason(e.target.value); if (editOnHoldError) setEditOnHoldError(''); }}
+                              placeholder="What are you waiting for?"
+                              className={`w-full px-3 py-2 bg-bg-card border rounded-lg text-white text-sm placeholder-text-sec outline-none transition-colors ${editOnHoldError ? 'border-accent-pink' : 'border-border-card focus:border-amber-500'}`}
+                            />
+                            {editOnHoldError && <p className="text-accent-pink text-xs mt-1">{editOnHoldError}</p>}
+                          </div>
+                          {/* Until date — only when type = date */}
+                          {editOnHoldType === 'date' && (
+                            <div>
+                              <label className="text-text-sec text-xs mb-1 block">Until date</label>
+                              <input
+                                type="date"
+                                value={editOnHoldUntil}
+                                onChange={e => setEditOnHoldUntil(e.target.value)}
+                                className="w-full px-3 py-2 bg-bg-card border border-border-card rounded-lg text-white text-sm outline-none focus:border-amber-500 transition-colors [&::-webkit-calendar-picker-indicator]:filter [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-70"
+                              />
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </>
                 )}
@@ -2197,6 +2525,98 @@ export default function ProjectOverviewPage({
       {showLongPressMenu && longPressTask && (
         <LongPressMenu task={longPressTask} />
       )}
+
+      {/* Recurrence Info Sheet */}
+      {recurrenceSheetTask && (() => {
+        const tmpl = recurrenceTemplate;
+        const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        let patternDesc = '…';
+        if (tmpl) {
+          if (tmpl.recurrence_type === 'daily') patternDesc = 'Repeats every day';
+          else if (tmpl.recurrence_type === 'specific_days' && tmpl.recurrence_days?.length) {
+            const names = tmpl.recurrence_days.map((d: number) => DAY_NAMES[d]).join(', ');
+            patternDesc = `Repeats every ${names}`;
+          } else if (tmpl.recurrence_type === 'interval' && tmpl.recurrence_interval) {
+            patternDesc = `Repeats every ${tmpl.recurrence_interval} days`;
+          }
+        }
+        let endDesc = 'No end date';
+        if (tmpl?.recurrence_end_date) endDesc = `Ends on ${new Date(tmpl.recurrence_end_date).toLocaleDateString()}`;
+        else if (tmpl?.recurrence_end_after) endDesc = `Ends after ${tmpl.recurrence_end_after} times`;
+        const missedDesc = tmpl?.recurrence_missed_behavior === 'skip' ? 'Skips missed days' : 'Shows missed days as overdue';
+
+        const handleStopRecurring = async () => {
+          const supabase = createClient();
+          const today = new Date().toISOString().split('T')[0];
+          await supabase
+            .from('tasks')
+            .update({ recurrence_end_date: today })
+            .eq('id', recurrenceSheetTask.recurrence_parent_id!);
+          queryClient.invalidateQueries({ queryKey: ['tasks'] });
+          setShowStopRecurringConfirm(false);
+          setRecurrenceSheetTask(null);
+        };
+
+        return (
+          <div className="fixed inset-0 bg-black/50 z-[100] flex items-end" onClick={() => { setRecurrenceSheetTask(null); setShowStopRecurringConfirm(false); }}>
+            <div className="bg-bg-card w-full rounded-t-3xl p-6" onClick={e => e.stopPropagation()}>
+              <div className="flex items-center justify-between mb-5">
+                <div className="flex items-center gap-2">
+                  <RefreshCw size={18} className="text-accent-yellow" />
+                  <h3 className="text-white text-lg font-semibold">Recurring Task</h3>
+                </div>
+                <button onClick={() => { setRecurrenceSheetTask(null); setShowStopRecurringConfirm(false); }} className="text-text-sec hover:text-white transition-colors">
+                  <X size={24} />
+                </button>
+              </div>
+
+              <div className="space-y-3 mb-6">
+                <div className="flex justify-between items-center py-2 border-b border-border-card">
+                  <span className="text-text-sec text-sm">Pattern</span>
+                  <span className="text-white text-sm font-medium">{patternDesc}</span>
+                </div>
+                <div className="flex justify-between items-center py-2 border-b border-border-card">
+                  <span className="text-text-sec text-sm">End</span>
+                  <span className="text-white text-sm font-medium">{endDesc}</span>
+                </div>
+                <div className="flex justify-between items-center py-2 border-b border-border-card">
+                  <span className="text-text-sec text-sm">If missed</span>
+                  <span className="text-white text-sm font-medium">{missedDesc}</span>
+                </div>
+              </div>
+
+              {!showStopRecurringConfirm ? (
+                <button
+                  onClick={() => setShowStopRecurringConfirm(true)}
+                  className="w-full flex items-center justify-center gap-2 bg-red-500/20 text-red-400 p-4 rounded-2xl hover:bg-red-500/30 transition-colors"
+                >
+                  <StopCircle size={18} />
+                  <span className="font-medium">Stop recurring</span>
+                </button>
+              ) : (
+                <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-4">
+                  <p className="text-white text-sm font-medium mb-1">Stop this recurring task?</p>
+                  <p className="text-text-sec text-xs mb-4">No new occurrences will be created. Existing tasks remain untouched.</p>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setShowStopRecurringConfirm(false)}
+                      className="flex-1 py-2.5 border border-border-card rounded-xl text-text-sec hover:text-white transition-colors text-sm"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleStopRecurring}
+                      className="flex-1 py-2.5 bg-red-500 rounded-xl text-white font-semibold text-sm hover:bg-red-600 transition-colors"
+                    >
+                      Stop
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Project Avatar Picker */}
       {showAvatarPicker && (

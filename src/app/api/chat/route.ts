@@ -242,9 +242,31 @@ export async function POST(request: NextRequest) {
             .eq('project_id', projectId)
             .order('created_at', { ascending: false })
 
+          // Fetch dependencies for these tasks
+          const taskIds = tasks?.map(t => t.id) || []
+          const { data: dependencies } = await serviceSupabase
+            .from('task_dependencies')
+            .select('task_id, depends_on_id')
+            .in('task_id', taskIds)
+
+          // Build a map of task_id -> array of depends_on_ids
+          const depsMap = new Map<string, string[]>()
+          for (const dep of dependencies || []) {
+            if (!depsMap.has(dep.task_id)) {
+              depsMap.set(dep.task_id, [])
+            }
+            depsMap.get(dep.task_id)!.push(dep.depends_on_id)
+          }
+
+          // Attach dependencies to each task
+          const tasksWithDeps = tasks?.map(task => ({
+            ...task,
+            dependencies: depsMap.get(task.id) || []
+          })) || []
+
           const contextBlock = buildContextBlock({
             ...project,
-            tasks: tasks || [],
+            tasks: tasksWithDeps,
             memories: memories || [],
           })
 

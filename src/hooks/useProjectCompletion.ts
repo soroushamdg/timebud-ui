@@ -6,6 +6,7 @@ interface ProjectCompletion {
   isCompleted: boolean
   completedTaskCount: number
   totalTaskCount: number
+  onHoldCount: number
 }
 
 export const useProjectCompletion = (projectId: string): ProjectCompletion => {
@@ -13,12 +14,22 @@ export const useProjectCompletion = (projectId: string): ProjectCompletion => {
 
   const completion = useMemo(() => {
     // Filter tasks that belong to this project and are actual tasks (not milestones)
-    const projectTasks = tasks.filter(task => 
-      task.project_id === projectId && task.item_type === 'task'
+    // Exclude on_hold and skipped — they don't count toward progress
+    const activeTasks = tasks.filter(task => 
+      task.project_id === projectId &&
+      task.item_type === 'task' &&
+      !task.on_hold &&
+      task.status !== 'skipped'
     )
 
-    const completedTaskCount = projectTasks.filter(task => task.status === 'completed').length
-    const totalTaskCount = projectTasks.length
+    const onHoldCount = tasks.filter(task =>
+      task.project_id === projectId &&
+      task.item_type === 'task' &&
+      task.on_hold
+    ).length
+
+    const completedTaskCount = activeTasks.filter(task => task.status === 'completed').length
+    const totalTaskCount = activeTasks.length
     const percentage = totalTaskCount > 0 
       ? Math.round((completedTaskCount / totalTaskCount) * 100) 
       : 0
@@ -28,7 +39,8 @@ export const useProjectCompletion = (projectId: string): ProjectCompletion => {
       percentage,
       isCompleted,
       completedTaskCount,
-      totalTaskCount
+      totalTaskCount,
+      onHoldCount,
     }
   }, [tasks, projectId])
 

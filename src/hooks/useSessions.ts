@@ -1,12 +1,62 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { toUtcString } from '@/lib/dates'
-import { DbFocusSession } from '@/types/database'
+import { DbFocusSession, DbSessionTaskLog } from '@/types/database'
 import { useReplan } from '@/contexts/ReplanContext'
 
 type FocusSession = DbFocusSession
 type FocusSessionInsert = Omit<DbFocusSession, 'id' | 'user_id'>
 type FocusSessionUpdate = Partial<Omit<DbFocusSession, 'id' | 'user_id'>>
+
+export type SessionTaskLogInsert = Omit<DbSessionTaskLog, 'id' | 'created_at'>
+
+export async function insertSessionTaskLogs(logs: SessionTaskLogInsert[]): Promise<void> {
+  if (logs.length === 0) return
+  const supabase = createClient()
+  const { error } = await supabase
+    .from('session_task_logs')
+    .insert(logs)
+  if (error) throw error
+}
+
+export const useSessionsWithLogs = () => {
+  return useQuery({
+    queryKey: ['sessions', 'with-logs'],
+    queryFn: async (): Promise<{ sessions: FocusSession[]; taskLogsBySessionId: Map<string, DbSessionTaskLog[]> }> => {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return { sessions: [], taskLogsBySessionId: new Map() }
+
+      const { data: sessions, error: sessionsError } = await supabase
+        .from('sessions')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('start_time', { ascending: false })
+      if (sessionsError) throw sessionsError
+
+      if (!sessions || sessions.length === 0) {
+        return { sessions: [], taskLogsBySessionId: new Map() }
+      }
+
+      const sessionIds = sessions.map(s => s.id)
+      const { data: taskLogs, error: logsError } = await supabase
+        .from('session_task_logs')
+        .select('*')
+        .in('session_id', sessionIds)
+      if (logsError) throw logsError
+
+      const taskLogsBySessionId = new Map<string, DbSessionTaskLog[]>()
+      for (const log of taskLogs ?? []) {
+        if (!taskLogsBySessionId.has(log.session_id)) {
+          taskLogsBySessionId.set(log.session_id, [])
+        }
+        taskLogsBySessionId.get(log.session_id)!.push(log)
+      }
+
+      return { sessions, taskLogsBySessionId }
+    },
+  })
+}
 
 export const useLatestUnfinishedFocusSession = () => {
   return useQuery({

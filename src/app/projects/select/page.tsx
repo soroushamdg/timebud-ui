@@ -38,6 +38,7 @@ interface ProjectWithCompletion extends DbProject {
     isCompleted: boolean
     completedTaskCount: number
     totalTaskCount: number
+    onHoldCount: number
   }
 }
 
@@ -275,11 +276,19 @@ export default function SelectProjectsPage() {
   const projectsWithCompletion = useMemo(() => {
     if (!projects || !tasks) return []
     return projects.map(project => {
-      const projectTasks = tasks.filter(task => 
-        task.project_id === project.id && task.item_type === 'task'
+      const activeTasks = tasks.filter(task => 
+        task.project_id === project.id &&
+        task.item_type === 'task' &&
+        !task.on_hold &&
+        task.status !== 'skipped'
       )
-      const completedTaskCount = projectTasks.filter(task => task.status === 'completed').length
-      const totalTaskCount = projectTasks.length
+      const onHoldCount = tasks.filter(task =>
+        task.project_id === project.id &&
+        task.item_type === 'task' &&
+        task.on_hold
+      ).length
+      const completedTaskCount = activeTasks.filter(task => task.status === 'completed').length
+      const totalTaskCount = activeTasks.length
       const percentage = totalTaskCount > 0 
         ? Math.round((completedTaskCount / totalTaskCount) * 100) 
         : 0
@@ -291,7 +300,8 @@ export default function SelectProjectsPage() {
           percentage,
           isCompleted,
           completedTaskCount,
-          totalTaskCount
+          totalTaskCount,
+          onHoldCount,
         }
       } as ProjectWithCompletion
     })
@@ -472,6 +482,11 @@ export default function SelectProjectsPage() {
                       maxFontSize={18}
                       minFontSize={8}
                     />
+                    {project.completion.onHoldCount > 0 && (
+                      <p className="text-[9px] text-text-sec leading-none mt-0.5">
+                        {project.completion.onHoldCount} on hold
+                      </p>
+                    )}
                   </div>
                 </div>
               ))}

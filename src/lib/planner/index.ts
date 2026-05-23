@@ -23,8 +23,10 @@ export interface PlannerTask {
   due_date: string | null;
   order: number;
   priority: boolean;
-  depends_on_task: string | null;
+  dependencies?: string[];  // array of task IDs this task depends on
   item_type?: string;
+  on_hold?: boolean;
+  is_recurring_template?: boolean;
 }
 
 export interface PlannerInput {
@@ -163,9 +165,11 @@ function buildUnlockMap(tasks: TaskWithMeta[]): Map<string, number> {
   const unlockMap = new Map<string, number>();
   
   for (const task of tasks) {
-    if (task.depends_on_task) {
-      const count = unlockMap.get(task.depends_on_task) ?? 0;
-      unlockMap.set(task.depends_on_task, count + 1);
+    if (task.dependencies && task.dependencies.length > 0) {
+      for (const depId of task.dependencies) {
+        const count = unlockMap.get(depId) ?? 0;
+        unlockMap.set(depId, count + 1);
+      }
     }
   }
   
@@ -173,13 +177,23 @@ function buildUnlockMap(tasks: TaskWithMeta[]): Map<string, number> {
 }
 
 function isTaskLocked(task: TaskWithMeta, allTasks: TaskWithMeta[]): boolean {
-  if (!task.depends_on_task) return false;
+  if (!task.dependencies || task.dependencies.length === 0) return false;
   
-  const dependency = allTasks.find(t => t.id === task.depends_on_task);
-  return dependency?.status !== 'completed';
+  // Task is locked if ANY of its dependencies are not completed
+  for (const depId of task.dependencies) {
+    const dependency = allTasks.find(t => t.id === depId);
+    if (dependency?.status !== 'completed') {
+      return true;
+    }
+  }
+  
+  return false;
 }
 
 function buildDependencyChain(taskId: string, allTasks: TaskWithMeta[]): TaskWithMeta[] {
+  // Build chain by traversing dependencies
+  // For simplicity, if a task has multiple dependencies, we only follow the first one
+  // This maintains the linear chain behavior expected by the planner
   const chain: TaskWithMeta[] = [];
   const visited = new Set<string>();
   let currentId: string | null = taskId;
@@ -199,7 +213,8 @@ function buildDependencyChain(taskId: string, allTasks: TaskWithMeta[]): TaskWit
     }
     
     visited.add(currentId);
-    currentId = task.depends_on_task;
+    // Follow first dependency only (linear chain)
+    currentId = task.dependencies && task.dependencies.length > 0 ? task.dependencies[0] : null;
   }
   
   return chain;
@@ -269,11 +284,14 @@ export function planSession(input: PlannerInput): PlannerOutput {
       t.project_id === null || activeProjectIds.has(t.project_id)
     );
     
-    // Filter out completed tasks
+    // Filter out completed tasks, on_hold tasks, and recurring templates
     // Keep all tasks (including locked ones and those without estimates) for scoring
     // Tasks without estimates will use DEFAULT_ESTIMATE_MINUTES (60 min) via getEffectiveEstimate()
     const schedulableTasks = tasksWithDeadlines.filter(t => 
-      t.status !== 'completed'
+      t.status !== 'completed' &&
+      t.status !== 'skipped' &&
+      !t.on_hold &&
+      !t.is_recurring_template
     );
     
     if (schedulableTasks.length === 0) {
@@ -346,7 +364,7 @@ export function planSession(input: PlannerInput): PlannerOutput {
               carryOverMinutes: 0,
               isPartOfChain: chain.length > 1,
               chainPosition: i,
-              dependsOnTaskId: chainTask.depends_on_task,
+              dependsOnTaskId: chainTask.dependencies && chainTask.dependencies.length > 0 ? chainTask.dependencies[0] : null,
               isLocked: i > 0
             });
             scheduledTaskIds.add(chainTask.id);
@@ -377,7 +395,7 @@ export function planSession(input: PlannerInput): PlannerOutput {
                 carryOverMinutes: 0,
                 isPartOfChain: chain.length > 1,
                 chainPosition: i,
-                dependsOnTaskId: chainTask.depends_on_task,
+                dependsOnTaskId: chainTask.dependencies && chainTask.dependencies.length > 0 ? chainTask.dependencies[0] : null,
                 isLocked: i > 0
               });
               scheduledTaskIds.add(chainTask.id);
@@ -400,7 +418,7 @@ export function planSession(input: PlannerInput): PlannerOutput {
                 carryOverMinutes: estimate - budgetLeft,
                 isPartOfChain: chain.length > 1,
                 chainPosition: i,
-                dependsOnTaskId: chainTask.depends_on_task,
+                dependsOnTaskId: chainTask.dependencies && chainTask.dependencies.length > 0 ? chainTask.dependencies[0] : null,
                 isLocked: i > 0
               });
               scheduledTaskIds.add(chainTask.id);
@@ -431,7 +449,7 @@ export function planSession(input: PlannerInput): PlannerOutput {
             carryOverMinutes: 0,
             isPartOfChain: false,
             chainPosition: 0,
-            dependsOnTaskId: task.depends_on_task,
+            dependsOnTaskId: task.dependencies && task.dependencies.length > 0 ? task.dependencies[0] : null,
             isLocked: false
           });
           scheduledTaskIds.add(task.id);
@@ -453,7 +471,7 @@ export function planSession(input: PlannerInput): PlannerOutput {
             carryOverMinutes: estimate - remainingBudget,
             isPartOfChain: false,
             chainPosition: 0,
-            dependsOnTaskId: task.depends_on_task,
+            dependsOnTaskId: task.dependencies && task.dependencies.length > 0 ? task.dependencies[0] : null,
             isLocked: false
           });
           scheduledTaskIds.add(task.id);
@@ -497,7 +515,7 @@ export function planSession(input: PlannerInput): PlannerOutput {
               carryOverMinutes: 0,
               isPartOfChain: false,
               chainPosition: 0,
-              dependsOnTaskId: task.depends_on_task,
+              dependsOnTaskId: task.dependencies && task.dependencies.length > 0 ? task.dependencies[0] : null,
               isLocked: false
             });
             scheduledTaskIds.add(task.id);
@@ -571,7 +589,7 @@ export function planSession(input: PlannerInput): PlannerOutput {
                   carryOverMinutes: 0,
                   isPartOfChain: chain.length > 1,
                   chainPosition: i,
-                  dependsOnTaskId: chainTask.depends_on_task,
+                  dependsOnTaskId: chainTask.dependencies && chainTask.dependencies.length > 0 ? chainTask.dependencies[0] : null,
                   isLocked: i > 0
                 });
                 scheduledTaskIds.add(chainTask.id);
@@ -602,7 +620,7 @@ export function planSession(input: PlannerInput): PlannerOutput {
                     carryOverMinutes: 0,
                     isPartOfChain: chain.length > 1,
                     chainPosition: i,
-                    dependsOnTaskId: chainTask.depends_on_task,
+                    dependsOnTaskId: chainTask.dependencies && chainTask.dependencies.length > 0 ? chainTask.dependencies[0] : null,
                     isLocked: i > 0
                   });
                   scheduledTaskIds.add(chainTask.id);
@@ -625,7 +643,7 @@ export function planSession(input: PlannerInput): PlannerOutput {
                     carryOverMinutes: estimate - budgetLeft,
                     isPartOfChain: chain.length > 1,
                     chainPosition: i,
-                    dependsOnTaskId: chainTask.depends_on_task,
+                    dependsOnTaskId: chainTask.dependencies && chainTask.dependencies.length > 0 ? chainTask.dependencies[0] : null,
                     isLocked: i > 0
                   });
                   scheduledTaskIds.add(chainTask.id);
@@ -657,7 +675,7 @@ export function planSession(input: PlannerInput): PlannerOutput {
                 carryOverMinutes: 0,
                 isPartOfChain: false,
                 chainPosition: 0,
-                dependsOnTaskId: task.depends_on_task,
+                dependsOnTaskId: task.dependencies && task.dependencies.length > 0 ? task.dependencies[0] : null,
                 isLocked: false
               });
               scheduledTaskIds.add(task.id);
@@ -679,7 +697,7 @@ export function planSession(input: PlannerInput): PlannerOutput {
                 carryOverMinutes: estimate - remainingBudget,
                 isPartOfChain: false,
                 chainPosition: 0,
-                dependsOnTaskId: task.depends_on_task,
+                dependsOnTaskId: task.dependencies && task.dependencies.length > 0 ? task.dependencies[0] : null,
                 isLocked: false
               });
               scheduledTaskIds.add(task.id);

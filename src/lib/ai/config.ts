@@ -129,7 +129,7 @@ export function buildContextBlock(
         t.estimated_minutes ? `\n  Est: ${t.estimated_minutes}min` : '',
         t.due_date ? `\n  Due: ${t.due_date}` : '',
         t.priority ? `\n  Priority: HIGH` : '',
-        t.depends_on_task ? `\n  Depends on: ${t.depends_on_task}` : '',
+        t.dependencies && t.dependencies.length > 0 ? `\n  Depends on: ${t.dependencies.join(', ')}` : '',
         `\n  ID: ${t.id}`,
       ]
       return parts.filter(Boolean).join('')

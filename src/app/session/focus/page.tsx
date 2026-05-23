@@ -5,8 +5,9 @@ import { useRouter } from 'next/navigation'
 import { X, Square } from 'lucide-react'
 import { useFocusSessionStore } from '@/stores/sessionStore'
 import { useUpdateTask } from '@/hooks/useTasks'
-import { useUpdateFocusSession, useCreateFocusSession, useCreateCompletedFocusSession } from '@/hooks/useSessions'
+import { useUpdateFocusSession, useCreateFocusSession, useCreateCompletedFocusSession, insertSessionTaskLogs } from '@/hooks/useSessions'
 import { toUtcString } from '@/lib/dates'
+import { createClient } from '@/lib/supabase/client'
 import { PlannedTask } from '@/stores/sessionStore'
 import { FocusTaskCard } from '@/components/tasks/FocusTaskCard'
 import { PartialTaskCompletionDialog } from '@/components/dialogs/PartialTaskCompletionDialog'
@@ -164,6 +165,10 @@ export default function FocusSession() {
   const handleStop = async () => {
     clearTimer()
     const endTime = new Date()
+
+    // Snapshot planned tasks before clearing session store
+    const plannedTasksSnapshot = [...focusSessionStore.plannedTasks]
+    let savedSessionId: string | null = null
     
     // Only save to database if session was actually started (has a real session ID)
     if (focusSessionStore.focusSessionId && !focusSessionStore.focusSessionId.startsWith('local-')) {
@@ -173,6 +178,7 @@ export default function FocusSession() {
           start_time: toUtcString(timerStartRef.current),
           end_time: toUtcString(endTime)
         })
+        savedSessionId = focusSessionStore.focusSessionId
       } catch (error) {
         console.error('Failed to update session:', error)
       }
@@ -181,13 +187,72 @@ export default function FocusSession() {
       try {
         const completedSession = await createCompletedFocusSession.mutateAsync({
           budget_minutes: focusSessionStore.budgetMinutes,
-          tasks_list: focusSessionStore.plannedTasks.map(t => t.taskId),
+          tasks_list: plannedTasksSnapshot.map(t => t.taskId),
           start_time: toUtcString(timerStartRef.current),
           end_time: toUtcString(endTime)
         })
+        savedSessionId = completedSession.id
         console.log('Session saved to database:', completedSession)
       } catch (error) {
         console.error('Failed to create completed session:', error)
+      }
+    }
+
+    // Write per-task outcome logs
+    if (savedSessionId && plannedTasksSnapshot.length > 0) {
+      try {
+        const taskIds = plannedTasksSnapshot.map(t => t.taskId)
+        const supabase = createClient()
+        const { data: dbTasks } = await supabase
+          .from('tasks')
+          .select('id, status')
+          .in('id', taskIds)
+
+        const statusMap = new Map((dbTasks ?? []).map((t: { id: string; status: string | null }) => [t.id, t.status]))
+
+        const logs = plannedTasksSnapshot.map(task => {
+          let outcome: 'completed' | 'partial' | 'skipped'
+          if (!task.done) {
+            outcome = 'skipped'
+          } else if (statusMap.get(task.taskId) === 'completed') {
+            outcome = 'completed'
+          } else {
+            outcome = 'partial'
+          }
+          return {
+            session_id: savedSessionId!,
+            task_id: task.taskId,
+            task_title: task.title,
+            project_id: task.projectId ?? null,
+            project_name: task.projectName ?? null,
+            outcome,
+            scheduled_minutes: task.scheduledMinutes,
+            actual_minutes: outcome !== 'skipped' ? task.scheduledMinutes : null,
+          }
+        })
+
+        await insertSessionTaskLogs(logs)
+
+        // Generate next occurrences for completed recurring tasks (log-first order)
+        const supabase2 = createClient()
+        const today2 = new Date().toISOString().split('T')[0]
+        for (const t of plannedTasksSnapshot) {
+          if (!t.recurrence_parent_id) continue
+          const taskLog = logs.find(l => l.task_id === t.taskId)
+          if (taskLog?.outcome !== 'completed') continue
+          const { data: existing } = await supabase2
+            .from('tasks')
+            .select('id')
+            .eq('recurrence_parent_id', t.recurrence_parent_id)
+            .in('status', ['pending', 'in_progress'])
+            .gte('recurrence_occurrence_date', today2)
+            .limit(1)
+          if (!existing || existing.length === 0) {
+            await supabase2.rpc('generate_next_occurrence', { p_template_id: t.recurrence_parent_id })
+          }
+        }
+      } catch (error) {
+        console.error('Failed to write session task logs:', error)
       }
     }
     

@@ -30,6 +30,7 @@ import { AvatarImage } from '@/components/ui/AvatarImage'
 import { useCurrentUser } from '@/hooks/useAuth'
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
+import { useOccurrenceManager } from '@/hooks/useRecurring'
 
 interface PlannedTask {
   taskId: string;
@@ -52,11 +53,13 @@ interface PlannedTask {
   chainPosition?: number;
   dependsOnTaskId?: string | null;
   isLocked?: boolean;
+  recurrence_parent_id?: string | null;
 }
 
 export default function Home() {
   console.log('[Home] Component mounting')
   const router = useRouter();
+  useOccurrenceManager();
   const { data: user, isLoading: userLoading, error: userError } = useCurrentUser();
   console.log('[Home] User query state:', { user: user?.id, isLoading: userLoading, error: userError, fullUser: user })
   
@@ -135,11 +138,19 @@ export default function Home() {
   const projectsWithCompletion = useMemo(() => {
     if (!projects || !tasks) return []
     return projects.map(project => {
-      const projectTasks = tasks.filter(task => 
-        task.project_id === project.id && task.item_type === 'task'
+      const activeTasks = tasks.filter(task => 
+        task.project_id === project.id &&
+        task.item_type === 'task' &&
+        !task.on_hold &&
+        task.status !== 'skipped'
       )
-      const completedTaskCount = projectTasks.filter(task => task.status === 'completed').length
-      const totalTaskCount = projectTasks.length
+      const onHoldCount = tasks.filter(task =>
+        task.project_id === project.id &&
+        task.item_type === 'task' &&
+        task.on_hold
+      ).length
+      const completedTaskCount = activeTasks.filter(task => task.status === 'completed').length
+      const totalTaskCount = activeTasks.length
       const percentage = totalTaskCount > 0 
         ? Math.round((completedTaskCount / totalTaskCount) * 100) 
         : 0
@@ -151,7 +162,8 @@ export default function Home() {
           percentage,
           isCompleted,
           completedTaskCount,
-          totalTaskCount
+          totalTaskCount,
+          onHoldCount,
         }
       }
     })
@@ -341,6 +353,7 @@ export default function Home() {
               chainPosition: task.chainPosition,
               dependsOnTaskId: task.dependsOnTaskId,
               isLocked: task.isLocked,
+              recurrence_parent_id: dbTask?.recurrence_parent_id ?? null,
             };
           });
       }
@@ -364,6 +377,7 @@ export default function Home() {
           description: task.description || undefined,
           isPinned: true,
           isManual: false,
+          recurrence_parent_id: task.recurrence_parent_id ?? null,
         };
       });
 
@@ -386,6 +400,7 @@ export default function Home() {
           description: task.description || undefined,
           isPinned: false,
           isManual: true,
+          recurrence_parent_id: task.recurrence_parent_id ?? null,
         };
       });
 
@@ -429,6 +444,7 @@ export default function Home() {
           chainPosition: t.chainPosition,
           dependsOnTaskId: t.dependsOnTaskId,
           isLocked: t.isLocked,
+          recurrence_parent_id: t.recurrence_parent_id ?? null,
         })) as any,
         preferredBudgetMinutes,
       );
@@ -704,7 +720,7 @@ export default function Home() {
                   <button
                     key={project.id}
                     onClick={() => router.push(`/projects/${project.id}`)}
-                    className="flex-shrink-0 transition-all relative hover:scale-110 hover:z-20 hover:shadow-xl hover:shadow-black/50"
+                    className="flex-shrink-0 transition-all relative hover:scale-110 hover:z-20 hover:shadow-xl hover:shadow-black/50 flex flex-col items-center gap-0.5"
                   >
                     <AvatarImage
                       src={project.project_avatar_url}
@@ -714,6 +730,11 @@ export default function Home() {
                       size={80}
                       className="border-2 border-black border-4 border-white"
                     />
+                    {project.completion.onHoldCount > 0 && (
+                      <span className="text-[9px] text-text-sec leading-none">
+                        {project.completion.onHoldCount} on hold
+                      </span>
+                    )}
                     {/* 100% completion ribbon */}
                     {project.completion.isCompleted && (
                       <div className="absolute -top-1 -right-1 w-20 h-20 overflow-hidden pointer-events-none z-10">

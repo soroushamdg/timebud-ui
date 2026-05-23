@@ -80,10 +80,11 @@ async function createTask(
 
   const nextOrder = maxOrderData && maxOrderData.length > 0 ? maxOrderData[0].order + 1.0 : 1.0
 
+  const taskId = crypto.randomUUID()
   const { data, error } = await supabase
     .from('tasks')
     .insert({
-      id: crypto.randomUUID(),
+      id: taskId,
       user_id: userId,
       project_id: projectId,
       item_type: 'task',
@@ -94,12 +95,23 @@ async function createTask(
       due_date: dueDate || null,
       order: nextOrder,
       priority: priority || false,
-      depends_on_task: dependsOnTask || null,
     })
     .select()
     .single()
 
   if (error) throw error
+
+  // Handle dependency if provided
+  if (dependsOnTask) {
+    const { error: depError } = await supabase
+      .from('task_dependencies')
+      .insert({
+        task_id: taskId,
+        depends_on_id: dependsOnTask,
+      })
+    
+    if (depError) throw depError
+  }
 
   return {
     success: true,
@@ -124,7 +136,6 @@ async function editTask(
       estimated_minutes: updates.estimatedMinutes,
       due_date: updates.dueDate,
       priority: updates.priority,
-      depends_on_task: updates.dependsOnTask,
     })
     .eq('id', taskId)
     .eq('user_id', userId)
@@ -227,16 +238,6 @@ async function bulkCreateTasks(
       priority = task.priority.toLowerCase() === 'high' || task.priority.toLowerCase() === 'true'
     }
 
-    // Resolve dependency
-    let dependsOnTask = null
-    if (task.dependsOnTaskId) {
-      // Direct UUID reference takes precedence
-      dependsOnTask = task.dependsOnTaskId
-    } else if (task.dependsOnTaskIndex !== undefined && task.dependsOnTaskIndex !== null) {
-      // Resolve index to UUID
-      dependsOnTask = taskIds[task.dependsOnTaskIndex]
-    }
-
     return {
       id: taskIds[index],
       user_id: userId,
@@ -249,7 +250,6 @@ async function bulkCreateTasks(
       due_date: task.dueDate || null,
       order: nextOrder++,
       priority,
-      depends_on_task: dependsOnTask,
     }
   })
 
@@ -259,6 +259,36 @@ async function bulkCreateTasks(
     .select()
 
   if (error) throw error
+
+  // Insert dependencies into task_dependencies table
+  const dependenciesToInsert = []
+  for (let i = 0; i < tasks.length; i++) {
+    const task = tasks[i]
+    let dependsOnTask = null
+    
+    if (task.dependsOnTaskId) {
+      // Direct UUID reference takes precedence
+      dependsOnTask = task.dependsOnTaskId
+    } else if (task.dependsOnTaskIndex !== undefined && task.dependsOnTaskIndex !== null) {
+      // Resolve index to UUID
+      dependsOnTask = taskIds[task.dependsOnTaskIndex]
+    }
+    
+    if (dependsOnTask) {
+      dependenciesToInsert.push({
+        task_id: taskIds[i],
+        depends_on_id: dependsOnTask,
+      })
+    }
+  }
+
+  if (dependenciesToInsert.length > 0) {
+    const { error: depError } = await supabase
+      .from('task_dependencies')
+      .insert(dependenciesToInsert)
+    
+    if (depError) throw depError
+  }
 
   const summary = dependencyCount > 0 
     ? `Created ${tasks.length} tasks with ${dependencyCount} ${dependencyCount === 1 ? 'dependency' : 'dependencies'}`
@@ -302,7 +332,6 @@ async function createMilestone(
       due_date: dueDate || null,
       order: nextOrder,
       priority: priority || false,
-      depends_on_task: null,
     })
     .select()
     .single()
@@ -526,21 +555,50 @@ async function setTaskDependency(
 ): Promise<ToolExecutionResult> {
   const { taskId, dependsOnTaskId } = input
 
-  const { data, error } = await supabase
+  // Verify task belongs to user
+  const { data: task, error: taskError } = await supabase
     .from('tasks')
-    .update({ depends_on_task: dependsOnTaskId || null })
+    .select('title')
     .eq('id', taskId)
     .eq('user_id', userId)
-    .select()
     .single()
 
-  if (error) throw error
+  if (taskError) throw taskError
 
-  return {
-    success: true,
-    summary: dependsOnTaskId 
-      ? `Set dependency for: ${data.title}`
-      : `Cleared dependency for: ${data.title}`,
-    data,
+  if (dependsOnTaskId) {
+    // Set dependency - first delete existing, then insert new
+    await supabase
+      .from('task_dependencies')
+      .delete()
+      .eq('task_id', taskId)
+
+    const { error: insertError } = await supabase
+      .from('task_dependencies')
+      .insert({
+        task_id: taskId,
+        depends_on_id: dependsOnTaskId,
+      })
+
+    if (insertError) throw insertError
+
+    return {
+      success: true,
+      summary: `Set dependency for: ${task.title}`,
+      data: task,
+    }
+  } else {
+    // Clear dependency
+    const { error: deleteError } = await supabase
+      .from('task_dependencies')
+      .delete()
+      .eq('task_id', taskId)
+
+    if (deleteError) throw deleteError
+
+    return {
+      success: true,
+      summary: `Cleared dependency for: ${task.title}`,
+      data: task,
+    }
   }
 }
