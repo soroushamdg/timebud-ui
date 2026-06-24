@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
+import { cookies } from 'next/headers'
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
@@ -29,7 +30,26 @@ export async function GET(request: NextRequest) {
         console.error('Failed to create user after OAuth callback:', createError)
       }
       
-      return NextResponse.redirect(`${origin}/`)
+      // Get all cookies that were set during the auth exchange
+      const cookieStore = await cookies()
+      const allCookies = cookieStore.getAll()
+      
+      // Create redirect response and copy all cookies
+      const redirectUrl = `${origin}/`
+      const response = NextResponse.redirect(redirectUrl)
+      
+      // Copy all cookies to the response
+      allCookies.forEach(cookie => {
+        response.cookies.set(cookie.name, cookie.value, {
+          // Ensure cookies are properly set for the redirect
+          sameSite: 'lax',
+          secure: process.env.NODE_ENV === 'production',
+          httpOnly: true,
+          path: '/',
+        })
+      })
+      
+      return response
     }
   }
   
