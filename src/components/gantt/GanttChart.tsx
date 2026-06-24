@@ -116,9 +116,9 @@ function TimelineView({ tasks, projects }: GanttChartProps) {
     !!t.dependencies?.length && t.dependencies.some(d => statusMap.get(d) !== 'completed')
 
   const groups = projects
-    .map(p => ({ project: p, tasks: tasks.filter(t => t.project_id === p.id && !t.is_recurring_template) }))
+    .map(p => ({ project: p, tasks: tasks.filter(t => t.project_id === p.id) }))
     .filter(g => g.tasks.length > 0)
-  const orphan = tasks.filter(t => !t.project_id && !t.is_recurring_template)
+  const orphan = tasks.filter(t => !t.project_id)
   if (orphan.length > 0) groups.push({ project: { id: '', name: 'No Project', color: null } as DbProject, tasks: orphan })
 
   // Build header ticks (months + mondays)
@@ -207,7 +207,7 @@ function TimelineView({ tasks, projects }: GanttChartProps) {
                   const isCompleted = task.status === 'completed'
                   const onHold = task.on_hold
                   const blocked = !onHold && isBlocked(task)
-                  const isRecurring = !!task.recurrence_parent_id
+                  const isRecurring = !!task.recurrence_type
 
                   if (isMilestone) {
                     const mx = getMilestoneX(task, chartStart)
@@ -320,7 +320,7 @@ function TimelineView({ tasks, projects }: GanttChartProps) {
 function ListView({ tasks, projects }: GanttChartProps) {
   const router = useRouter()
   const projectMap = new Map(projects.map(p => [p.id, p]))
-  const visible = tasks.filter(t => !t.is_recurring_template)
+  const visible = tasks
   const withDue = [...visible.filter(t => t.due_date)].sort(
     (a, b) => new Date(a.due_date!).getTime() - new Date(b.due_date!).getTime(),
   )

@@ -1,5 +1,5 @@
 export type ProjectStatus = "active" | "paused" | "archived";
-export type TaskStatus = "pending" | "completed" | "skipped";
+export type TaskStatus = "pending" | "completed";
 export type ItemType = "task" | "milestone";
 export interface DbUser {
   id: string;
@@ -36,15 +36,12 @@ export interface DbTask {
   priority: boolean;
   created_at: string;
   // Recurring fields
-  is_recurring_template: boolean;
   recurrence_type: "daily" | "specific_days" | "interval" | null;
   recurrence_days: number[] | null; // e.g., [1,3,5] for Mon/Wed/Fri
   recurrence_interval: number | null; // e.g., 2 for every 2 weeks
   recurrence_end_date: string | null;
   recurrence_end_after: number | null; // end after N occurrences
   recurrence_missed_behavior: "skip" | "overdue" | null;
-  recurrence_parent_id: string | null; // links occurrence to template
-  recurrence_occurrence_date: string | null;
   // On hold fields
   on_hold: boolean;
   on_hold_reason: string | null;

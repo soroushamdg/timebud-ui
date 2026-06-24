@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
-import { toUtcString } from '@/lib/dates'
+import { toUtcString, calculateNextDueDate } from '@/lib/dates'
 import { DbTask, TaskStatus } from '@/types/database'
 import { useReplan } from '@/contexts/ReplanContext'
 
@@ -22,7 +22,7 @@ export const useTasks = (filters?: TaskFilters) => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('User not authenticated')
       
-      let query = supabase.from('tasks').select('*').eq('user_id', user.id).eq('is_recurring_template', false)
+      let query = supabase.from('tasks').select('*').eq('user_id', user.id)
       
       if (filters?.projectId) {
         query = query.eq('project_id', filters.projectId)
@@ -103,6 +103,34 @@ export const useUpdateTask = () => {
   return useMutation({
     mutationFn: async ({ id, ...fields }: TaskUpdate & { id: string }) => {
       const supabase = createClient()
+      
+      // Fetch current task to check if it's recurring
+      const { data: currentTask } = await supabase
+        .from('tasks')
+        .select('*')
+        .eq('id', id)
+        .single()
+      
+      if (!currentTask) throw new Error('Task not found')
+      
+      // If marking a recurring task as completed, calculate next due_date
+      if (fields.status === 'completed' && currentTask.recurrence_type && currentTask.item_type === 'task') {
+        const nextDueDate = calculateNextDueDate(currentTask.due_date, currentTask as any)
+        const updateFields = {
+          status: nextDueDate ? 'pending' : 'completed',
+          due_date: nextDueDate,
+        }
+        const { data, error } = await supabase
+          .from('tasks')
+          .update(updateFields)
+          .eq('id', id)
+          .select()
+          .single()
+        if (error) throw error
+        return data
+      }
+      
+      // Normal update
       const { data, error } = await supabase
         .from('tasks')
         .update(fields)
@@ -142,44 +170,6 @@ export const useCreateTask = () => {
         .select()
         .single()
       if (error) throw error
-      return data
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks'] })
-      triggerReplan()
-    },
-  })
-}
-
-export const useCompleteTask = () => {
-  const queryClient = useQueryClient()
-  const { triggerReplan } = useReplan()
-
-  return useMutation({
-    mutationFn: async (task: DbTask) => {
-      const supabase = createClient()
-      const { data, error } = await supabase
-        .from('tasks')
-        .update({ status: 'completed' })
-        .eq('id', task.id)
-        .select()
-        .single()
-      if (error) throw error
-
-      if (task.recurrence_parent_id) {
-        const today = new Date().toISOString().split('T')[0]
-        const { data: existing } = await supabase
-          .from('tasks')
-          .select('id')
-          .eq('recurrence_parent_id', task.recurrence_parent_id)
-          .in('status', ['pending', 'in_progress'])
-          .gte('recurrence_occurrence_date', today)
-          .limit(1)
-        if (!existing || existing.length === 0) {
-          await supabase.rpc('generate_next_occurrence', { p_template_id: task.recurrence_parent_id })
-        }
-      }
-
       return data
     },
     onSuccess: () => {

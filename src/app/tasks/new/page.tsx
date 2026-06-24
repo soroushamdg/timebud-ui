@@ -8,7 +8,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { useProjectsForTasks } from '@/hooks/useProjects'
 import { useTasks } from '@/hooks/useTasks'
-import { toUtcString } from '@/lib/dates'
+import { toUtcString, calculateNextDueDate } from '@/lib/dates'
 import { DbProject } from '@/types/database'
 
 const PRIORITY_OPTIONS = [
@@ -134,45 +134,6 @@ export default function NewTaskPage(props: { searchParams: Promise<{ projectId?:
         }
       }
 
-      if (data.recurring && data.itemType === 'task') {
-        // Recurring task: insert as template
-        const templateData: Record<string, unknown> = {
-          title: data.title.trim(),
-          project_id: data.project_id || null,
-          user_id: user.id,
-          item_type: 'task',
-          order: calculatedOrder,
-          created_at: new Date().toISOString(),
-          description: data.description?.trim() || null,
-          estimated_minutes: Number(data.estimated_minutes) || 25,
-          priority: Boolean(data.priority),
-          status: null,
-          due_date: null,
-          is_recurring_template: true,
-          recurrence_type: recurrenceType,
-          recurrence_days: recurrenceType === 'specific_days' ? recurrenceDays : null,
-          recurrence_interval: recurrenceType === 'interval' ? recurrenceInterval : null,
-          recurrence_end_date: recurrenceEndType === 'date' && recurrenceEndDate ? toUtcString(new Date(recurrenceEndDate)) : null,
-          recurrence_end_after: recurrenceEndType === 'after' ? recurrenceEndAfter : null,
-          recurrence_missed_behavior: recurrenceMissedBehavior,
-        }
-
-        if (!templateData.title) throw new Error('Task title is required')
-
-        const { data: template, error: tErr } = await supabase
-          .from('tasks')
-          .insert(templateData)
-          .select()
-          .single()
-
-        if (tErr) throw tErr
-
-        // Generate first occurrence immediately
-        await supabase.rpc('generate_next_occurrence', { p_template_id: template.id })
-
-        return template
-      }
-      
       // Prepare item data based on type
       const itemData: Record<string, unknown> = {
         title: data.title.trim(),
@@ -194,12 +155,26 @@ export default function NewTaskPage(props: { searchParams: Promise<{ projectId?:
         })
       } else {
         // Task-specific fields
+        const isRecurring = data.recurring;
+        let initialDueDate = data.due_date ? toUtcString(new Date(data.due_date)) : null;
+        
+        // For recurring tasks without a due_date, set it to today
+        if (isRecurring && !initialDueDate) {
+          initialDueDate = new Date().toISOString().split('T')[0];
+        }
+
         Object.assign(itemData, {
           description: data.description?.trim() || null,
           estimated_minutes: Number(data.estimated_minutes) || 25,
           status: 'pending' as const,
-          due_date: data.due_date ? toUtcString(new Date(data.due_date)) : null,
+          due_date: initialDueDate,
           priority: Boolean(data.priority),
+          recurrence_type: isRecurring ? recurrenceType : null,
+          recurrence_days: isRecurring && recurrenceType === 'specific_days' ? recurrenceDays : null,
+          recurrence_interval: isRecurring && recurrenceType === 'interval' ? recurrenceInterval : null,
+          recurrence_end_date: isRecurring && recurrenceEndType === 'date' && recurrenceEndDate ? toUtcString(new Date(recurrenceEndDate)) : null,
+          recurrence_end_after: isRecurring && recurrenceEndType === 'after' ? recurrenceEndAfter : null,
+          recurrence_missed_behavior: isRecurring ? recurrenceMissedBehavior : null,
         })
       }
       
@@ -227,8 +202,8 @@ export default function NewTaskPage(props: { searchParams: Promise<{ projectId?:
       return result
     },
     onSuccess: async (item) => {
-      // Insert dependencies if any (only for non-template tasks)
-      if (item.item_type === 'task' && !item.is_recurring_template && pendingDeps.length > 0) {
+      // Insert dependencies if any
+      if (item.item_type === 'task' && pendingDeps.length > 0) {
         const supabase = createClient()
         await supabase
           .from('task_dependencies')

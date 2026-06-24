@@ -279,8 +279,7 @@ export default function SelectProjectsPage() {
       const activeTasks = tasks.filter(task => 
         task.project_id === project.id &&
         task.item_type === 'task' &&
-        !task.on_hold &&
-        task.status !== 'skipped'
+        !task.on_hold
       )
       const onHoldCount = tasks.filter(task =>
         task.project_id === project.id &&

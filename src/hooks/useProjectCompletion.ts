@@ -14,12 +14,11 @@ export const useProjectCompletion = (projectId: string): ProjectCompletion => {
 
   const completion = useMemo(() => {
     // Filter tasks that belong to this project and are actual tasks (not milestones)
-    // Exclude on_hold and skipped — they don't count toward progress
+    // Exclude on_hold — they don't count toward progress
     const activeTasks = tasks.filter(task => 
       task.project_id === projectId &&
       task.item_type === 'task' &&
-      !task.on_hold &&
-      task.status !== 'skipped'
+      !task.on_hold
     )
 
     const onHoldCount = tasks.filter(task =>

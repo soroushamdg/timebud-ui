@@ -25,7 +25,6 @@ export interface PlannedTask {
   chainPosition?: number;
   dependsOnTaskId?: string | null;
   isLocked?: boolean;
-  recurrence_parent_id?: string | null;
 }
 
 interface FocusSessionStore {

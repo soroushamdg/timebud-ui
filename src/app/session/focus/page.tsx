@@ -232,25 +232,6 @@ export default function FocusSession() {
         })
 
         await insertSessionTaskLogs(logs)
-
-        // Generate next occurrences for completed recurring tasks (log-first order)
-        const supabase2 = createClient()
-        const today2 = new Date().toISOString().split('T')[0]
-        for (const t of plannedTasksSnapshot) {
-          if (!t.recurrence_parent_id) continue
-          const taskLog = logs.find(l => l.task_id === t.taskId)
-          if (taskLog?.outcome !== 'completed') continue
-          const { data: existing } = await supabase2
-            .from('tasks')
-            .select('id')
-            .eq('recurrence_parent_id', t.recurrence_parent_id)
-            .in('status', ['pending', 'in_progress'])
-            .gte('recurrence_occurrence_date', today2)
-            .limit(1)
-          if (!existing || existing.length === 0) {
-            await supabase2.rpc('generate_next_occurrence', { p_template_id: t.recurrence_parent_id })
-          }
-        }
       } catch (error) {
         console.error('Failed to write session task logs:', error)
       }

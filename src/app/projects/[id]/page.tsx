@@ -22,7 +22,7 @@ import {
   StopCircle,
 } from "lucide-react";
 import { ChevronDoubleUpIcon } from "@heroicons/react/24/outline";
-import { useTasks, useUpdateTask, useCompleteTask } from "@/hooks/useTasks";
+import { useTasks, useUpdateTask } from "@/hooks/useTasks";
 import { useProject, useDeleteProject } from "@/hooks/useProjects";
 import { AvatarImage } from "@/components/ui/AvatarImage";
 import { ProjectAvatarPicker } from "@/components/avatars/ProjectAvatarPicker";
@@ -138,19 +138,13 @@ export default function ProjectOverviewPage({
   const [recurrenceTemplate, setRecurrenceTemplate] = useState<DbTask | null>(null);
   const [showStopRecurringConfirm, setShowStopRecurringConfirm] = useState(false);
 
-  // Fetch template when recurrence sheet opens
+  // When recurrence sheet opens, use the task itself (single-instance model)
   useEffect(() => {
-    if (!recurrenceSheetTask?.recurrence_parent_id) {
+    if (!recurrenceSheetTask?.recurrence_type) {
       setRecurrenceTemplate(null);
-      return;
+    } else {
+      setRecurrenceTemplate(recurrenceSheetTask);
     }
-    const supabase = createClient();
-    supabase
-      .from('tasks')
-      .select('*')
-      .eq('id', recurrenceSheetTask.recurrence_parent_id)
-      .single()
-      .then(({ data }) => setRecurrenceTemplate(data ?? null));
   }, [recurrenceSheetTask]);
 
   // Project edit state
@@ -313,7 +307,6 @@ export default function ProjectOverviewPage({
   const deleteProject = useDeleteProject();
   const [deletingMemoryId, setDeletingMemoryId] = useState<string | null>(null);
   const updateTask = useUpdateTask();
-  const completeTask = useCompleteTask();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showGantt, setShowGantt] = useState(false);
 
@@ -466,9 +459,9 @@ export default function ProjectOverviewPage({
     return task.item_type === "task"; // All tasks can be swiped, including completed ones
   }, []);
 
-  // Calculate progress — exclude milestones, on_hold, and skipped tasks
+  // Calculate progress — exclude milestones and on_hold tasks
   const activeTasks = tasks.filter(
-    (t) => t.item_type === "task" && !t.on_hold && t.status !== "skipped",
+    (t) => t.item_type === "task" && !t.on_hold,
   );
   const completedTaskCount = activeTasks.filter(
     (t) => t.status === "completed",
@@ -602,7 +595,7 @@ export default function ProjectOverviewPage({
             // Complete task - check if locked
             if (!isLocked(swipedTask)) {
               console.log('Completing task via swipe:', swipedTask.title);
-              await completeTask.mutateAsync(swipedTask);
+              await updateTask.mutateAsync({ id: swipedTask.id, status: 'completed' });
             } else {
               console.log('Task is locked, cannot complete:', swipedTask.title);
             }
@@ -623,7 +616,7 @@ export default function ProjectOverviewPage({
     setSwipedTask(null);
     setSwipeDirection(null);
     setSwipeDistance(0);
-  }, [swipedTask, swipeDirection, swipeDistance, updateTask, completeTask, queryClient, longPressTimer, isLocked]);
+  }, [swipedTask, swipeDirection, swipeDistance, updateTask, queryClient, longPressTimer, isLocked]);
 
   // Long-press handlers
   const handleLongPressAction = useCallback(async (action: 'complete' | 'priority' | 'delete', task: DbTask) => {
@@ -632,7 +625,7 @@ export default function ProjectOverviewPage({
     try {
       if (action === 'complete') {
         if (!isLocked(task)) {
-          await completeTask.mutateAsync(task);
+          await updateTask.mutateAsync({ id: task.id, status: 'completed' });
         }
       } else if (action === 'priority') {
         await updateTask.mutateAsync({
@@ -664,7 +657,7 @@ export default function ProjectOverviewPage({
   const handleCompleteTask = useCallback(
     async (task: DbTask) => {
       try {
-        await completeTask.mutateAsync(task);
+        await updateTask.mutateAsync({ id: task.id, status: 'completed' });
         setSwipedTask(null);
         setSwipeDirection(null);
         setSwipeDistance(0);
@@ -672,7 +665,7 @@ export default function ProjectOverviewPage({
         console.error("Failed to complete task:", error);
       }
     },
-    [completeTask],
+    [updateTask],
   );
 
   const handleTogglePriority = useCallback(
@@ -702,13 +695,13 @@ export default function ProjectOverviewPage({
         if (task.status === "completed") {
           await updateTask.mutateAsync({ id: task.id, status: "pending" });
         } else {
-          await completeTask.mutateAsync(task);
+          await updateTask.mutateAsync({ id: task.id, status: "completed" });
         }
       } catch (error) {
         console.error("Failed to toggle task status:", error);
       }
     },
-    [isLocked, updateTask, completeTask],
+    [isLocked, updateTask],
   );
 
   const handleTaskMenuToggle = useCallback(
@@ -1366,7 +1359,7 @@ export default function ProjectOverviewPage({
                 >
                   {item.title}
                 </h3>
-                {item.recurrence_parent_id && (
+                {item.recurrence_type && (
                   <button
                     type="button"
                     onClick={(e) => { e.stopPropagation(); setRecurrenceSheetTask(item); }}
@@ -2547,11 +2540,10 @@ export default function ProjectOverviewPage({
 
         const handleStopRecurring = async () => {
           const supabase = createClient();
-          const today = new Date().toISOString().split('T')[0];
           await supabase
             .from('tasks')
-            .update({ recurrence_end_date: today })
-            .eq('id', recurrenceSheetTask.recurrence_parent_id!);
+            .update({ recurrence_type: null, recurrence_days: null, recurrence_interval: null, recurrence_end_date: null, recurrence_end_after: null, recurrence_missed_behavior: null })
+            .eq('id', recurrenceSheetTask.id);
           queryClient.invalidateQueries({ queryKey: ['tasks'] });
           setShowStopRecurringConfirm(false);
           setRecurrenceSheetTask(null);

@@ -30,7 +30,6 @@ import { AvatarImage } from '@/components/ui/AvatarImage'
 import { useCurrentUser } from '@/hooks/useAuth'
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
-import { useOccurrenceManager } from '@/hooks/useRecurring'
 
 interface PlannedTask {
   taskId: string;
@@ -53,13 +52,11 @@ interface PlannedTask {
   chainPosition?: number;
   dependsOnTaskId?: string | null;
   isLocked?: boolean;
-  recurrence_parent_id?: string | null;
 }
 
 export default function Home() {
   console.log('[Home] Component mounting')
   const router = useRouter();
-  useOccurrenceManager();
   const { data: user, isLoading: userLoading, error: userError } = useCurrentUser();
   console.log('[Home] User query state:', { user: user?.id, isLoading: userLoading, error: userError, fullUser: user })
   
@@ -141,8 +138,7 @@ export default function Home() {
       const activeTasks = tasks.filter(task => 
         task.project_id === project.id &&
         task.item_type === 'task' &&
-        !task.on_hold &&
-        task.status !== 'skipped'
+        !task.on_hold
       )
       const onHoldCount = tasks.filter(task =>
         task.project_id === project.id &&
@@ -353,7 +349,6 @@ export default function Home() {
               chainPosition: task.chainPosition,
               dependsOnTaskId: task.dependsOnTaskId,
               isLocked: task.isLocked,
-              recurrence_parent_id: dbTask?.recurrence_parent_id ?? null,
             };
           });
       }
@@ -377,7 +372,6 @@ export default function Home() {
           description: task.description || undefined,
           isPinned: true,
           isManual: false,
-          recurrence_parent_id: task.recurrence_parent_id ?? null,
         };
       });
 
@@ -400,7 +394,6 @@ export default function Home() {
           description: task.description || undefined,
           isPinned: false,
           isManual: true,
-          recurrence_parent_id: task.recurrence_parent_id ?? null,
         };
       });
 
@@ -444,7 +437,6 @@ export default function Home() {
           chainPosition: t.chainPosition,
           dependsOnTaskId: t.dependsOnTaskId,
           isLocked: t.isLocked,
-          recurrence_parent_id: t.recurrence_parent_id ?? null,
         })) as any,
         preferredBudgetMinutes,
       );

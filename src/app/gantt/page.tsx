@@ -14,7 +14,7 @@ export default function GanttPage() {
 
   const isLoading = projectsLoading || tasksLoading
 
-  const tasks = allTasks.filter(t => !t.is_recurring_template)
+  const tasks = allTasks
 
   return (
     <AppShell>
