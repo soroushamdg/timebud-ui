@@ -102,7 +102,7 @@ export const TOOL_SCHEMAS = {
   bulk_create_tasks: {
     name: "bulk_create_tasks",
     description:
-      "Create multiple tasks at once. Supports setting dependencies between tasks using either dependsOnTaskIndex (for tasks in the same batch, 0-based index) or dependsOnTaskId (UUID of an existing task). Use dependsOnTaskIndex when creating task chains (e.g., task 2 depends on task 1).",
+      "Create multiple tasks at once. Supports setting dependencies between tasks using dependsOnTaskIndex (single, 0-based index in same batch) or dependsOnTaskIndices (array of indices, for multi-dep within batch). Use dependsOnTaskId (single UUID) or dependsOnTaskIds (array of UUIDs) for existing tasks. Example: task C depends on A(index 0) and B(index 1) → dependsOnTaskIndices: [0, 1].",
     inputSchema: {
       type: "object",
       properties: {
@@ -127,12 +127,24 @@ export const TOOL_SCHEMAS = {
               dependsOnTaskIndex: {
                 type: "number",
                 description:
-                  "0-based index of a task in this same array that this task depends on",
+                  "0-based index of a single task in this same array that this task depends on",
+              },
+              dependsOnTaskIndices: {
+                type: "array",
+                items: { type: "number" },
+                description:
+                  "0-based indices of multiple tasks in this same array that this task depends on (use for multi-dependency within the batch)",
               },
               dependsOnTaskId: {
                 type: "string",
                 description:
-                  "UUID of an existing task that this task depends on",
+                  "UUID of a single existing task that this task depends on",
+              },
+              dependsOnTaskIds: {
+                type: "array",
+                items: { type: "string" },
+                description:
+                  "UUIDs of multiple existing tasks that this task depends on (use for multi-dependency on pre-existing tasks)",
               },
             },
             required: ["title"],
@@ -290,7 +302,7 @@ export const TOOL_SCHEMAS = {
 
   set_task_dependency: {
     name: "set_task_dependency",
-    description: "Set or clear task dependency",
+    description: "Set or replace ALL dependencies for a task. Deletes existing deps and inserts new ones. Use dependsOnTaskIds (array) for 2+ dependencies. Pass neither field to clear all dependencies.",
     inputSchema: {
       type: "object",
       properties: {
@@ -300,7 +312,12 @@ export const TOOL_SCHEMAS = {
         },
         dependsOnTaskId: {
           type: "string",
-          description: "The ID of the task this depends on (null to clear)",
+          description: "The ID of a single task this depends on (use dependsOnTaskIds for multiple)",
+        },
+        dependsOnTaskIds: {
+          type: "array",
+          items: { type: "string" },
+          description: "Array of task IDs this task depends on. Replaces all existing dependencies. Use this when a task has 2+ dependencies.",
         },
       },
       required: ["taskId"],

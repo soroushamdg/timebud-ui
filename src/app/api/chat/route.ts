@@ -93,6 +93,7 @@ export async function POST(request: NextRequest) {
     const maxIterations = 4
     let creditsDeducted = 0
     let creditDeductionResult: any = null
+    let postCreationPass = false
 
     while (iterations < maxIterations) {
       iterations++
@@ -304,6 +305,7 @@ export async function POST(request: NextRequest) {
         // Execute tools without confirmation
         const serviceSupabase = createServiceClient()
         const toolsExecuted: Array<{ tool: string; success: boolean; summary: string }> = []
+        const createdTasksContext: Array<{ title: string; id: string }> = []
 
         for (const tool of aiResponse.tools || []) {
           const result = await executeTool(
@@ -317,6 +319,20 @@ export async function POST(request: NextRequest) {
             success: result.success,
             summary: result.summary,
           })
+
+          // Collect created task IDs for the post-creation dependency pass
+          if (result.success && (tool.name === 'bulk_create_tasks' || tool.name === 'create_task')) {
+            const taskData = result.data
+            if (Array.isArray(taskData)) {
+              createdTasksContext.push(
+                ...taskData
+                  .filter((t: any) => t.id && t.title)
+                  .map((t: any) => ({ title: t.title, id: t.id }))
+              )
+            } else if (taskData?.id && taskData?.title) {
+              createdTasksContext.push({ title: taskData.title, id: taskData.id })
+            }
+          }
         }
 
         // Check if any tools failed
@@ -338,6 +354,27 @@ export async function POST(request: NextRequest) {
               purchased_remaining: creditDeductionResult.balance?.purchased_credits || 0,
             } : undefined,
           } as ChatAPIResponse, { status: 200 })
+        }
+
+        // Post-creation dependency pass: if tasks were just created and we haven't done
+        // this pass yet, inject the real IDs so the AI can call set_task_dependency.
+        if (createdTasksContext.length > 0 && !postCreationPass && iterations <= 2) {
+          postCreationPass = true
+
+          const idList = createdTasksContext
+            .map(t => `"${t.title}" → ${t.id}`)
+            .join('\n')
+
+          conversationHistory.push({
+            role: 'assistant',
+            content: JSON.stringify({ action: 'execute_tools', message: aiResponse.message, tools: aiResponse.tools }),
+          })
+          conversationHistory.push({
+            role: 'user',
+            content: `Tasks were just created. Here are their real IDs — use set_task_dependency now if any cross-task dependencies are needed:\n${idList}`,
+          })
+
+          continue
         }
 
         return NextResponse.json({

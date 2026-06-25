@@ -209,23 +209,41 @@ async function bulkCreateTasks(
   let dependencyCount = 0
   for (let i = 0; i < tasks.length; i++) {
     const task = tasks[i]
-    
+
     if (task.dependsOnTaskIndex !== undefined && task.dependsOnTaskIndex !== null) {
       const depIndex = task.dependsOnTaskIndex
-      
+
       // Validate index is within bounds
       if (depIndex < 0 || depIndex >= tasks.length) {
         throw new Error(`Task "${task.title}" has invalid dependsOnTaskIndex: ${depIndex}. Must be between 0 and ${tasks.length - 1}`)
       }
-      
+
       // Prevent self-reference
       if (depIndex === i) {
         throw new Error(`Task "${task.title}" cannot depend on itself`)
       }
-      
+
       dependencyCount++
-    } else if (task.dependsOnTaskId) {
+    }
+
+    if (Array.isArray(task.dependsOnTaskIndices)) {
+      for (const depIndex of task.dependsOnTaskIndices) {
+        if (depIndex < 0 || depIndex >= tasks.length) {
+          throw new Error(`Task "${task.title}" has invalid dependsOnTaskIndices entry: ${depIndex}. Must be between 0 and ${tasks.length - 1}`)
+        }
+        if (depIndex === i) {
+          throw new Error(`Task "${task.title}" cannot depend on itself`)
+        }
+        dependencyCount++
+      }
+    }
+
+    if (task.dependsOnTaskId) {
       dependencyCount++
+    }
+
+    if (Array.isArray(task.dependsOnTaskIds)) {
+      dependencyCount += task.dependsOnTaskIds.length
     }
   }
 
@@ -264,20 +282,32 @@ async function bulkCreateTasks(
   const dependenciesToInsert = []
   for (let i = 0; i < tasks.length; i++) {
     const task = tasks[i]
-    let dependsOnTask = null
-    
+    const depIds: string[] = []
+
+    // Collect from singular UUID field
     if (task.dependsOnTaskId) {
-      // Direct UUID reference takes precedence
-      dependsOnTask = task.dependsOnTaskId
-    } else if (task.dependsOnTaskIndex !== undefined && task.dependsOnTaskIndex !== null) {
-      // Resolve index to UUID
-      dependsOnTask = taskIds[task.dependsOnTaskIndex]
+      depIds.push(task.dependsOnTaskId)
     }
-    
-    if (dependsOnTask) {
+    // Collect from plural UUID array field
+    if (Array.isArray(task.dependsOnTaskIds)) {
+      depIds.push(...task.dependsOnTaskIds)
+    }
+    // Collect from singular index field
+    if (task.dependsOnTaskIndex !== undefined && task.dependsOnTaskIndex !== null) {
+      depIds.push(taskIds[task.dependsOnTaskIndex])
+    }
+    // Collect from plural index array field
+    if (Array.isArray(task.dependsOnTaskIndices)) {
+      for (const idx of task.dependsOnTaskIndices) {
+        depIds.push(taskIds[idx])
+      }
+    }
+
+    // Deduplicate and insert a row per dependency
+    for (const depId of [...new Set(depIds)]) {
       dependenciesToInsert.push({
         task_id: taskIds[i],
-        depends_on_id: dependsOnTask,
+        depends_on_id: depId,
       })
     }
   }
@@ -553,7 +583,13 @@ async function setTaskDependency(
   supabase: SupabaseClient,
   userId: string
 ): Promise<ToolExecutionResult> {
-  const { taskId, dependsOnTaskId } = input
+  const { taskId, dependsOnTaskId, dependsOnTaskIds } = input
+
+  // Normalize: merge singular and plural into one deduplicated array
+  const resolvedIds: string[] = []
+  if (dependsOnTaskId) resolvedIds.push(dependsOnTaskId)
+  if (Array.isArray(dependsOnTaskIds)) resolvedIds.push(...dependsOnTaskIds)
+  const uniqueIds = [...new Set(resolvedIds)]
 
   // Verify task belongs to user
   const { data: task, error: taskError } = await supabase
@@ -565,39 +601,31 @@ async function setTaskDependency(
 
   if (taskError) throw taskError
 
-  if (dependsOnTaskId) {
-    // Set dependency - first delete existing, then insert new
-    await supabase
-      .from('task_dependencies')
-      .delete()
-      .eq('task_id', taskId)
+  // Always delete all existing deps first
+  await supabase
+    .from('task_dependencies')
+    .delete()
+    .eq('task_id', taskId)
 
+  if (uniqueIds.length > 0) {
     const { error: insertError } = await supabase
       .from('task_dependencies')
-      .insert({
+      .insert(uniqueIds.map(depId => ({
         task_id: taskId,
-        depends_on_id: dependsOnTaskId,
-      })
+        depends_on_id: depId,
+      })))
 
     if (insertError) throw insertError
 
     return {
       success: true,
-      summary: `Set dependency for: ${task.title}`,
+      summary: `Set ${uniqueIds.length} ${uniqueIds.length === 1 ? 'dependency' : 'dependencies'} for: ${task.title}`,
       data: task,
     }
   } else {
-    // Clear dependency
-    const { error: deleteError } = await supabase
-      .from('task_dependencies')
-      .delete()
-      .eq('task_id', taskId)
-
-    if (deleteError) throw deleteError
-
     return {
       success: true,
-      summary: `Cleared dependency for: ${task.title}`,
+      summary: `Cleared all dependencies for: ${task.title}`,
       data: task,
     }
   }

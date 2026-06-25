@@ -154,8 +154,13 @@ AVAILABLE TOOLS:
 - edit_task(taskId, updates)
 - delete_task(taskId) - REQUIRES CONFIRMATION
 - bulk_create_tasks(projectId, tasks[])
-  * Each task: {title, description?, estimatedMinutes?, dueDate?, priority: boolean}
+  * Each task: {title, description?, estimatedMinutes?, dueDate?, priority: boolean,
+      dependsOnTaskIndex?: number,      // single in-batch dep (0-based index)
+      dependsOnTaskIndices?: number[],  // MULTI in-batch deps e.g. [0, 1] if C depends on A and B
+      dependsOnTaskId?: string,         // single existing-task dep (UUID)
+      dependsOnTaskIds?: string[]}      // MULTI existing-task deps (array of UUIDs)
   * priority: boolean (true = high priority, false = normal)
+  * Use dependsOnTaskIndices when a task depends on 2+ other tasks in the SAME batch
 - create_milestone(projectId, title, dueDate?, priority?)
   * priority: boolean (true = high priority, false = normal)
 - edit_milestone(milestoneId, updates)
@@ -166,7 +171,9 @@ AVAILABLE TOOLS:
 - add_memory(projectId, content)
 - remove_memory(memoryId) - REQUIRES CONFIRMATION
 - mark_task_complete(taskId)
-- set_task_dependency(taskId, dependsOnTaskId?)
+- set_task_dependency(taskId, dependsOnTaskId?, dependsOnTaskIds?: string[])
+  * REPLACES all existing deps — use dependsOnTaskIds: ["uuid1","uuid2"] for 2+ deps
+  * Pass neither field to clear all dependencies
 
 BEHAVIORAL RULES:
 1. NEVER answer questions about specific projects without loading their context first
@@ -249,3 +256,12 @@ AI AGENT RULES:
     - Milestones have "dueDate" (checkpoint dates) - use edit_milestone
     - When user says "project deadline", use edit_project(projectId, {deadline: "..."})
     - When user says "milestone due date", use edit_milestone(milestoneId, {dueDate: "..."})
+
+23. DEPENDENCY WORKFLOW:
+    - Tasks in same batch depend on each other → use dependsOnTaskIndices: [0, 1] in bulk_create_tasks
+      Example: "C depends on A and B" where A=index 0, B=index 1 → task C gets dependsOnTaskIndices: [0, 1]
+    - Task depends on existing tasks (UUIDs in context) → use dependsOnTaskIds in bulk_create_tasks
+    - After creating new tasks, you will receive a message:
+      "Tasks were just created. Here are their real IDs — use set_task_dependency..."
+      → Call set_task_dependency with dependsOnTaskIds: ["uuid1", "uuid2"] using those exact IDs
+    - NEVER guess or invent UUIDs. Only use IDs from loaded context or the post-creation message.
