@@ -1,25 +1,41 @@
-import { createClient } from '@/lib/supabase/server'
+import { createServerClient } from '@supabase/ssr'
 import { NextRequest, NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
-  
+
   if (code) {
-    const supabase = await createClient()
+    // Build the redirect response first so cookies are set directly on it,
+    // preserving all original Supabase cookie attributes (maxAge, expires, etc.)
+    const response = NextResponse.redirect(`${origin}/`)
+
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll: () => request.cookies.getAll(),
+          setAll: (cookiesToSet) => {
+            cookiesToSet.forEach(({ name, value, options }) => {
+              response.cookies.set(name, value, options)
+            })
+          },
+        },
+      }
+    )
+
     const { error } = await supabase.auth.exchangeCodeForSession(code)
-    
+
     if (!error) {
-      // Ensure user is created in database after OAuth callback
       try {
-        const userResponse = await fetch(`${origin}/api/auth/create-user`, { 
+        const userResponse = await fetch(`${origin}/api/auth/create-user`, {
           method: 'POST',
           headers: {
             'Cookie': request.headers.get('Cookie') || ''
           }
         })
-        
+
         if (userResponse.ok) {
           const result = await userResponse.json()
           console.log('OAuth callback user creation:', result.created ? 'success' : 'already exists')
@@ -29,30 +45,12 @@ export async function GET(request: NextRequest) {
       } catch (createError) {
         console.error('Failed to create user after OAuth callback:', createError)
       }
-      
-      // Get all cookies that were set during the auth exchange
-      const cookieStore = await cookies()
-      const allCookies = cookieStore.getAll()
-      
-      // Create redirect response and copy all cookies
-      const redirectUrl = `${origin}/`
-      const response = NextResponse.redirect(redirectUrl)
-      
-      // Copy all cookies to the response
-      allCookies.forEach(cookie => {
-        response.cookies.set(cookie.name, cookie.value, {
-          // Ensure cookies are properly set for the redirect
-          sameSite: 'lax',
-          secure: process.env.NODE_ENV === 'production',
-          httpOnly: true,
-          path: '/',
-        })
-      })
-      
+
       return response
     }
+
+    console.error('OAuth code exchange failed:', error.message)
   }
-  
-  // Return the user to an error page with some context
+
   return NextResponse.redirect(`${origin}/auth/auth-code-error`)
 }
