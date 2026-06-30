@@ -207,11 +207,10 @@ function CreditsContent() {
                     </div>
                   </div>
                   <button
-                    onClick={() => handleBuyPack(pack.priceId, false)}
-                    disabled={buyingPriceId === pack.priceId}
-                    className="w-full bg-accent-yellow text-black font-semibold py-3 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
+                    disabled={true}
+                    className="w-full bg-accent-yellow text-black font-semibold py-3 rounded-lg opacity-50 cursor-not-allowed"
                   >
-                    {buyingPriceId === pack.priceId ? 'Processing...' : 'Buy Now'}
+                    Coming Soon
                   </button>
                 </div>
               ))}
@@ -274,11 +273,10 @@ function CreditsContent() {
                   </li>
                 </ul>
                 <button
-                  onClick={() => handleBuyPack(proPack.priceId, true)}
-                  disabled={buyingPriceId === proPack.priceId}
-                  className="w-full bg-accent-yellow text-black font-semibold py-3 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
+                  disabled={true}
+                  className="w-full bg-accent-yellow text-black font-semibold py-3 rounded-lg opacity-50 cursor-not-allowed"
                 >
-                  {buyingPriceId === proPack.priceId ? 'Processing...' : 'Upgrade to Pro'}
+                  Coming Soon
                 </button>
               </div>
             )}
