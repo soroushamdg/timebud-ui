@@ -2,7 +2,7 @@ import { useState } from "react";
 import { AvatarImage } from "@/components/ui/AvatarImage";
 import { PlannedTask } from "@/stores/sessionStore";
 import { CalendarIcon, LockClosedIcon } from "@heroicons/react/24/outline";
-import { formatLocalSmart } from "@/lib/dates";
+import { formatLocalSmart, parseDateLocal } from "@/lib/dates";
 
 interface FocusTaskCardProps {
   task: PlannedTask;
@@ -85,8 +85,7 @@ export function FocusTaskCard({
     if (!deadline) return false;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const dueDate = new Date(deadline);
-    dueDate.setHours(0, 0, 0, 0);
+    const dueDate = parseDateLocal(deadline);
     return dueDate < today;
   };
 
@@ -94,8 +93,7 @@ export function FocusTaskCard({
     if (!deadline) return false;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const dueDate = new Date(deadline);
-    dueDate.setHours(0, 0, 0, 0);
+    const dueDate = parseDateLocal(deadline);
     return dueDate.getTime() === today.getTime();
   };
 

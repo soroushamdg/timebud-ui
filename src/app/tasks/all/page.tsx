@@ -8,7 +8,7 @@ import { TaskCardSkeleton } from "@/components/tasks/TaskCardSkeleton";
 import { useTasks, useUpdateTask, useDeleteTask } from "@/hooks/useTasks";
 import { useProjects } from "@/hooks/useProjects";
 import { getDiceBearUrl } from "@/lib/utils";
-import { formatLocalSmart } from "@/lib/dates";
+import { formatLocalSmart, parseDateLocal } from "@/lib/dates";
 import { DbTask, TaskStatus } from "@/types/database";
 import { ArrowUpDown, Plus, X, ChevronLeft } from "lucide-react";
 import { FilterDialog } from "./components/FilterDialog";
@@ -149,23 +149,23 @@ export default function AllTasksPage() {
           const thisMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
           
           if (filter.value === 'overdue') {
-            filtered = filtered.filter(task => task.due_date && new Date(task.due_date) < today);
+            filtered = filtered.filter(task => task.due_date && parseDateLocal(task.due_date) < today);
           } else if (filter.value === 'today') {
             filtered = filtered.filter(task => {
               if (!task.due_date) return false;
-              const dueDate = new Date(task.due_date);
+              const dueDate = parseDateLocal(task.due_date);
               return dueDate >= today && dueDate < new Date(today.getTime() + 24 * 60 * 60 * 1000);
             });
           } else if (filter.value === 'this_week') {
             filtered = filtered.filter(task => {
               if (!task.due_date) return false;
-              const dueDate = new Date(task.due_date);
+              const dueDate = parseDateLocal(task.due_date);
               return dueDate >= today && dueDate < thisWeek;
             });
           } else if (filter.value === 'this_month') {
             filtered = filtered.filter(task => {
               if (!task.due_date) return false;
-              const dueDate = new Date(task.due_date);
+              const dueDate = parseDateLocal(task.due_date);
               return dueDate >= today && dueDate < thisMonth;
             });
           } else if (filter.value === 'no_deadline') {

@@ -6,7 +6,6 @@ import { ChevronLeft, Check, Camera, Upload } from 'lucide-react'
 import { ChevronDoubleUpIcon } from '@heroicons/react/24/outline'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
-import { toUtcString } from '@/lib/dates'
 import { AvatarImage } from '@/components/ui/AvatarImage'
 import { ImageCropDialog } from '@/components/avatars/ImageCropDialog'
 import { LegoTransformSheet } from '@/components/avatars/LegoTransformSheet'
@@ -77,7 +76,7 @@ export default function NewProjectPage() {
         id: previewId,
         name: data.name,
         description: data.description || null,
-        deadline: data.deadline ? toUtcString(new Date(data.deadline)) : null,
+        deadline: data.deadline || null,
         priority: data.priority,
         color: selectedColor,
         project_avatar_url: selectedAvatarUrl,

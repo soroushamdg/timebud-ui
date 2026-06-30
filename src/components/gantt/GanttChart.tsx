@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { BarChart2, List, Lock, Clock } from 'lucide-react'
 import { DbTask, DbProject } from '@/types/database'
+import { parseDateLocal } from '@/lib/dates'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const DAY_WIDTH = 32
@@ -48,15 +49,15 @@ function getBarBounds(
   chartStart: Date,
   chartEnd: Date,
 ): { startX: number; width: number; openEnd: boolean } {
-  const endDate = task.due_date ? sod(new Date(task.due_date)) : chartEnd
+  const endDate = task.due_date ? sod(parseDateLocal(task.due_date)) : chartEnd
   const openEnd = !task.due_date
 
   let startDate: Date
   if (task.due_date && task.estimated_minutes) {
     const durDays = Math.max(0.5, task.estimated_minutes / 1440)
-    startDate = addDays(new Date(task.due_date), -Math.ceil(durDays))
+    startDate = addDays(parseDateLocal(task.due_date), -Math.ceil(durDays))
   } else if (task.due_date) {
-    startDate = addDays(new Date(task.due_date), -1)
+    startDate = addDays(parseDateLocal(task.due_date), -1)
   } else {
     startDate = sod(new Date(task.created_at))
   }
@@ -75,7 +76,7 @@ function getBarBounds(
 
 function getMilestoneX(task: DbTask, chartStart: Date): number | null {
   if (!task.due_date) return null
-  const dx = diffDays(new Date(task.due_date), chartStart)
+  const dx = diffDays(parseDateLocal(task.due_date), chartStart)
   if (dx < 0 || dx > TOTAL_DAYS) return null
   return dx * DAY_WIDTH + DAY_WIDTH / 2
 }
@@ -303,7 +304,7 @@ function TimelineView({ tasks, projects }: GanttChartProps) {
         >
           <p className="text-white font-semibold mb-1 leading-snug">{popover.task.title}</p>
           {popover.projName && <p className="text-text-sec mb-0.5">{popover.projName}</p>}
-          {popover.task.due_date && <p className="text-text-sec mb-0.5">Due: {fmtFull(new Date(popover.task.due_date))}</p>}
+          {popover.task.due_date && <p className="text-text-sec mb-0.5">Due: {fmtFull(parseDateLocal(popover.task.due_date))}</p>}
           {popover.task.estimated_minutes != null && (
             <p className="text-text-sec mb-0.5">Est: {fmtMins(popover.task.estimated_minutes)}</p>
           )}
@@ -322,13 +323,13 @@ function ListView({ tasks, projects }: GanttChartProps) {
   const projectMap = new Map(projects.map(p => [p.id, p]))
   const visible = tasks
   const withDue = [...visible.filter(t => t.due_date)].sort(
-    (a, b) => new Date(a.due_date!).getTime() - new Date(b.due_date!).getTime(),
+    (a, b) => parseDateLocal(a.due_date!).getTime() - parseDateLocal(b.due_date!).getTime(),
   )
   const noDue = visible.filter(t => !t.due_date)
 
   const weekGroups = new Map<string, DbTask[]>()
   for (const t of withDue) {
-    const k = weekMondayKey(new Date(t.due_date!))
+    const k = weekMondayKey(parseDateLocal(t.due_date!))
     if (!weekGroups.has(k)) weekGroups.set(k, [])
     weekGroups.get(k)!.push(t)
   }
@@ -361,7 +362,7 @@ function ListView({ tasks, projects }: GanttChartProps) {
           </span>
         )}
         {task.due_date && (
-          <span className="text-text-sec text-[11px] flex-shrink-0">{fmtShort(new Date(task.due_date))}</span>
+          <span className="text-text-sec text-[11px] flex-shrink-0">{fmtShort(parseDateLocal(task.due_date))}</span>
         )}
         {task.estimated_minutes != null && task.estimated_minutes > 0 && (
           <span className="bg-bg-card border border-border-card text-text-sec text-[10px] px-1.5 py-0.5 rounded flex-shrink-0">

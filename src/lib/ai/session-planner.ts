@@ -3,6 +3,7 @@ import { planSession, PlannerTask } from '@/lib/planner'
 import { SessionPlan } from '@/types/ai'
 import { deductCreditsForAction } from '@/lib/credits/deduct'
 import { createServiceClient } from '@/lib/supabase/server'
+import { parseDateLocal } from '@/lib/dates'
 
 export interface PlanSessionOptions {
   budgetMinutes: number
@@ -128,7 +129,8 @@ export async function planSessionFromAI(
       if (plannedTask.partial) {
         reasoning = `Partial completion (${plannedTask.carryOverMinutes}min remaining for later)`
       } else if (task?.due_date) {
-        const daysUntil = Math.floor((new Date(task.due_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+        const todayLocal = new Date(); todayLocal.setHours(0, 0, 0, 0)
+        const daysUntil = Math.round((parseDateLocal(task.due_date).getTime() - todayLocal.getTime()) / (1000 * 60 * 60 * 24))
         if (daysUntil < 0) {
           reasoning = `Overdue by ${Math.abs(daysUntil)} days`
         } else if (daysUntil === 0) {

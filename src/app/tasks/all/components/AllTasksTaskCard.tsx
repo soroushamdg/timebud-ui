@@ -3,7 +3,7 @@
 import { useState, useCallback } from "react";
 import { AvatarImage } from '@/components/ui/AvatarImage';
 import { ChevronDoubleUpIcon, CalendarIcon } from '@heroicons/react/24/outline';
-import { formatLocalSmart } from '@/lib/dates';
+import { formatLocalSmart, parseDateLocal } from '@/lib/dates';
 import { Check, X, MoreVertical, Trash2, Edit } from 'lucide-react';
 import { DbTask } from '@/types/database';
 
@@ -92,8 +92,7 @@ export function AllTasksTaskCard({
     if (!deadline) return false;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const dueDate = new Date(deadline);
-    dueDate.setHours(0, 0, 0, 0);
+    const dueDate = parseDateLocal(deadline);
     return dueDate < today;
   };
 
@@ -101,8 +100,7 @@ export function AllTasksTaskCard({
     if (!deadline) return false;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const dueDate = new Date(deadline);
-    dueDate.setHours(0, 0, 0, 0);
+    const dueDate = parseDateLocal(deadline);
     return dueDate.getTime() === today.getTime();
   };
 

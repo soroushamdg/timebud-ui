@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { X, Plus, Calendar, Clock } from 'lucide-react'
 import { ChevronDoubleUpIcon } from '@heroicons/react/24/outline'
 import { AvatarImage } from '@/components/ui/AvatarImage'
-import { formatLocalSmart } from '@/lib/dates'
+import { formatLocalSmart, parseDateLocal } from '@/lib/dates'
 import { DbTask } from '@/types/database'
 import { useUIStore } from '@/stores/uiStore'
 
@@ -67,8 +67,7 @@ export function AddTaskToPlannerDialog({
     if (!deadline) return false
     const today = new Date()
     today.setHours(0, 0, 0, 0)
-    const dueDate = new Date(deadline)
-    dueDate.setHours(0, 0, 0, 0)
+    const dueDate = parseDateLocal(deadline)
     return dueDate < today
   }
 

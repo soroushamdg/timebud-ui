@@ -1,13 +1,25 @@
-import { format, parseISO } from 'date-fns'
+import { format } from 'date-fns'
 export const toUtcString  = (d: Date) => d.toISOString()
-export const formatLocal  = (s: string, fmt = 'MMM d, yyyy') => format(parseISO(s), fmt)
-export const formatLocalTime = (s: string) => format(parseISO(s), 'h:mm a')
+export const formatLocalTime = (s: string) => {
+  const d = new Date(s)
+  return format(d, 'h:mm a')
+}
+
+// Always parse a date string as a local calendar date, regardless of time/timezone component.
+// This prevents "2026-06-30T00:00:00Z" from displaying as Jun 29 in UTC-4 timezones.
+export const parseDateLocal = (s: string): Date => {
+  const datePart = s.split('T')[0]
+  const [year, month, day] = datePart.split('-').map(Number)
+  return new Date(year, month - 1, day)
+}
+
+export const formatLocal  = (s: string, fmt = 'MMM d, yyyy') => format(parseDateLocal(s), fmt)
 
 export const formatLocalSmart = (s: string) => {
-  const date = parseISO(s)
+  const date = parseDateLocal(s)
   const currentYear = new Date().getFullYear()
   const dateYear = date.getFullYear()
-  
+
   if (dateYear === currentYear) {
     return format(date, 'MMM d')
   } else {

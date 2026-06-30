@@ -10,6 +10,7 @@ import { useUpdateFocusSession, useDeleteFocusSession } from '@/hooks/useSession
 import { planSession } from '@/lib/planner'
 import { createClient } from '@/lib/supabase/client'
 import { isValidUuid } from '@/lib/utils'
+import { parseDateLocal } from '@/lib/dates'
 import { ProjectCardSkeleton } from '@/components/ui/Skeleton'
 import { AutoSizeText } from '@/components/ui/AutoSizeText'
 import { AvatarImage } from '@/components/ui/AvatarImage'
@@ -319,7 +320,7 @@ export default function SelectProjectsPage() {
       if (!a.deadline && !b.deadline) return 0
       if (!a.deadline) return 1
       if (!b.deadline) return -1
-      return new Date(a.deadline).getTime() - new Date(b.deadline).getTime()
+      return parseDateLocal(a.deadline).getTime() - parseDateLocal(b.deadline).getTime()
     }
 
     const sortByAlphabet = (a: ProjectWithCompletion, b: ProjectWithCompletion) => {

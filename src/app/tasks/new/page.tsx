@@ -8,7 +8,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { useProjectsForTasks } from '@/hooks/useProjects'
 import { useTasks } from '@/hooks/useTasks'
-import { toUtcString, calculateNextDueDate } from '@/lib/dates'
+import { calculateNextDueDate, parseDateLocal } from '@/lib/dates'
 import { DbProject } from '@/types/database'
 
 const PRIORITY_OPTIONS = [
@@ -150,13 +150,13 @@ export default function NewTaskPage(props: { searchParams: Promise<{ projectId?:
           description: null,
           estimated_minutes: null,
           status: null,
-          due_date: data.due_date ? toUtcString(new Date(data.due_date)) : null,
+          due_date: data.due_date || null,
           priority: false,
         })
       } else {
         // Task-specific fields
         const isRecurring = data.recurring;
-        let initialDueDate = data.due_date ? toUtcString(new Date(data.due_date)) : null;
+        let initialDueDate = data.due_date || null;
         
         // For recurring tasks without a due_date, set it to today
         if (isRecurring && !initialDueDate) {
@@ -172,7 +172,7 @@ export default function NewTaskPage(props: { searchParams: Promise<{ projectId?:
           recurrence_type: isRecurring ? recurrenceType : null,
           recurrence_days: isRecurring && recurrenceType === 'specific_days' ? recurrenceDays : null,
           recurrence_interval: isRecurring && recurrenceType === 'interval' ? recurrenceInterval : null,
-          recurrence_end_date: isRecurring && recurrenceEndType === 'date' && recurrenceEndDate ? toUtcString(new Date(recurrenceEndDate)) : null,
+          recurrence_end_date: isRecurring && recurrenceEndType === 'date' && recurrenceEndDate ? recurrenceEndDate : null,
           recurrence_end_after: isRecurring && recurrenceEndType === 'after' ? recurrenceEndAfter : null,
           recurrence_missed_behavior: isRecurring ? recurrenceMissedBehavior : null,
         })
@@ -265,11 +265,11 @@ export default function NewTaskPage(props: { searchParams: Promise<{ projectId?:
     if (formData.project_id && formData.due_date) {
       const selectedProject = projects.find(p => p.id === formData.project_id)
       if (selectedProject && selectedProject.deadline) {
-        const taskDeadline = new Date(formData.due_date)
-        const projectDeadline = new Date(selectedProject.deadline)
-        
+        const taskDeadline = parseDateLocal(formData.due_date)
+        const projectDeadline = parseDateLocal(selectedProject.deadline)
+
         if (taskDeadline > projectDeadline) {
-          setDeadlineError(`${itemType === 'milestone' ? 'Milestone' : 'Task'} deadline cannot be after project deadline (${new Date(selectedProject.deadline).toLocaleDateString()})`)
+          setDeadlineError(`${itemType === 'milestone' ? 'Milestone' : 'Task'} deadline cannot be after project deadline (${parseDateLocal(selectedProject.deadline).toLocaleDateString()})`)
           return
         }
       }

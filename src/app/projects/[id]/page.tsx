@@ -26,7 +26,7 @@ import { useTasks, useUpdateTask } from "@/hooks/useTasks";
 import { useProject, useDeleteProject } from "@/hooks/useProjects";
 import { AvatarImage } from "@/components/ui/AvatarImage";
 import { ProjectAvatarPicker } from "@/components/avatars/ProjectAvatarPicker";
-import { formatLocal, formatLocalSmart } from "@/lib/dates";
+import { formatLocal, formatLocalSmart, parseDateLocal } from "@/lib/dates";
 import { DbTask, TaskStatus } from "@/types/database";
 import { TaskCardSkeleton } from "@/components/ui/Skeleton";
 import { createClient } from "@/lib/supabase/client";
@@ -49,8 +49,7 @@ const isOverdue = (deadline: string | null | undefined): boolean => {
   if (!deadline) return false;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const dueDate = new Date(deadline);
-  dueDate.setHours(0, 0, 0, 0);
+  const dueDate = parseDateLocal(deadline);
   return dueDate < today;
 };
 
@@ -59,8 +58,7 @@ const isToday = (deadline: string | null | undefined): boolean => {
   if (!deadline) return false;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const dueDate = new Date(deadline);
-  dueDate.setHours(0, 0, 0, 0);
+  const dueDate = parseDateLocal(deadline);
   return dueDate.getTime() === today.getTime();
 };
 
@@ -846,14 +844,14 @@ export default function ProjectOverviewPage({
 
     // Deadline validation: task/milestone deadline cannot be after project deadline
     if (project && editFormData.due_date && project.deadline) {
-      const itemDeadline = new Date(editFormData.due_date);
-      const projectDeadline = new Date(project.deadline);
+      const itemDeadline = parseDateLocal(editFormData.due_date);
+      const projectDeadline = parseDateLocal(project.deadline);
 
       if (itemDeadline > projectDeadline) {
         setEditFormError(
           `${
             editFormData.item_type === "milestone" ? "Milestone" : "Task"
-          } deadline cannot be after project deadline (${new Date(
+          } deadline cannot be after project deadline (${parseDateLocal(
             project.deadline,
           ).toLocaleDateString()})`,
         );
