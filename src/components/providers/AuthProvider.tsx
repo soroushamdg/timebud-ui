@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { type Session } from '@supabase/supabase-js'
+import { setLoggedInCookie, clearLoggedInCookie } from '@/lib/cross-domain-cookie'
 
 interface AuthProviderProps {
   children: React.ReactNode
@@ -31,11 +32,21 @@ export function AuthProvider({ children, initialSession }: AuthProviderProps) {
 
   useEffect(() => {
     console.log('[AuthProvider] Setting up auth state listener')
-    
+
+    if (initialSession) {
+      setLoggedInCookie()
+    }
+
     // Set up auth state change listener for real-time updates
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
       console.log('[AuthProvider] Auth state change:', { event, hasSession: !!newSession })
       setSession(newSession)
+
+      if (newSession) {
+        setLoggedInCookie()
+      } else {
+        clearLoggedInCookie()
+      }
     })
 
     return () => {
