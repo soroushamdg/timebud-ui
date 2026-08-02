@@ -50,7 +50,7 @@ export const useProjectsForTasks = () => {
       const { data, error } = await supabase
         .from('projects')
         .select('*')
-        .in('status', ['active', 'paused'])
+        .eq('status', 'active')
         .order('created_at', { ascending: false })
       if (error) throw error
       return data
