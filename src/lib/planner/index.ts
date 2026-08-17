@@ -1,3 +1,6 @@
+export { planWeek } from './planWeek';
+export type { PlanWeekInput, PlanWeekOutput, WeekDayPlan } from './planWeek';
+
 export interface PlannerProject {
   id: string;
   name: string;

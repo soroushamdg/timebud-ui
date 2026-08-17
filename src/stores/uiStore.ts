@@ -7,6 +7,8 @@ interface UIStore {
   allowPartialTasks: boolean;
   pinnedTaskIds: string[];
   manualTaskIds: string[];
+  weekOverviewExpanded: boolean;
+  setWeekOverviewExpanded: (expanded: boolean) => void;
   setBudget: (m: number) => void;
   setPreferredBudgetMinutes: (m: number) => void;
   setCustomBudgetMinutes: (m: number | null) => void;
@@ -28,7 +30,13 @@ export const useUIStore = create<UIStore>()(
       allowPartialTasks: true,
       pinnedTaskIds: [],
       manualTaskIds: [],
-      
+      weekOverviewExpanded: false,
+
+      setWeekOverviewExpanded: (expanded: boolean) =>
+        set({
+          weekOverviewExpanded: expanded,
+        }),
+
       setBudget: (m: number) =>
         set({
           preferredBudgetMinutes: m,

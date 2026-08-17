@@ -8,7 +8,7 @@ import { AppShell } from '@/components/layout/AppShell'
 import { useCurrentUser } from '@/hooks/useAuth'
 import { useFocusSessions } from '@/hooks/useSessions'
 import { AvatarImage } from '@/components/ui/AvatarImage'
-import { ChangeSessionTimeDialog } from '@/components/dialogs/ChangeSessionTimeDialog'
+import { ChangeSessionTimeDialog } from '@/components/sessions/ChangeSessionTimeDialog'
 import { PartialTasksDialog } from '@/components/dialogs/PartialTasksDialog'
 import { EditProfileDialog } from '@/components/dialogs/EditProfileDialog'
 import { SignOutDialog } from '@/components/dialogs/SignOutDialog'
@@ -20,6 +20,7 @@ import { useAISettings, useUpsertAISettings } from '@/hooks/useAISettings'
 import { SUPPORTED_MODELS } from '@/lib/ai/config'
 import { AIProvider } from '@/types/database'
 import { useTotalCredits } from '@/hooks/useCredits'
+import { useUIStore } from '@/stores/uiStore'
 
 export default function ProfilePage() {
   const router = useRouter()
@@ -27,6 +28,7 @@ export default function ProfilePage() {
   const { data: user } = useCurrentUser()
   const { data: focusSessions = [] } = useFocusSessions()
   const { total, proSubscriber, isLoading: creditsLoading } = useTotalCredits()
+  const { preferredBudgetMinutes } = useUIStore()
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isPartialDialogOpen, setIsPartialDialogOpen] = useState(false)
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false)
@@ -58,7 +60,6 @@ export default function ProfilePage() {
   const [thinkingMode, setThinkingMode] = useState(aiSettings?.thinking_mode || false)
   const [timezone, setTimezone] = useState(aiSettings?.timezone || 'UTC')
   const [firstDayOfWeek, setFirstDayOfWeek] = useState(aiSettings?.first_day_of_week || 'Monday')
-  const [preferredSessionMinutes, setPreferredSessionMinutes] = useState(aiSettings?.preferred_session_minutes || 60)
   const [allowResearch, setAllowResearch] = useState(aiSettings?.allow_research ?? true)
   const [saveSuccess, setSaveSuccess] = useState(false)
 
@@ -125,7 +126,6 @@ export default function ProfilePage() {
         thinking_mode: thinkingMode,
         timezone,
         first_day_of_week: firstDayOfWeek,
-        preferred_session_minutes: preferredSessionMinutes,
         allow_research: allowResearch,
       })
       setSaveSuccess(true)
@@ -255,8 +255,11 @@ export default function ProfilePage() {
                 onClick={() => setIsDialogOpen(true)}
                 className="w-full bg-bg-card rounded-none px-4 py-4 mb-2 flex justify-between items-center hover:bg-bg-card/80 transition-colors"
               >
-                <span className="text-white">Default duration</span>
-                <ChevronRight className="w-5 h-5 text-text-sec" />
+                <span className="text-white">Daily time budget</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-accent-yellow font-semibold">{formatTimeDisplay(preferredBudgetMinutes)}</span>
+                  <ChevronRight className="w-5 h-5 text-text-sec" />
+                </div>
               </button>
               
               <button
@@ -378,26 +381,6 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-              {/* Preferred session length */}
-              <div>
-                <label className="text-sm text-text-sec mb-2 block">
-                  Default Session Length: {preferredSessionMinutes} minutes
-                </label>
-                <input
-                  type="range"
-                  min="15"
-                  max="180"
-                  step="15"
-                  value={preferredSessionMinutes}
-                  onChange={(e) => setPreferredSessionMinutes(parseInt(e.target.value))}
-                  className="w-full h-2 bg-border-card rounded-lg appearance-none cursor-pointer accent-accent-yellow"
-                />
-                <div className="flex justify-between text-xs text-text-sec mt-1">
-                  <span>15 min</span>
-                  <span>180 min</span>
-                </div>
-              </div>
-
               {/* Allow web research toggle */}
               <div className="flex items-center justify-between bg-bg-card border border-border-card rounded-lg p-4">
                 <div>
@@ -450,12 +433,13 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* Change Session Time Dialog */}
-      <ChangeSessionTimeDialog 
-        isOpen={isDialogOpen}
-        onClose={() => setIsDialogOpen(false)}
-      />
-      
+      {/* Daily Time Budget Dialog */}
+      {isDialogOpen && (
+        <ChangeSessionTimeDialog
+          onClose={() => setIsDialogOpen(false)}
+        />
+      )}
+
       {/* Partial Tasks Dialog */}
       <PartialTasksDialog 
         isOpen={isPartialDialogOpen}

@@ -11,7 +11,6 @@ export const useCurrentUser = () => {
     queryFn: async (): Promise<User | null> => {
       const supabase = createClient()
       const { data: { user }, error } = await supabase.auth.getUser()
-      console.log('[useCurrentUser] Auth check:', { user: user?.id, error })
       if (error) throw error
       return user
     },

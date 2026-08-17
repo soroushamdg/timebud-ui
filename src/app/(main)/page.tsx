@@ -15,7 +15,7 @@ import { useLatestUnfinishedFocusSession } from '@/hooks/useSessions'
 import { useProjects } from '@/hooks/useProjects'
 import { useTasks } from '@/hooks/useTasks'
 import { useCreateFocusSession, useDeleteFocusSession } from '@/hooks/useSessions'
-import { planSession, PlannerTask } from '@/lib/planner'
+import { planSession, planWeek, PlannerTask } from '@/lib/planner'
 import { useFocusSessionStore } from '@/stores/sessionStore'
 import { useUIStore } from '@/stores/uiStore'
 import { useLoading } from '@/contexts/LoadingContext'
@@ -30,6 +30,9 @@ import { AvatarImage } from '@/components/ui/AvatarImage'
 import { useCurrentUser } from '@/hooks/useAuth'
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
+import { addDays } from 'date-fns'
+import { TodayOverviewSection } from '@/components/planner/TodayOverviewSection'
+import { WeekDayChipData } from '@/components/planner/WeekAheadStrip'
 
 interface PlannedTask {
   taskId: string;
@@ -55,11 +58,9 @@ interface PlannedTask {
 }
 
 export default function Home() {
-  console.log('[Home] Component mounting')
   const router = useRouter();
-  const { data: user, isLoading: userLoading, error: userError } = useCurrentUser();
-  console.log('[Home] User query state:', { user: user?.id, isLoading: userLoading, error: userError, fullUser: user })
-  
+  const { data: user, isLoading: userLoading } = useCurrentUser();
+
   const [unfinishedFocusSession, setUnfinishedFocusSession] = useState<DbFocusSession | null>(
     null,
   );
@@ -116,17 +117,7 @@ export default function Home() {
 
   const { data: latestUnfinished } = useLatestUnfinishedFocusSession();
   const { data: projects, isLoading: projectsLoading, error: projectsError } = useProjects();
-  
-  // Debug: Test Supabase auth directly
-  useEffect(() => {
-    const testAuth = async () => {
-      const supabase = createClient();
-      const { data: { user }, error } = await supabase.auth.getUser();
-      console.log('[Home] Direct Supabase auth test:', { user: user?.id, error });
-    };
-    testAuth();
-  }, []);
-  
+
   // Fetch all tasks so planner can check dependencies against completed tasks
   // The planner will filter out completed tasks after dependency checking
   const { data: tasks, isLoading: tasksLoading } = useTasks();
@@ -182,17 +173,7 @@ export default function Home() {
     
     return [...incompleteProjects, ...completedProjects]
   }, [projectsWithCompletion])
-  
-  // Debug: Test Supabase auth directly
-  useEffect(() => {
-    const testAuth = async () => {
-      const supabase = createClient();
-      const { data: { user }, error } = await supabase.auth.getUser();
-      console.log('[Home] Direct Supabase auth test:', { user: user?.id, error });
-    };
-    testAuth();
-  }, []);
-  
+
   const createFocusSession = useCreateFocusSession();
   const deleteFocusSession = useDeleteFocusSession();
   const { 
@@ -207,7 +188,55 @@ export default function Home() {
   const { registerReplanFunction } = useReplan();
   const setFocusSession = useFocusSessionStore((state) => state.setFocusSession);
   const markTaskDone = useFocusSessionStore((state) => state.markTaskDone);
-  
+
+  // Project today's plan forward across the next 6 days (days 1-6; today itself is
+  // `plannedTasks`, computed below) so the week-ahead strip can show what's coming
+  // without waiting for the user to page through days one at a time.
+  const weekAhead = useMemo(() => {
+    if (!tasks || !projects) return null;
+
+    const now = new Date();
+    const todayUsedMinutes = plannedTasks.reduce(
+      (sum, t) => sum + (t.scheduledMinutes ?? t.estimatedMinutes ?? 0),
+      0
+    );
+
+    const day0TaskIds = new Set(plannedTasks.map((t) => t.taskId));
+    const pool: PlannerTask[] = tasks
+      .filter((t) => t.status === 'pending' && t.item_type === 'task' && !day0TaskIds.has(t.id))
+      .map((t) => ({
+        ...t,
+        estimated_minutes: t.estimated_minutes || 0,
+        status: t.status || 'pending',
+      }));
+
+    const week = planWeek({
+      projects,
+      tasks: pool,
+      dailyBudgetMinutes: preferredBudgetMinutes,
+      startDate: addDays(now, 1),
+      days: 6,
+      allowPartial: allowPartialTasks,
+    });
+
+    const chips: WeekDayChipData[] = [
+      {
+        date: now,
+        taskCount: plannedTasks.length,
+        usedMinutes: todayUsedMinutes,
+        budgetMinutes: preferredBudgetMinutes,
+      },
+      ...week.days.map((d, i) => ({
+        date: addDays(now, i + 1),
+        taskCount: d.tasks.length,
+        usedMinutes: d.totalUsedMinutes,
+        budgetMinutes: d.budgetMinutes,
+      })),
+    ];
+
+    return { chips, unscheduledCount: week.unscheduledTasks.length, todayUsedMinutes };
+  }, [tasks, projects, plannedTasks, preferredBudgetMinutes, allowPartialTasks]);
+
   // Show loading state while user is loading
   if (userLoading) {
     return (
@@ -221,7 +250,6 @@ export default function Home() {
   
   // Redirect to login if user is not authenticated
   if (!user) {
-    console.log('[Home] No user found, redirecting to login')
     router.push('/auth/login')
     return (
       <AppShell>
@@ -742,6 +770,16 @@ export default function Home() {
               </div>
             )}
           </div>
+
+          {/* Today Overview: collapsed by default, expands into budget usage + week-ahead preview */}
+          {weekAhead && (
+            <TodayOverviewSection
+              usedMinutes={weekAhead.todayUsedMinutes}
+              budgetMinutes={preferredBudgetMinutes}
+              chips={weekAhead.chips}
+              unscheduledCount={weekAhead.unscheduledCount}
+            />
+          )}
 
           {/* Tasks Header with Time Button and Add Button */}
           <div className="flex items-center justify-between px-6 mb-4">

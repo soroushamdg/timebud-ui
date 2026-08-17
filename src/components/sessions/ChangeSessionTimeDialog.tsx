@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useFocusSessionStore } from '@/stores/sessionStore'
 import { useUIStore } from '@/stores/uiStore'
+import { useUpsertAISettings } from '@/hooks/useAISettings'
 import { Settings } from 'lucide-react'
 
 interface ChangeSessionTimeDialogProps {
@@ -12,14 +13,20 @@ interface ChangeSessionTimeDialogProps {
 
 export function ChangeSessionTimeDialog({ onClose, onTimeChanged }: ChangeSessionTimeDialogProps) {
   const { preferredBudgetMinutes, customBudgetMinutes, setPreferredBudgetMinutes, setCustomBudgetMinutes } = useUIStore()
+  const upsertSettings = useUpsertAISettings()
   const [selectedMinutes, setSelectedMinutes] = useState(preferredBudgetMinutes)
   const [showCustomInput, setShowCustomInput] = useState(false)
   const [customInput, setCustomInput] = useState(customBudgetMinutes?.toString() || '')
 
   const timeOptions = [15, 30, 45, 60, 75, 90, 120]
 
+  const persistBudget = (minutes: number) => {
+    upsertSettings.mutate({ preferred_session_minutes: minutes })
+  }
+
   const handleSave = () => {
     setPreferredBudgetMinutes(selectedMinutes)
+    persistBudget(selectedMinutes)
     onClose()
     onTimeChanged?.()
   }
@@ -39,7 +46,7 @@ export function ChangeSessionTimeDialog({ onClose, onTimeChanged }: ChangeSessio
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] px-4">
       <div className="bg-bg-card border border-border-card rounded-2xl p-6 w-full max-w-sm">
-        <h2 className="text-white text-xl font-bold mb-4">Change session time</h2>
+        <h2 className="text-white text-xl font-bold mb-4">Daily time budget</h2>
         
         <div className="grid grid-cols-3 gap-2 mb-4">
           {timeOptions.map((minutes) => (

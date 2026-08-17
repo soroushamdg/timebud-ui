@@ -33,6 +33,12 @@ export function formatDuration(start: string, end: string): string {
   return h > 0 ? `${h}h ${m}m` : `${m}m`
 }
 
+export function formatMinutesLabel(totalMinutes: number): string {
+  const minutes = Math.max(0, Math.round(totalMinutes))
+  const h = Math.floor(minutes / 60), m = minutes % 60
+  return h > 0 ? (m > 0 ? `${h}h ${m}m` : `${h}h`) : `${m}m`
+}
+
 interface RecurrenceConfig {
   recurrence_type: 'daily' | 'specific_days' | 'interval' | null;
   recurrence_days: number[] | null;

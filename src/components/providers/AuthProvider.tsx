@@ -1,6 +1,7 @@
 'use client'
 
 import { createContext, useContext, useEffect, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { type Session } from '@supabase/supabase-js'
 import { setLoggedInCookie, clearLoggedInCookie } from '@/lib/cross-domain-cookie'
@@ -27,20 +28,23 @@ export function useAuth() {
 export function AuthProvider({ children, initialSession }: AuthProviderProps) {
   const [supabase] = useState(() => createClient())
   const [session, setSession] = useState<Session | null>(initialSession)
-
-  console.log('[AuthProvider] Rendering, session:', session?.user?.id)
+  const queryClient = useQueryClient()
 
   useEffect(() => {
-    console.log('[AuthProvider] Setting up auth state listener')
-
     if (initialSession) {
       setLoggedInCookie()
     }
 
     // Set up auth state change listener for real-time updates
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
-      console.log('[AuthProvider] Auth state change:', { event, hasSession: !!newSession })
       setSession(newSession)
+
+      // Keep the shared ['auth-user'] query cache in sync immediately. Without this,
+      // a cache entry seeded with `null` before sign-in (e.g. by OnboardingProvider
+      // mounting on /auth/login) never gets refreshed, since refetchOnMount/
+      // refetchOnWindowFocus are disabled on that query — leaving the rest of the
+      // app thinking no one is signed in until a full page reload.
+      queryClient.setQueryData(['auth-user'], newSession?.user ?? null)
 
       if (newSession) {
         setLoggedInCookie()
@@ -50,10 +54,9 @@ export function AuthProvider({ children, initialSession }: AuthProviderProps) {
     })
 
     return () => {
-      console.log('[AuthProvider] Cleaning up auth listener')
       subscription.unsubscribe()
     }
-  }, [supabase])
+  }, [supabase, queryClient])
 
   return (
     <AuthContext.Provider value={{ session }}>
