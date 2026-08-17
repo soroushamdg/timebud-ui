@@ -1,5 +1,6 @@
 import { ReactNode } from 'react'
 import { TabBar } from './TabBar'
+import { InstallPwaPrompt } from '@/components/pwa/InstallPwaPrompt'
 
 interface AppShellProps {
   children: ReactNode
@@ -12,6 +13,7 @@ export function AppShell({ children, showTabBar = true }: AppShellProps) {
       <div className={showTabBar ? 'pb-0' : ''}>
         {children}
       </div>
+      <InstallPwaPrompt />
       {showTabBar && <TabBar />}
     </div>
   )

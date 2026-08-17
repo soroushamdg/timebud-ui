@@ -9,6 +9,8 @@ interface UIStore {
   manualTaskIds: string[];
   weekOverviewExpanded: boolean;
   setWeekOverviewExpanded: (expanded: boolean) => void;
+  installPromptDismissedAt: number | null;
+  dismissInstallPrompt: () => void;
   setBudget: (m: number) => void;
   setPreferredBudgetMinutes: (m: number) => void;
   setCustomBudgetMinutes: (m: number | null) => void;
@@ -31,10 +33,16 @@ export const useUIStore = create<UIStore>()(
       pinnedTaskIds: [],
       manualTaskIds: [],
       weekOverviewExpanded: false,
+      installPromptDismissedAt: null,
 
       setWeekOverviewExpanded: (expanded: boolean) =>
         set({
           weekOverviewExpanded: expanded,
+        }),
+
+      dismissInstallPrompt: () =>
+        set({
+          installPromptDismissedAt: Date.now(),
         }),
 
       setBudget: (m: number) =>
