@@ -42,6 +42,7 @@ export type ActionType =
   | 'avatar_generation'
   | 'perplexity_research'
   | 'plan_session'
+  | 'voice_transcription'
   | 'purchase'
   | 'renewal'
   | 'subscription'

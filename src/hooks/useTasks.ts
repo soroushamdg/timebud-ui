@@ -126,10 +126,10 @@ export const useUpdateTask = () => {
           .eq('id', id)
           .select()
           .single()
-        if (error) throw error
+        if (error) throw new Error(error.message || error.details || error.hint || 'Failed to update task')
         return data
       }
-      
+
       // Normal update
       const { data, error } = await supabase
         .from('tasks')
@@ -137,7 +137,7 @@ export const useUpdateTask = () => {
         .eq('id', id)
         .select()
         .single()
-      if (error) throw error
+      if (error) throw new Error(error.message || error.details || error.hint || 'Failed to update task')
       return data
     },
     onSuccess: () => {

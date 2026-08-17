@@ -30,6 +30,7 @@ export function EditTaskDialog({
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Helper function to format date for input
   const formatDateForInput = (dateString: string | null): string => {
@@ -47,6 +48,7 @@ export function EditTaskDialog({
         priority: task.priority,
         project_id: task.project_id,
       });
+      setError(null);
     }
   }, [task]);
 
@@ -57,6 +59,7 @@ export function EditTaskDialog({
     if (!formData.title.trim()) return;
 
     setIsSubmitting(true);
+    setError(null);
     try {
       await onUpdateTask(task.id, {
         title: formData.title.trim(),
@@ -67,8 +70,9 @@ export function EditTaskDialog({
         project_id: formData.project_id,
       });
       onClose();
-    } catch (error) {
-      console.error('Failed to update task:', error);
+    } catch (err) {
+      console.error('Failed to update task:', err);
+      setError(err instanceof Error ? err.message : 'Failed to update task');
     } finally {
       setIsSubmitting(false);
     }
@@ -259,6 +263,10 @@ export function EditTaskDialog({
               High priority
             </label>
           </div>
+
+          {error && (
+            <p className="text-accent-pink text-sm">{error}</p>
+          )}
 
           {/* Actions */}
           <div className="flex gap-3 pt-4">

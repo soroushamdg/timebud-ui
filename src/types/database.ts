@@ -91,6 +91,17 @@ export interface DbUserAISettings {
   allow_partial_tasks?: boolean;
   allow_research?: boolean;
   auto_estimate_tasks?: boolean;
+  reminder_enabled?: boolean;
+  reminder_time?: string | null; // 'HH:MM', 24h, interpreted in `timezone`
+}
+
+export interface DbPushSubscription {
+  id: string;
+  user_id: string;
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+  created_at: string;
 }
 
 export interface DbTaskDependency {

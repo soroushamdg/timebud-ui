@@ -10,6 +10,7 @@ export const CREDIT_COSTS: Record<ActionType, number> = {
   avatar_generation: 15,
   perplexity_research: 100,
   plan_session: 5,
+  voice_transcription: 5,
   purchase: 0,
   renewal: 0,
   subscription: 0,

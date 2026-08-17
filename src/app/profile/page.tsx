@@ -21,6 +21,7 @@ import { SUPPORTED_MODELS } from '@/lib/ai/config'
 import { AIProvider } from '@/types/database'
 import { useTotalCredits } from '@/hooks/useCredits'
 import { useUIStore } from '@/stores/uiStore'
+import { NotificationSettingsRow } from '@/components/settings/NotificationSettingsRow'
 
 export default function ProfilePage() {
   const router = useRouter()
@@ -270,14 +271,8 @@ export default function ProfilePage() {
                 <ChevronRight className="w-5 h-5 text-text-sec" />
               </button>
               
-              <button
-                className="w-full bg-bg-card rounded-none px-4 py-4 mb-2 flex justify-between items-center hover:bg-bg-card/80 transition-colors"
-                disabled
-              >
-                <span className="text-white">Notifications</span>
-                <ChevronRight className="w-5 h-5 text-text-sec" />
-              </button>
-              
+              <NotificationSettingsRow />
+
               <button
                 className="w-full bg-bg-card rounded-none px-4 py-4 mb-2 flex justify-between items-center hover:bg-bg-card/80 transition-colors"
                 disabled

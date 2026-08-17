@@ -21,5 +21,13 @@ export default function manifest(): MetadataRoute.Manifest {
         type: 'image/png',
       },
     ],
+    shortcuts: [
+      {
+        name: 'Quick capture',
+        short_name: 'Capture',
+        description: 'Jot down a task before you forget it',
+        url: '/?capture=1',
+      },
+    ],
   }
 }

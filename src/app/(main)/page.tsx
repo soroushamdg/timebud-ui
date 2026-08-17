@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { QuickCaptureSheet } from "@/components/capture/QuickCaptureSheet";
 import { AppShell } from "@/components/layout/AppShell";
 import { TaskCard } from "@/components/tasks/TaskCard";
 import { TaskCardSkeleton } from "@/components/tasks/TaskCardSkeleton";
@@ -81,7 +82,18 @@ export default function Home() {
   const [showActionMenu, setShowActionMenu] = useState(false);
   const [showDeferDialog, setShowDeferDialog] = useState(false);
   const [showAddTaskDialog, setShowAddTaskDialog] = useState(false);
+  const [showCapture, setShowCapture] = useState(false);
   const [selectedTask, setSelectedTask] = useState<PlannedTask | null>(null);
+
+  // Open quick capture automatically when deep-linked (push notification tap, PWA
+  // home-screen shortcut) via /?capture=1, then clean the param out of the URL.
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    if (searchParams.get('capture') === '1') {
+      setShowCapture(true);
+      router.replace('/');
+    }
+  }, [searchParams, router]);
 
   // Toast states
   const [showToast, setShowToast] = useState(false);
@@ -917,6 +929,17 @@ export default function Home() {
           currentManualTaskIds={manualTaskIds}
           onTaskAdded={handleTaskAdded}
           onBudgetExceeded={handleBudgetExceeded}
+        />
+      )}
+
+      {showCapture && (
+        <QuickCaptureSheet
+          onClose={() => setShowCapture(false)}
+          onSuccess={(message) => {
+            setToastMessage(message);
+            setToastType('success');
+            setShowToast(true);
+          }}
         />
       )}
 
