@@ -33,16 +33,22 @@ export function usePushSubscription() {
 
     setIsLoading(true)
     try {
+      // Actively (re)register rather than assuming one already exists from page load.
       // The service worker is disabled outside production builds (see next.config.ts),
-      // so navigator.serviceWorker.ready would hang forever in `next dev` with nothing
-      // ever registered. Check for a real registration first and fail fast with a clear
-      // message instead of letting that hang, or a downstream call fail cryptically.
-      const registration = await navigator.serviceWorker.getRegistration()
+      // so this naturally fails with a clear message in `next dev` instead of the
+      // registration attempt hanging or a downstream call failing cryptically.
+      let registration = await navigator.serviceWorker.getRegistration()
       if (!registration) {
-        throw new Error(
-          'No active service worker found — push notifications only work in a production build (npm run build && npm run start), not in local dev.'
-        )
+        try {
+          registration = await navigator.serviceWorker.register('/sw.js')
+        } catch {
+          throw new Error(
+            'Could not set up a service worker — push notifications only work in a production build (npm run build && npm run start), not in local dev.'
+          )
+        }
       }
+      // Wait for it to finish installing/activating before subscribing.
+      registration = await navigator.serviceWorker.ready
 
       const permission = await Notification.requestPermission()
       if (permission !== 'granted') {
