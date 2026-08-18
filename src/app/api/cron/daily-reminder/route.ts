@@ -1,27 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import webpush, { WebPushError } from 'web-push'
 import { createServiceClient } from '@/lib/supabase/server'
+import { getLocalDateString, getLocalHour } from '@/lib/dates'
 
 const LOOKBACK_MS = 48 * 60 * 60 * 1000
-
-function localDateString(date: Date, timeZone: string): string {
-  try {
-    return new Intl.DateTimeFormat('en-CA', { timeZone }).format(date)
-  } catch {
-    return new Intl.DateTimeFormat('en-CA', { timeZone: 'UTC' }).format(date)
-  }
-}
-
-function localHour(date: Date, timeZone: string): number {
-  try {
-    return parseInt(
-      new Intl.DateTimeFormat('en-US', { timeZone, hourCycle: 'h23', hour: '2-digit' }).format(date),
-      10
-    )
-  } catch {
-    return date.getUTCHours()
-  }
-}
 
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get('authorization')
@@ -55,7 +37,7 @@ export async function GET(request: NextRequest) {
   const dueUsers = (settingsRows ?? []).filter((row) => {
     const tz = row.timezone || 'UTC'
     const reminderHour = parseInt((row.reminder_time ?? '').split(':')[0] ?? '', 10)
-    return !Number.isNaN(reminderHour) && localHour(now, tz) === reminderHour
+    return !Number.isNaN(reminderHour) && getLocalHour(now, tz) === reminderHour
   })
 
   let sent = 0
@@ -63,7 +45,7 @@ export async function GET(request: NextRequest) {
 
   for (const row of dueUsers) {
     const tz = row.timezone || 'UTC'
-    const todayLocal = localDateString(now, tz)
+    const todayLocal = getLocalDateString(now, tz)
 
     const [subsResult, tasksResult, sessionsResult] = await Promise.all([
       supabase.from('push_subscriptions').select('*').eq('user_id', row.user_id),
@@ -75,9 +57,9 @@ export async function GET(request: NextRequest) {
     if (subscriptions.length === 0) continue
 
     const touchedToday =
-      (tasksResult.data ?? []).some((t) => t.created_at && localDateString(new Date(t.created_at), tz) === todayLocal) ||
+      (tasksResult.data ?? []).some((t) => t.created_at && getLocalDateString(new Date(t.created_at), tz) === todayLocal) ||
       (sessionsResult.data ?? []).some(
-        (s) => s.start_time && localDateString(new Date(s.start_time), tz) === todayLocal
+        (s) => s.start_time && getLocalDateString(new Date(s.start_time), tz) === todayLocal
       )
 
     if (touchedToday) {

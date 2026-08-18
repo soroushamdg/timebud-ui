@@ -1,3 +1,5 @@
+import { getLocalDateString, parseDateLocal, formatDateLocal } from '@/lib/dates'
+
 export interface TemporalContext {
   currentUtcTime: string
   currentLocalTime: string
@@ -28,11 +30,11 @@ export function buildTemporalContext(
     hour12: false,
   }).format(now)
   
-  // Today's date in YYYY-MM-DD format
-  const todayDate = now.toISOString().split('T')[0]
-  
+  // Today's date in YYYY-MM-DD format, in the user's timezone (not the server's clock)
+  const todayDate = getLocalDateString(now, timezone)
+
   // Calculate week start and end based on first day of week
-  const { weekStart, weekEnd, endOfWeek } = getWeekBounds(now, firstDayOfWeek)
+  const { weekStart, weekEnd, endOfWeek } = getWeekBounds(todayDate, firstDayOfWeek)
   
   // Human readable description
   const dayName = new Intl.DateTimeFormat('en-US', { 
@@ -61,14 +63,18 @@ export function buildTemporalContext(
   }
 }
 
-function getWeekBounds(date: Date, firstDayOfWeek: string): {
+// `todayDateStr` is the user's "today" already resolved to their timezone (see
+// getLocalDateString above) — everything from here on is pure calendar-day arithmetic
+// on a local-safe Date (via parseDateLocal), not a timezone conversion.
+function getWeekBounds(todayDateStr: string, firstDayOfWeek: string): {
   weekStart: string
   weekEnd: string
   endOfWeek: string
 } {
+  const date = parseDateLocal(todayDateStr)
   const dayOfWeek = date.getDay() // 0 = Sunday, 1 = Monday, etc.
   const isWeekStartMonday = firstDayOfWeek === 'Monday'
-  
+
   // Calculate days to subtract to get to week start
   let daysToWeekStart: number
   if (isWeekStartMonday) {
@@ -78,37 +84,23 @@ function getWeekBounds(date: Date, firstDayOfWeek: string): {
     // Week starts Sunday (0)
     daysToWeekStart = dayOfWeek
   }
-  
+
   // Calculate week start
   const weekStartDate = new Date(date)
   weekStartDate.setDate(date.getDate() - daysToWeekStart)
-  weekStartDate.setHours(0, 0, 0, 0)
-  
+
   // Calculate week end (6 days after start)
   const weekEndDate = new Date(weekStartDate)
   weekEndDate.setDate(weekStartDate.getDate() + 6)
-  weekEndDate.setHours(23, 59, 59, 999)
-  
-  // End of week is the last day (same as weekEnd but formatted differently)
-  const endOfWeekDate = new Date(weekEndDate)
-  endOfWeekDate.setHours(23, 59, 59, 999)
-  
+
   return {
-    weekStart: formatDate(weekStartDate),
-    weekEnd: formatDate(weekEndDate),
-    endOfWeek: formatDate(endOfWeekDate),
+    weekStart: formatDateLocal(weekStartDate),
+    weekEnd: formatDateLocal(weekEndDate),
+    endOfWeek: formatDateLocal(weekEndDate),
   }
 }
 
-function formatDate(date: Date): string {
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
-}
-
-export function getEndOfWeek(firstDayOfWeek: string): Date {
-  const now = new Date()
-  const { endOfWeek } = getWeekBounds(now, firstDayOfWeek)
-  return new Date(endOfWeek)
+export function getEndOfWeek(firstDayOfWeek: string, timezone: string = 'UTC'): Date {
+  const { endOfWeek } = getWeekBounds(getLocalDateString(new Date(), timezone), firstDayOfWeek)
+  return parseDateLocal(endOfWeek)
 }

@@ -13,6 +13,36 @@ export const parseDateLocal = (s: string): Date => {
   return new Date(year, month - 1, day)
 }
 
+// The safe inverse of parseDateLocal: reads local Y/M/D components directly rather than
+// round-tripping through .toISOString() (which re-expresses the date in UTC and silently
+// shifts it a day for positive-UTC-offset users — the same class of bug parseDateLocal
+// exists to prevent on the way in).
+export const formatDateLocal = (date: Date): string => {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+// Genuine per-user-timezone-aware variants (not just "local to this device/server") —
+// use these when you actually need to know the date/hour in a specific IANA timezone,
+// e.g. server-side code deciding what's "today" for a given user.
+export const getLocalDateString = (date: Date, timeZone: string): string => {
+  try {
+    return new Intl.DateTimeFormat('en-CA', { timeZone }).format(date)
+  } catch {
+    return new Intl.DateTimeFormat('en-CA', { timeZone: 'UTC' }).format(date)
+  }
+}
+
+export const getLocalHour = (date: Date, timeZone: string): number => {
+  try {
+    return parseInt(new Intl.DateTimeFormat('en-US', { timeZone, hourCycle: 'h23', hour: '2-digit' }).format(date), 10)
+  } catch {
+    return date.getUTCHours()
+  }
+}
+
 export const formatLocal  = (s: string, fmt = 'MMM d, yyyy') => format(parseDateLocal(s), fmt)
 
 export const formatLocalSmart = (s: string) => {
@@ -53,7 +83,7 @@ export function calculateNextDueDate(currentDueDate: string | null, config: Recu
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const current = currentDueDate ? new Date(currentDueDate) : today;
+  const current = currentDueDate ? parseDateLocal(currentDueDate) : today;
   current.setHours(0, 0, 0, 0);
 
   let nextDate: Date;
@@ -82,10 +112,10 @@ export function calculateNextDueDate(currentDueDate: string | null, config: Recu
 
   // Check end date condition
   if (config.recurrence_end_date) {
-    const endDate = new Date(config.recurrence_end_date);
+    const endDate = parseDateLocal(config.recurrence_end_date);
     endDate.setHours(0, 0, 0, 0);
     if (nextDate > endDate) return null;
   }
 
-  return nextDate.toISOString().split('T')[0];
+  return formatDateLocal(nextDate);
 }

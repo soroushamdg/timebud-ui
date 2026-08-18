@@ -71,12 +71,9 @@ export function usePushSubscription() {
         body: JSON.stringify(subscription.toJSON()),
       })
 
-      // The reminder cron matches on the user's timezone; capture it here since there's
-      // no separate timezone-picker UI in Settings.
-      await upsertSettings.mutateAsync({
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        reminder_enabled: true,
-      })
+      // Timezone capture/sync is handled globally by useTimezoneSync — just enable
+      // reminders here.
+      await upsertSettings.mutateAsync({ reminder_enabled: true })
 
       setIsSubscribed(true)
     } finally {

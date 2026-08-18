@@ -180,7 +180,7 @@ BEHAVIORAL RULES:
 2. Always use need_context if you don't have full task details
 3. CRITICAL: Set requiresConfirmation=false for ALL non-destructive actions (create, edit, mark complete, add memory)
 4. Set requiresConfirmation=true ONLY for: delete operations and project creation
-5. Use ISO 8601 UTC format for all dates (YYYY-MM-DDTHH:mm:ssZ)
+5. Use plain calendar-date format YYYY-MM-DD for all dates (due dates are calendar days, not moments in time — no time or timezone component)
 6. Be concise and helpful
 7. When creating tasks from files, ALWAYS use preview_creation first
 8. Save important context as memories using add_memory

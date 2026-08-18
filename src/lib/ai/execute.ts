@@ -1,6 +1,18 @@
 import { SupabaseClient } from '@supabase/supabase-js'
 import { ToolExecutionResult } from '@/types/ai'
 
+// Defense in depth: due_date/deadline are calendar days, not moments in time. The
+// system prompt instructs the AI to emit plain YYYY-MM-DD, but this normalizes
+// whatever comes back to just the date part regardless, so a model that doesn't
+// perfectly follow that instruction still can't write a bad-format date into the DB.
+// Preserves undefined ("don't touch this field" in a partial update) vs null
+// ("explicitly clear it") vs a real value (normalize to date-only).
+function normalizeDateOnly(value: string | null | undefined): string | null | undefined {
+  if (value === undefined) return undefined
+  if (value === null) return null
+  return value.split('T')[0]
+}
+
 export async function executeTool(
   toolName: string,
   input: Record<string, any>,
@@ -92,7 +104,7 @@ async function createTask(
       description: description || null,
       estimated_minutes: estimatedMinutes || null,
       status: 'pending',
-      due_date: dueDate || null,
+      due_date: normalizeDateOnly(dueDate) ?? null,
       order: nextOrder,
       priority: priority || false,
     })
@@ -134,7 +146,7 @@ async function editTask(
       title: updates.title,
       description: updates.description,
       estimated_minutes: updates.estimatedMinutes,
-      due_date: updates.dueDate,
+      due_date: normalizeDateOnly(updates.dueDate),
       priority: updates.priority,
     })
     .eq('id', taskId)
@@ -265,7 +277,7 @@ async function bulkCreateTasks(
       description: task.description || null,
       estimated_minutes: task.estimatedMinutes || null,
       status: 'pending',
-      due_date: task.dueDate || null,
+      due_date: normalizeDateOnly(task.dueDate) ?? null,
       order: nextOrder++,
       priority,
     }
@@ -359,7 +371,7 @@ async function createMilestone(
       description: null,
       estimated_minutes: null,
       status: null,
-      due_date: dueDate || null,
+      due_date: normalizeDateOnly(dueDate) ?? null,
       order: nextOrder,
       priority: priority || false,
     })
@@ -386,7 +398,7 @@ async function editMilestone(
     .from('tasks')
     .update({
       title: updates.title,
-      due_date: updates.dueDate,
+      due_date: normalizeDateOnly(updates.dueDate),
       priority: updates.priority,
     })
     .eq('id', milestoneId)
@@ -456,7 +468,7 @@ async function createProject(
       user_id: userId,
       name,
       description: description || null,
-      deadline: deadline || null,
+      deadline: normalizeDateOnly(deadline) ?? null,
       priority: false,
       status: 'active',
       color: color || '#F5C518',
@@ -484,7 +496,7 @@ async function editProject(
   
   if (updates.name !== undefined) updateData.name = updates.name
   if (updates.description !== undefined) updateData.description = updates.description
-  if (updates.deadline !== undefined) updateData.deadline = updates.deadline
+  if (updates.deadline !== undefined) updateData.deadline = normalizeDateOnly(updates.deadline)
   if (updates.status !== undefined) updateData.status = updates.status
   if (updates.color !== undefined) updateData.color = updates.color
   if (updates.priority !== undefined) updateData.priority = updates.priority

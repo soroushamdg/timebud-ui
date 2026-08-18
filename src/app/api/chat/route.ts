@@ -78,13 +78,12 @@ export async function POST(request: NextRequest) {
 
     // 4. Build temporal context and system prompt
     const firstName = (user as any).first_name || 'there'
-    const today = new Date().toISOString().split('T')[0]
     const timezone = settings.timezone || 'UTC'
     const firstDayOfWeek = settings.first_day_of_week || 'Monday'
-    
+
     const temporalContext = buildTemporalContext(timezone, firstDayOfWeek)
     const promptTemplate = loadSystemPromptTemplate()
-    const systemPrompt = buildSystemPrompt(firstName, today, projectSummaries, promptTemplate, temporalContext)
+    const systemPrompt = buildSystemPrompt(firstName, temporalContext.todayDate, projectSummaries, promptTemplate, temporalContext)
 
     // 5. Run AI loop (max 4 iterations)
     const conversationHistory = [...messages]

@@ -39,7 +39,7 @@ export const TOOL_SCHEMAS = {
         dueDate: {
           type: "string",
           description:
-            "Due date in ISO 8601 UTC string format (YYYY-MM-DDTHH:mm:ssZ)",
+            "Due date in plain calendar-date format (YYYY-MM-DD, no time/timezone component)",
         },
         priority: {
           type: "boolean",
@@ -73,7 +73,7 @@ export const TOOL_SCHEMAS = {
             estimatedMinutes: { type: "number" },
             dueDate: {
               type: "string",
-              description: "ISO 8601 UTC string format",
+              description: "Plain calendar-date format (YYYY-MM-DD, no time/timezone component)",
             },
             priority: { type: "boolean" },
             dependsOnTask: { type: "string" },
@@ -121,7 +121,7 @@ export const TOOL_SCHEMAS = {
               estimatedMinutes: { type: "number" },
               dueDate: {
                 type: "string",
-                description: "ISO 8601 UTC string format",
+                description: "Plain calendar-date format (YYYY-MM-DD, no time/timezone component)",
               },
               priority: { type: "boolean" },
               dependsOnTaskIndex: {
@@ -171,7 +171,7 @@ export const TOOL_SCHEMAS = {
         },
         dueDate: {
           type: "string",
-          description: "Due date in ISO 8601 UTC string format",
+          description: "Due date in plain calendar-date format (YYYY-MM-DD)",
         },
         priority: {
           type: "boolean",
@@ -198,7 +198,7 @@ export const TOOL_SCHEMAS = {
             title: { type: "string" },
             dueDate: {
               type: "string",
-              description: "ISO 8601 UTC string format",
+              description: "Plain calendar-date format (YYYY-MM-DD, no time/timezone component)",
             },
             priority: { type: "boolean" },
           },
@@ -240,7 +240,7 @@ export const TOOL_SCHEMAS = {
         },
         deadline: {
           type: "string",
-          description: "Project deadline in ISO 8601 UTC string format",
+          description: "Project deadline in plain calendar-date format (YYYY-MM-DD)",
         },
         color: {
           type: "string",

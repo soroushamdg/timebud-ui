@@ -1,3 +1,5 @@
+import { parseDateLocal } from '@/lib/dates';
+
 export { planWeek } from './planWeek';
 export type { PlanWeekInput, PlanWeekOutput, WeekDayPlan } from './planWeek';
 
@@ -97,31 +99,11 @@ function getEffectiveEstimate(task: TaskWithMeta): number {
 }
 
 export function daysUntil(dateStr: string, today: Date): number {
-  // For date-only deadlines (YYYY-MM-DD), compare local dates without timezone conversion
-  // This treats "due March 25" as "due on March 25 in the user's timezone"
-  
-  let targetDate: Date;
-  if (dateStr.includes('T')) {
-    // Already has time component, parse as-is
-    targetDate = new Date(dateStr);
-  } else {
-    // Date-only string: parse as local date
-    const [year, month, day] = dateStr.split('-').map(Number);
-    targetDate = new Date(year, month - 1, day); // month is 0-indexed
-  }
-  
-  // Compare dates in local timezone by normalizing both to midnight local time
-  const targetMidnight = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
+  // Treats "due March 25" as "due on March 25" regardless of any time/timezone component
+  // on the stored value — a deadline is a calendar day, not a moment in time.
+  const targetMidnight = parseDateLocal(dateStr);
   const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  
-  const diff = (targetMidnight.getTime() - todayMidnight.getTime()) / (1000 * 60 * 60 * 24);
-  
-  // Debug logging
-  if (typeof window !== 'undefined') {
-    console.log(`[daysUntil] dateStr=${dateStr}, today=${today.toISOString()}, targetMidnight=${targetMidnight.toISOString()}, todayMidnight=${todayMidnight.toISOString()}, diff=${diff}`);
-  }
-  
-  return diff;
+  return (targetMidnight.getTime() - todayMidnight.getTime()) / (1000 * 60 * 60 * 24);
 }
 
 function inheritMilestoneDeadlines(allItems: PlannerTask[]): TaskWithMeta[] {

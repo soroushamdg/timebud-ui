@@ -8,11 +8,25 @@ import { ReplanProvider } from "@/contexts/ReplanContext";
 import { AuthProvider } from "@/components/providers/AuthProvider";
 import { OnboardingProvider } from "@/components/providers/OnboardingProvider";
 import { useSyncDailyBudget } from "@/hooks/useAISettings";
+import { useTimezoneSync } from "@/hooks/useTimezoneSync";
+import { SimpleToast } from "@/components/ui/SimpleToast";
 import { Session } from "@supabase/supabase-js";
 
 function BudgetSync() {
   useSyncDailyBudget();
   return null;
+}
+
+function TimezoneSync() {
+  const { justSyncedTo, resetJustSynced } = useTimezoneSync();
+  return (
+    <SimpleToast
+      isVisible={!!justSyncedTo}
+      message={justSyncedTo ? `Timezone updated to ${justSyncedTo}` : ""}
+      type="info"
+      onDismiss={resetJustSynced}
+    />
+  );
 }
 
 interface ProvidersProps {
@@ -39,6 +53,7 @@ export function Providers({ children, initialSession }: ProvidersProps) {
         <QueryClientProvider client={queryClient}>
           <AuthProvider initialSession={initialSession}>
             <BudgetSync />
+            <TimezoneSync />
             <OnboardingProvider>
               {children}
               {process.env.NODE_ENV === 'development' && <ReactQueryDevtools />}

@@ -93,6 +93,7 @@ export interface DbUserAISettings {
   auto_estimate_tasks?: boolean;
   reminder_enabled?: boolean;
   reminder_time?: string | null; // 'HH:MM', 24h, interpreted in `timezone`
+  auto_timezone_enabled?: boolean;
 }
 
 export interface DbPushSubscription {

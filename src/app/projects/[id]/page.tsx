@@ -341,13 +341,14 @@ export default function ProjectOverviewPage({
   useEffect(() => {
     if (!tasks || tasks.length === 0) return
 
-    const now = new Date()
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
     const expired = tasks.filter(
       t =>
         t.on_hold === true &&
         t.on_hold_type === 'until_date' &&
         t.on_hold_until != null &&
-        new Date(t.on_hold_until) <= now,
+        parseDateLocal(t.on_hold_until) <= today,
     )
     if (expired.length === 0) return
 

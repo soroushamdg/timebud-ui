@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { X, Calendar } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useQueryClient } from '@tanstack/react-query'
+import { parseDateLocal, formatLocal, formatDateLocal } from '@/lib/dates'
 
 interface DeferTaskDialogProps {
   isOpen: boolean
@@ -33,7 +34,7 @@ export function DeferTaskDialog({
       return
     }
 
-    const selected = new Date(selectedDate)
+    const selected = parseDateLocal(selectedDate)
     const today = new Date()
     today.setHours(0, 0, 0, 0)
 
@@ -95,7 +96,7 @@ export function DeferTaskDialog({
           {currentDeadline && (
             <div>
               <p className="text-text-sec text-sm mb-1">Current Deadline</p>
-              <p className="text-white">{new Date(currentDeadline).toLocaleDateString()}</p>
+              <p className="text-white">{formatLocal(currentDeadline)}</p>
             </div>
           )}
 
@@ -111,7 +112,7 @@ export function DeferTaskDialog({
                 setError('')
               }}
               className="w-full bg-[#2A2A2A] text-white border border-[#333333] rounded-lg px-3 py-2 focus:outline-none focus:border-accent-yellow"
-              min={new Date().toISOString().split('T')[0]}
+              min={formatDateLocal(new Date())}
             />
           </div>
 

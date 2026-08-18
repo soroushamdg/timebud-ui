@@ -22,6 +22,7 @@ import { AIProvider } from '@/types/database'
 import { useTotalCredits } from '@/hooks/useCredits'
 import { useUIStore } from '@/stores/uiStore'
 import { NotificationSettingsRow } from '@/components/settings/NotificationSettingsRow'
+import { TimezoneSettingsRow } from '@/components/settings/TimezoneSettingsRow'
 
 export default function ProfilePage() {
   const router = useRouter()
@@ -272,6 +273,8 @@ export default function ProfilePage() {
               </button>
               
               <NotificationSettingsRow />
+
+              <TimezoneSettingsRow />
 
               <button
                 className="w-full bg-bg-card rounded-none px-4 py-4 mb-2 flex justify-between items-center hover:bg-bg-card/80 transition-colors"
