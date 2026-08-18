@@ -26,7 +26,7 @@ import { isValidUuid } from '@/lib/utils'
 import { DbFocusSession, DbTask } from '@/types/database'
 import { useFocusSessionGuard } from '@/hooks/useSessionGuard'
 import { ArrowsRightLeftIcon } from '@heroicons/react/24/outline'
-import { Plus } from 'lucide-react'
+import { Plus, Sparkles } from 'lucide-react'
 import { AvatarImage } from '@/components/ui/AvatarImage'
 import { useCurrentUser } from '@/hooks/useAuth'
 import { useQuery } from '@tanstack/react-query'
@@ -722,12 +722,21 @@ export default function Home() {
                 Your studio &gt;
               </span>
             </button>
-            <button
-              onClick={() => router.push("/tasks/all")}
-              className="bg-[#2A2A2A] text-white rounded-full px-4 py-2 text-sm font-medium hover:text-[#d7d7d7] transition-colors"
-            >
-              All tasks
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => router.push("/chat")}
+                className="w-11 h-11 bg-[#2A2A2A] rounded-full flex items-center justify-center hover:bg-[#2A2A2A]/80 transition-colors"
+                title="AI Assistant"
+              >
+                <Sparkles className="w-5 h-5 text-accent-yellow" />
+              </button>
+              <button
+                onClick={() => router.push("/tasks/all")}
+                className="bg-[#2A2A2A] text-white rounded-full px-4 py-2 text-sm font-medium hover:text-[#d7d7d7] transition-colors"
+              >
+                All tasks
+              </button>
+            </div>
           </div>
 
           {/* Target Projects */}

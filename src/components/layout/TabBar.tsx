@@ -3,7 +3,7 @@
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { useState } from 'react'
-import { HomeIcon, SparklesIcon, CalendarDaysIcon, PlusIcon } from '@heroicons/react/24/outline'
+import { HomeIcon, CalendarDaysIcon, PlusIcon } from '@heroicons/react/24/outline'
 import { QuickCaptureSheet } from '@/components/capture/QuickCaptureSheet'
 import { SimpleToast } from '@/components/ui/SimpleToast'
 
@@ -19,21 +19,16 @@ export function TabBar() {
       href: '/'
     },
     {
-      icon: SparklesIcon,
-      label: 'Chat',
-      href: '/chat'
-    },
-    {
-      icon: CalendarDaysIcon,
-      label: 'Logs',
-      href: '/logs'
-    },
-    {
       icon: PlusIcon,
       label: 'Add',
       href: '#',
       isSpecial: true,
       onClick: () => setShowCapture(true)
+    },
+    {
+      icon: CalendarDaysIcon,
+      label: 'Logs',
+      href: '/logs'
     },
   ]
 
