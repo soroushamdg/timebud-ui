@@ -68,6 +68,7 @@ export interface DbFocusSession {
   start_time: string | null;
   end_time: string | null;
   tasks_list: string[];
+  unfinished_reminder_sent_at?: string | null;
 }
 
 export type AIProvider = "anthropic" | "openai" | "google";
@@ -92,8 +93,15 @@ export interface DbUserAISettings {
   allow_research?: boolean;
   auto_estimate_tasks?: boolean;
   reminder_enabled?: boolean;
-  reminder_time?: string | null; // 'HH:MM', 24h, interpreted in `timezone`
+  reminder_time?: string | null; // 'HH:MM', 24h, interpreted in `timezone` — the inactivity nudge
   auto_timezone_enabled?: boolean;
+  morning_briefing_enabled?: boolean;
+  morning_briefing_time?: string | null; // 'HH:MM', 24h — also governs deadline alerts + weekly look-ahead
+  deadline_alerts_enabled?: boolean;
+  weekly_lookahead_enabled?: boolean;
+  unfinished_session_alerts_enabled?: boolean;
+  streak_alerts_enabled?: boolean;
+  last_streak_milestone?: number;
 }
 
 export interface DbPushSubscription {
