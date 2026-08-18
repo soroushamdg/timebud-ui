@@ -68,10 +68,11 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // sw.js and manifest.webmanifest must never require a login session — the browser
-    // fetches them to register the service worker / evaluate installability, and a
-    // service worker registration response can never be a redirect (browsers reject it
+    // /serwist/* (service worker, served via @serwist/turbopack's route handler) and
+    // manifest.webmanifest must never require a login session — the browser fetches
+    // them to register the service worker / evaluate installability, and a service
+    // worker registration response can never be a redirect (browsers reject it
     // outright), so gating these behind auth silently breaks all PWA functionality.
-    "/((?!_next/static|_next/image|favicon.ico|sw.js|manifest.webmanifest|.*.(?:svg|png|jpg|jpeg|gif|webp)$|auth).*)",
+    "/((?!_next/static|_next/image|favicon.ico|serwist/|manifest.webmanifest|.*.(?:svg|png|jpg|jpeg|gif|webp)$|auth).*)",
   ],
 };

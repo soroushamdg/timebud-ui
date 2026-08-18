@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import { Providers } from "@/components/providers/Providers";
 import { createClient } from "@/lib/supabase/server";
 import { Analytics } from "@vercel/analytics/react";
+import { SerwistProvider } from "@serwist/turbopack/react";
 import "./globals.css";
 
 const inter = Inter({
@@ -35,9 +36,11 @@ export default async function RootLayout({
         className={`${inter.variable} antialiased`}
         suppressHydrationWarning
       >
-        <Providers initialSession={session}>
-          {children}
-        </Providers>
+        <SerwistProvider swUrl="/serwist/sw.js" disable={process.env.NODE_ENV !== "production"}>
+          <Providers initialSession={session}>
+            {children}
+          </Providers>
+        </SerwistProvider>
         <Analytics />
       </body>
     </html>
