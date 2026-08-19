@@ -1,0 +1,462 @@
+'use client'
+
+import { useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { X, Square } from 'lucide-react'
+import { useFocusSessionStore } from '@/stores/sessionStore'
+import { useUpdateTask } from '@/hooks/useTasks'
+import { useUpdateFocusSession, useCreateFocusSession, useCreateCompletedFocusSession, insertSessionTaskLogs } from '@/hooks/useSessions'
+import { toUtcString } from '@/lib/dates'
+import { createClient } from '@/lib/supabase/client'
+import { PlannedTask } from '@/stores/sessionStore'
+import { FocusTaskCard } from '@/components/tasks/FocusTaskCard'
+import { PartialTaskCompletionDialog } from '@/components/dialogs/PartialTaskCompletionDialog'
+import { TaskOverviewDialog } from '@/components/dialogs/TaskOverviewDialog'
+import { useFocusSessionGuard } from '@/hooks/useSessionGuard'
+import { useReplan } from '@/contexts/ReplanContext'
+
+export default function FocusSession() {
+  const router = useRouter()
+  const focusSessionStore = useFocusSessionStore()
+  const updateTask = useUpdateTask()
+  const updateFocusSession = useUpdateFocusSession()
+  const createFocusSession = useCreateFocusSession()
+  const createCompletedFocusSession = useCreateCompletedFocusSession()
+  const { triggerReplan } = useReplan()
+  
+  // Debug: Log session data
+  console.log('[FocusSession] Session data:', {
+    taskCount: focusSessionStore.plannedTasks.length,
+    tasks: focusSessionStore.plannedTasks.map(t => ({
+      title: t.title,
+      dependsOnTaskId: t.dependsOnTaskId,
+      isPartOfChain: t.isPartOfChain,
+      chainPosition: t.chainPosition,
+      isLocked: t.isLocked
+    }))
+  });
+  
+  // Focus session guard - allow this page but redirect if no active focus session
+  useFocusSessionGuard(true);
+  
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false)
+  const [showStopConfirmDialog, setShowStopConfirmDialog] = useState(false)
+  const [showPartialCompletionDialog, setShowPartialCompletionDialog] = useState(false)
+  const [showTaskOverview, setShowTaskOverview] = useState(false)
+  const [selectedTask, setSelectedTask] = useState<PlannedTask | null>(null)
+  const [elapsedSeconds, setElapsedSeconds] = useState(0)
+  const [loadingTaskIds, setLoadingTaskIds] = useState<Set<string>>(new Set())
+  
+  const timerStartRef = useRef(new Date())
+  const intervalRef = useRef<NodeJS.Timeout | null>(null)
+
+  const startTimer = () => {
+    // Don't set new start time if session was already running (resuming)
+    if (!focusSessionStore.sessionStartTime) {
+      timerStartRef.current = new Date()
+      focusSessionStore.startTimer()
+    } else {
+      // Use existing start time for resumed sessions (handle both Date and string)
+      const startTime = typeof focusSessionStore.sessionStartTime === 'string' 
+        ? new Date(focusSessionStore.sessionStartTime) 
+        : focusSessionStore.sessionStartTime;
+      timerStartRef.current = startTime;
+    }
+    intervalRef.current = setInterval(() => {
+      tickTimer()
+    }, 1000)
+  }
+
+  const tickTimer = () => {
+    const now = new Date()
+    const elapsed = Math.floor((now.getTime() - timerStartRef.current.getTime()) / 1000)
+    setElapsedSeconds(elapsed)
+  }
+
+  const clearTimer = () => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current)
+      intervalRef.current = null
+    }
+  }
+
+  const formatTime = (seconds: number) => {
+    const h = Math.floor(seconds / 3600)
+    const m = Math.floor((seconds % 3600) / 60)
+    const sec = seconds % 60
+    return `${h}:${m.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`
+  }
+
+  const handleTaskCheckmark = async (taskId: string) => {
+    const task = focusSessionStore.plannedTasks.find(t => t.taskId === taskId)
+    
+    if (!task) return
+    
+    // If task is already done, undo it
+    if (task.done) {
+      setLoadingTaskIds(prev => new Set(prev).add(taskId))
+      
+      try {
+        await updateTask.mutateAsync({ id: taskId, status: 'pending' })
+        focusSessionStore.markTaskUndone(taskId)
+      } catch (error) {
+        console.error('Failed to undo task:', error)
+      } finally {
+        setLoadingTaskIds(prev => {
+          const newSet = new Set(prev)
+          newSet.delete(taskId)
+          return newSet
+        })
+      }
+      return
+    }
+    
+    // If task is partial and not done, show partial completion dialog
+    if (task.partial && !task.done) {
+      setSelectedTask(task)
+      setShowPartialCompletionDialog(true)
+      return
+    }
+    
+    // Mark task as done
+    setLoadingTaskIds(prev => new Set(prev).add(taskId))
+    
+    try {
+      await updateTask.mutateAsync({ id: taskId, status: 'completed' })
+      focusSessionStore.markTaskDone(taskId)
+      // Unlock any tasks that depend on this one
+      focusSessionStore.unlockDependentTasks(taskId)
+    } catch (error) {
+      console.error('Failed to update task:', error)
+    } finally {
+      setLoadingTaskIds(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(taskId)
+        return newSet
+      })
+    }
+  }
+
+  const handleTaskHold = async (taskId: string) => {
+    const task = focusSessionStore.plannedTasks.find(t => t.taskId === taskId)
+    
+    if (!task || task.partial || task.done) return
+    
+    // For non-partial tasks, we want to open the partial completion dialog
+    // but we need to modify the task to act like a partial task temporarily
+    setSelectedTask(task)
+    setShowPartialCompletionDialog(true)
+  }
+
+  const handleTaskClick = (task: PlannedTask) => {
+    setSelectedTask(task);
+    setShowTaskOverview(true);
+  };
+
+  const handleStopClick = () => {
+    setShowStopConfirmDialog(true)
+  }
+
+  const handleStopConfirm = async () => {
+    setShowStopConfirmDialog(false)
+    await handleStop()
+  }
+
+  const handleStop = async () => {
+    clearTimer()
+    const endTime = new Date()
+
+    // Snapshot planned tasks before clearing session store
+    const plannedTasksSnapshot = [...focusSessionStore.plannedTasks]
+    let savedSessionId: string | null = null
+    
+    // Only save to database if session was actually started (has a real session ID)
+    if (focusSessionStore.focusSessionId && !focusSessionStore.focusSessionId.startsWith('local-')) {
+      try {
+        await updateFocusSession.mutateAsync({
+          id: focusSessionStore.focusSessionId,
+          start_time: toUtcString(timerStartRef.current),
+          end_time: toUtcString(endTime)
+        })
+        savedSessionId = focusSessionStore.focusSessionId
+      } catch (error) {
+        console.error('Failed to update session:', error)
+      }
+    } else if (focusSessionStore.focusSessionId && focusSessionStore.focusSessionId.startsWith('local-')) {
+      // Create and save session to database only now that it's completed
+      try {
+        const completedSession = await createCompletedFocusSession.mutateAsync({
+          budget_minutes: focusSessionStore.budgetMinutes,
+          tasks_list: plannedTasksSnapshot.map(t => t.taskId),
+          start_time: toUtcString(timerStartRef.current),
+          end_time: toUtcString(endTime)
+        })
+        savedSessionId = completedSession.id
+        console.log('Session saved to database:', completedSession)
+      } catch (error) {
+        console.error('Failed to create completed session:', error)
+      }
+    }
+
+    // Write per-task outcome logs
+    if (savedSessionId && plannedTasksSnapshot.length > 0) {
+      try {
+        const taskIds = plannedTasksSnapshot.map(t => t.taskId)
+        const supabase = createClient()
+        const { data: dbTasks } = await supabase
+          .from('tasks')
+          .select('id, status')
+          .in('id', taskIds)
+
+        const statusMap = new Map((dbTasks ?? []).map((t: { id: string; status: string | null }) => [t.id, t.status]))
+
+        const logs = plannedTasksSnapshot.map(task => {
+          let outcome: 'completed' | 'partial' | 'skipped'
+          if (!task.done) {
+            outcome = 'skipped'
+          } else if (statusMap.get(task.taskId) === 'completed') {
+            outcome = 'completed'
+          } else {
+            outcome = 'partial'
+          }
+          return {
+            session_id: savedSessionId!,
+            task_id: task.taskId,
+            task_title: task.title,
+            project_id: task.projectId ?? null,
+            project_name: task.projectName ?? null,
+            outcome,
+            scheduled_minutes: task.scheduledMinutes,
+            actual_minutes: outcome !== 'skipped' ? task.scheduledMinutes : null,
+          }
+        })
+
+        await insertSessionTaskLogs(logs)
+      } catch (error) {
+        console.error('Failed to write session task logs:', error)
+      }
+    }
+    
+    focusSessionStore.clearFocusSession()
+    
+    // Trigger planner re-run after session ends
+    triggerReplan()
+    
+    router.push('/v1')
+  }
+
+  const handleEndWithoutSaving = () => {
+    clearTimer()
+    focusSessionStore.clearFocusSession()
+    
+    // Trigger planner re-run after session ends without saving
+    triggerReplan()
+    
+    router.push('/v1')
+  }
+
+  const handleUpdateEstimatedTime = async (remainingMinutes: number) => {
+    if (!selectedTask) return
+    
+    const newEstimatedMinutes = remainingMinutes
+    
+    try {
+      await updateTask.mutateAsync({ 
+        id: selectedTask.taskId, 
+        estimated_minutes: newEstimatedMinutes 
+      })
+      
+      focusSessionStore.markTaskDone(selectedTask.taskId)
+      // Unlock any tasks that depend on this one
+      focusSessionStore.unlockDependentTasks(selectedTask.taskId)
+    } catch (error) {
+      console.error('Failed to update task estimated time:', error)
+    }
+  }
+
+  const handleMarkTaskComplete = async () => {
+    if (!selectedTask) return
+    
+    setLoadingTaskIds(prev => new Set(prev).add(selectedTask.taskId))
+    
+    try {
+      await updateTask.mutateAsync({ id: selectedTask.taskId, status: 'completed' })
+      focusSessionStore.markTaskDone(selectedTask.taskId)
+      // Unlock any tasks that depend on this one
+      focusSessionStore.unlockDependentTasks(selectedTask.taskId)
+    } catch (error) {
+      console.error('Failed to update task:', error)
+    } finally {
+      setLoadingTaskIds(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(selectedTask.taskId)
+        return newSet
+      })
+    }
+  }
+
+  const handlePartialCompletionForNonPartialTask = async (remainingMinutes: number) => {
+    if (!selectedTask) return
+    
+    const newEstimatedMinutes = remainingMinutes
+    
+    try {
+      // Update the task's estimated time
+      await updateTask.mutateAsync({ 
+        id: selectedTask.taskId, 
+        estimated_minutes: newEstimatedMinutes 
+      })
+      
+      // Mark the task as done in the current session (but not completed in the database)
+      focusSessionStore.markTaskDone(selectedTask.taskId)
+    } catch (error) {
+      console.error('Failed to update task estimated time:', error)
+    }
+  }
+
+  useEffect(() => {
+    // Resume timer if session was running
+    if (focusSessionStore.timerRunning && focusSessionStore.sessionStartTime) {
+      // Ensure sessionStartTime is a Date object
+      const startTime = typeof focusSessionStore.sessionStartTime === 'string' 
+        ? new Date(focusSessionStore.sessionStartTime) 
+        : focusSessionStore.sessionStartTime;
+      
+      // Calculate elapsed time since session started
+      const elapsed = Math.floor((new Date().getTime() - startTime.getTime()) / 1000);
+      setElapsedSeconds(elapsed);
+      startTimer();
+    }
+    return () => {
+      clearTimer();
+    };
+  }, [focusSessionStore.timerRunning, focusSessionStore.sessionStartTime]);
+
+  return (
+    <div className="min-h-screen bg-black relative">
+      {/* Floating X button - Top left corner */}
+      <button
+        onClick={() => setShowConfirmDialog(true)}
+        className="fixed top-4 left-4 w-12 h-12 bg-black/50 backdrop-blur-sm rounded-full flex items-center justify-center text-accent-pink hover:bg-black/70 hover:opacity-80 transition-all z-50 border border-accent-pink/20"
+      >
+        <X size={20} />
+      </button>
+
+      {/* Timer display */}
+      <div className="flex flex-col items-center justify-center mt-32">
+        <div className="flex items-center gap-2">
+          <div className="w-2.5 h-2.5 bg-accent-pink rounded-full"></div>
+          <div className="text-white text-5xl font-bold">
+            {formatTime(elapsedSeconds)}
+          </div>
+        </div>
+      </div>
+
+      {/* Task list */}
+      <div className="px-4 mt-12 max-h-[calc(100vh-300px)] overflow-y-auto">
+        <div className="space-y-3 max-w-full">
+          {focusSessionStore.plannedTasks.map((task, index) => {
+            // Compute chain metadata on-the-fly if missing (for backward compatibility)
+            const enhancedTask = {
+              ...task,
+              isPartOfChain: task.isPartOfChain ?? (task.dependsOnTaskId != null || focusSessionStore.plannedTasks.some(t => t.dependsOnTaskId === task.taskId)),
+              chainPosition: task.chainPosition ?? (task.dependsOnTaskId != null ? index : 0),
+              isLocked: task.isLocked ?? (task.dependsOnTaskId != null && focusSessionStore.plannedTasks.find(t => t.taskId === task.dependsOnTaskId)?.done !== true),
+            };
+            
+            return (
+              <FocusTaskCard
+                key={task.taskId}
+                task={enhancedTask}
+                onCheckmark={() => handleTaskCheckmark(task.taskId)}
+                onClick={() => handleTaskClick(task)}
+                onHold={() => handleTaskHold(task.taskId)}
+                isLoading={loadingTaskIds.has(task.taskId)}
+              />
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Stop button */}
+      <button
+        onClick={handleStopClick}
+        className="fixed bottom-8 left-1/2 -translate-x-1/2 w-[72px] h-[72px] bg-accent-pink rounded-none flex items-center justify-center text-white border border-[#ffffff]"
+      >
+        <Square size={32} fill="currentColor" />
+      </button>
+
+      {/* Stop confirmation dialog */}
+      {showStopConfirmDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100]">
+          <div className="bg-bg-card rounded-2xl p-6 max-w-sm w-full mx-4">
+            <h2 className="text-xl font-semibold mb-2">Finish session?</h2>
+            <p className="text-gray-400 mb-6">This session will be saved and completed.</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowStopConfirmDialog(false)}
+                className="flex-1 px-4 py-2 border border-gray-600 rounded-lg text-gray-300 hover:bg-gray-800 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleStopConfirm}
+                className="flex-1 px-4 py-2 bg-accent-pink text-white font-bold rounded-lg hover:bg-accent-pink/90 transition-colors"
+              >
+                Finish Session
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm dialog */}
+      {showConfirmDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100]">
+          <div className="bg-bg-card rounded-2xl p-6 max-w-sm w-full mx-4">
+            <h2 className="text-xl font-semibold mb-2">End session?</h2>
+            <p className="text-gray-400 mb-6">This session won't be saved.</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowConfirmDialog(false)}
+                className="flex-1 px-4 py-2 border border-gray-600 rounded-lg text-gray-300 hover:bg-gray-800 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleEndWithoutSaving}
+                className="flex-1 px-4 py-2 bg-accent-pink text-white font-bold rounded-lg hover:bg-accent-pink/90 transition-colors"
+              >
+                End without saving
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Partial task completion dialog */}
+      {selectedTask && (
+        <PartialTaskCompletionDialog
+          task={selectedTask}
+          isOpen={showPartialCompletionDialog}
+          onClose={() => {
+            setShowPartialCompletionDialog(false)
+            setSelectedTask(null)
+          }}
+          onUpdateEstimatedTime={handleUpdateEstimatedTime}
+          onMarkComplete={handleMarkTaskComplete}
+          onPartialCompletionForNonPartialTask={handlePartialCompletionForNonPartialTask}
+        />
+      )}
+
+      {/* Task overview dialog */}
+      {showTaskOverview && selectedTask && (
+        <TaskOverviewDialog 
+          isOpen={showTaskOverview}
+          onClose={() => setShowTaskOverview(false)}
+          task={selectedTask}
+        />
+      )}
+    </div>
+  )
+}
