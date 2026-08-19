@@ -19,7 +19,7 @@ export function UnfinishedSessionModal({ session, onContinue, onStartFresh }: Un
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] px-4">
       <div className="bg-bg-card border border-border-card rounded-2xl p-6 w-full max-w-sm">
-        <h2 className="text-white text-xl font-bold mb-2">Unfinished session</h2>
+        <h2 className="text-white text-xl font-bold mb-2">Unfinished run</h2>
         
         <p className="text-text-sec mb-6">
           Started at {formatStartTime(session.start_time)}

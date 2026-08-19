@@ -33,8 +33,11 @@ function getLevelTitle(level: number): string {
 
 // Cumulative XP needed to REACH a given level, on a quadratic curve (gaps between
 // levels grow over time instead of every level costing the same, flat amount).
+// Shifted so level 1 sits at a 0 XP floor — everyone starts at Level 1 with 0 XP,
+// so that floor can never be positive (that made xpIntoLevel go negative for anyone
+// below 50 XP).
 function cumulativeXpForLevel(level: number): number {
-  return 50 * level * level
+  return 50 * (level - 1) * (level - 1)
 }
 
 export interface LevelProgress {

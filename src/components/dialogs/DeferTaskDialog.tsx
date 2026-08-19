@@ -61,7 +61,7 @@ export function DeferTaskDialog({
       onClose()
     } catch (err) {
       console.error('Failed to defer task:', err)
-      setError('Failed to update task deadline')
+      setError('Failed to update job deadline')
     } finally {
       setIsLoading(false)
     }
@@ -77,7 +77,7 @@ export function DeferTaskDialog({
         <div className="flex items-center justify-between p-4 border-b border-[#333333]">
           <div className="flex items-center gap-3">
             <Calendar className="w-5 h-5 text-accent-yellow" />
-            <h2 className="text-white font-bold text-lg">Defer Task</h2>
+            <h2 className="text-white font-bold text-lg">Defer Job</h2>
           </div>
           <button 
             onClick={onClose}
@@ -89,7 +89,7 @@ export function DeferTaskDialog({
         
         <div className="p-4 space-y-4">
           <div>
-            <p className="text-text-sec text-sm mb-1">Task</p>
+            <p className="text-text-sec text-sm mb-1">Job</p>
             <p className="text-white font-medium">{taskTitle}</p>
           </div>
 

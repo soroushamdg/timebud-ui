@@ -56,9 +56,9 @@ export default function AddPage() {
                 <FolderIcon className="w-6 h-6 text-black" />
               </div>
               <div className="flex-1 text-left">
-                <h3 className="text-white font-semibold">New Project</h3>
+                <h3 className="text-white font-semibold">New Mission</h3>
                 <p className="text-[#666666] text-sm">
-                  Create a new project to organize tasks
+                  Create a new mission to organize jobs
                 </p>
               </div>
             </button>
@@ -72,9 +72,9 @@ export default function AddPage() {
                 <DocumentTextIcon className="w-6 h-6 text-black" />
               </div>
               <div className="flex-1 text-left">
-                <h3 className="text-white font-semibold">New Task</h3>
+                <h3 className="text-white font-semibold">New Job</h3>
                 <p className="text-[#666666] text-sm">
-                  Add a new task to your workspace
+                  Add a new job to your workspace
                 </p>
               </div>
             </button>

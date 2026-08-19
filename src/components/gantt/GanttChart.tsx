@@ -120,7 +120,7 @@ function TimelineView({ tasks, projects }: GanttChartProps) {
     .map(p => ({ project: p, tasks: tasks.filter(t => t.project_id === p.id) }))
     .filter(g => g.tasks.length > 0)
   const orphan = tasks.filter(t => !t.project_id)
-  if (orphan.length > 0) groups.push({ project: { id: '', name: 'No Project', color: null } as DbProject, tasks: orphan })
+  if (orphan.length > 0) groups.push({ project: { id: '', name: 'No Mission', color: null } as DbProject, tasks: orphan })
 
   // Build header ticks (months + mondays)
   const ticks: { x: number; label: string; bold: boolean }[] = []
@@ -286,7 +286,7 @@ function TimelineView({ tasks, projects }: GanttChartProps) {
 
           {groups.length === 0 && (
             <div className="flex items-center justify-center py-16">
-              <p className="text-text-sec text-sm">No tasks to display</p>
+              <p className="text-text-sec text-sm">No jobs to display</p>
             </div>
           )}
         </div>
@@ -376,7 +376,7 @@ function ListView({ tasks, projects }: GanttChartProps) {
   if (visible.length === 0) {
     return (
       <div className="flex items-center justify-center py-16">
-        <p className="text-text-sec text-sm">No tasks to display</p>
+        <p className="text-text-sec text-sm">No jobs to display</p>
       </div>
     )
   }

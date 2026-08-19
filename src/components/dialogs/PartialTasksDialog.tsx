@@ -30,7 +30,7 @@ export function PartialTasksDialog({ isOpen, onClose }: PartialTasksDialogProps)
         <div className="flex items-center justify-between p-6 pb-4">
           <div className="flex items-center gap-3">
             <HelpCircle className="w-5 h-5 text-text-sec" />
-            <h2 className="text-white font-bold text-lg">Partial tasks</h2>
+            <h2 className="text-white font-bold text-lg">Partial jobs</h2>
           </div>
           <button 
             onClick={onClose}
@@ -46,7 +46,7 @@ export function PartialTasksDialog({ isOpen, onClose }: PartialTasksDialogProps)
         {/* Description */}
         <div className="px-6 py-4">
           <p className="text-text-sec text-sm">
-            Allow tasks to be split across sessions when time runs out. When disabled, only tasks that can be completed fully will be scheduled.
+            Allow jobs to be split across runs when time runs out. When disabled, only jobs that can be completed fully will be scheduled.
           </p>
         </div>
         
@@ -60,7 +60,7 @@ export function PartialTasksDialog({ isOpen, onClose }: PartialTasksDialogProps)
           >
             <div className="flex flex-col items-start">
               <span className="text-white text-base">Enabled</span>
-              <span className="text-text-sec text-xs mt-1">Tasks can be split if time is insufficient</span>
+              <span className="text-text-sec text-xs mt-1">Jobs can be split if time is insufficient</span>
             </div>
             
             {/* Selection indicator */}
@@ -81,7 +81,7 @@ export function PartialTasksDialog({ isOpen, onClose }: PartialTasksDialogProps)
           >
             <div className="flex flex-col items-start">
               <span className="text-white text-base">Disabled</span>
-              <span className="text-text-sec text-xs mt-1">Only schedule tasks that can be completed fully</span>
+              <span className="text-text-sec text-xs mt-1">Only schedule jobs that can be completed fully</span>
             </div>
             
             {/* Selection indicator */}

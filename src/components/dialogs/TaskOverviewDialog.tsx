@@ -25,7 +25,7 @@ export function TaskOverviewDialog({ isOpen, onClose, task }: TaskOverviewDialog
         <div className="flex items-center justify-between p-6 pb-4">
           <div className="flex items-center gap-3">
             <Info className="w-5 h-5 text-text-sec" />
-            <h2 className="text-white font-bold text-lg">Task Overview</h2>
+            <h2 className="text-white font-bold text-lg">Job Overview</h2>
           </div>
           <button 
             onClick={onClose}
@@ -46,21 +46,21 @@ export function TaskOverviewDialog({ isOpen, onClose, task }: TaskOverviewDialog
               <AvatarImage
                 src={undefined}
                 fallbackType="project"
-                fallbackLabel={task.projectName || 'Project'}
+                fallbackLabel={task.projectName || 'Mission'}
                 fallbackColor={task.projectColor || '#F5C518'}
                 size={48}
                 className="flex-shrink-0"
               />
               <div>
-                <p className="text-text-sec text-sm">Project</p>
-                <p className="text-white font-medium">{task.projectName || 'Unknown Project'}</p>
+                <p className="text-text-sec text-sm">Mission</p>
+                <p className="text-white font-medium">{task.projectName || 'Unknown Mission'}</p>
               </div>
             </div>
           )}
 
-          {/* Task Title */}
+          {/* Job Title */}
           <div>
-            <p className="text-text-sec text-sm mb-1">Task</p>
+            <p className="text-text-sec text-sm mb-1">Job</p>
             <h3 className="text-white text-lg font-semibold">{task.title}</h3>
           </div>
 
@@ -104,11 +104,11 @@ export function TaskOverviewDialog({ isOpen, onClose, task }: TaskOverviewDialog
               </p>
             </div>
 
-            {/* Task Type */}
+            {/* Job Type */}
             <div className="bg-bg-card rounded-lg p-3 border border-border-card">
               <p className="text-text-sec text-sm mb-1">Type</p>
               <p className="text-white font-medium">
-                {task.isSolo ? 'Solo Task' : 'Project Task'}
+                {task.isSolo ? 'Solo Job' : 'Mission Job'}
               </p>
             </div>
           </div>
@@ -116,16 +116,16 @@ export function TaskOverviewDialog({ isOpen, onClose, task }: TaskOverviewDialog
           {/* Additional Info */}
           {task.partial && (
             <div className="bg-bg-card rounded-lg p-3 border border-border-card">
-              <p className="text-text-sec text-sm mb-1">Session Info</p>
+              <p className="text-text-sec text-sm mb-1">Run Info</p>
               <p className="text-white font-medium">
-                Partial task - {task.scheduledMinutes} minutes allocated for this session
+                Partial job - {task.scheduledMinutes} minutes allocated for this run
               </p>
             </div>
           )}
 
-          {/* Task ID */}
+          {/* Job ID */}
           <div className="text-xs text-text-sec">
-            <p>Task ID: {task.taskId}</p>
+            <p>Job ID: {task.taskId}</p>
           </div>
         </div>
       </div>

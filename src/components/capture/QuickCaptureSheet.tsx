@@ -199,10 +199,10 @@ export function QuickCaptureSheet({ onClose, onSuccess }: QuickCaptureSheetProps
 
         <div className="flex items-center justify-center gap-6 text-sm">
           <button onClick={() => goTo('/tasks/new')} className="text-text-sec hover:text-white transition-colors">
-            Full task form
+            Full job form
           </button>
           <button onClick={() => goTo('/projects/new')} className="text-text-sec hover:text-white transition-colors">
-            New project
+            New mission
           </button>
         </div>
       </div>

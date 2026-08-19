@@ -40,9 +40,9 @@ export default function GanttPage() {
             <div className="w-12 h-12 bg-bg-card border border-border-card rounded-full flex items-center justify-center mb-4">
               <span className="text-accent-yellow text-xl">◆</span>
             </div>
-            <p className="text-white text-base font-medium mb-1">No tasks yet</p>
+            <p className="text-white text-base font-medium mb-1">No jobs yet</p>
             <p className="text-text-sec text-sm text-center">
-              Add tasks with due dates to see them on the timeline.
+              Add jobs with due dates to see them on the timeline.
             </p>
           </div>
         ) : (

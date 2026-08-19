@@ -102,7 +102,7 @@ export function AddTaskToPlannerDialog({
         <div className="flex-1 overflow-y-auto px-4 pb-4">
           {incompleteTasks.length === 0 ? (
             <div className="flex items-center justify-center h-32">
-              <p className="text-text-sec text-center">No tasks available to add</p>
+              <p className="text-text-sec text-center">No jobs available to add</p>
             </div>
           ) : (
             <div className="space-y-2">

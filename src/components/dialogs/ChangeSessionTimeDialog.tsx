@@ -181,7 +181,7 @@ export function ChangeSessionTimeDialog({ isOpen, onClose }: ChangeSessionTimeDi
         {/* Loading overlay */}
         {isReplanning && (
           <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-t-3xl">
-            <div className="text-white text-sm">Replanning session...</div>
+            <div className="text-white text-sm">Replanning run...</div>
           </div>
         )}
       </div>

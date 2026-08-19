@@ -488,22 +488,25 @@ export default function ProjectOverviewPage({
     : 0;
 
   // Mission-complete celebration: fires once when progress crosses into 100% during
-  // this session (not on initial load — the ref primes silently on first render, same
-  // pattern as useLevelUpWatcher). The durable XP bonus itself already came from the
-  // Phase 2 DB trigger; this only decides when to show the modal.
+  // this session (not on initial load, and not while `tasks` is still loading — priming
+  // the baseline before the real task list arrives would see a false totalTaskCount===0
+  // "incomplete" state and then wrongly fire the moment real data lands on an already-
+  // complete mission). The durable XP bonus itself already came from the Phase 2 DB
+  // trigger; this only decides when to show the modal.
   const wasCompleteRef = useRef<boolean | null>(null);
   const [showMissionComplete, setShowMissionComplete] = useState(false);
   useEffect(() => {
-    const isComplete = totalTaskCount > 0 && progressPercentage === 100;
+    if (tasksLoading) return
+    const isComplete = totalTaskCount > 0 && progressPercentage === 100
     if (wasCompleteRef.current === null) {
-      wasCompleteRef.current = isComplete;
-      return;
+      wasCompleteRef.current = isComplete
+      return
     }
     if (isComplete && !wasCompleteRef.current) {
-      setShowMissionComplete(true);
+      setShowMissionComplete(true)
     }
-    wasCompleteRef.current = isComplete;
-  }, [totalTaskCount, progressPercentage]);
+    wasCompleteRef.current = isComplete
+  }, [totalTaskCount, progressPercentage, tasksLoading]);
 
   const { newLevel, dismiss: dismissLevelUp } = useLevelUpWatcher();
 
@@ -1779,6 +1782,28 @@ export default function ProjectOverviewPage({
         </div>
       )}
 
+      {/* Bud cameo — reacts to how this mission is going, scrolls with the page so it
+          never sits on top of the job list's checkboxes */}
+      {!showGantt && totalTaskCount > 0 && (
+        <div className="flex items-center gap-2.5 px-4 pt-4 pb-1">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/bud/bud-avatar.png"
+            alt="Bud"
+            className="w-9 h-9 rounded-full border-2 border-accent-yellow flex-shrink-0 object-cover"
+          />
+          <div className="bg-bg-card border border-border-card text-white text-xs font-medium px-3 py-2 rounded-2xl rounded-bl-sm">
+            {progressPercentage === 100
+              ? "Mission complete. That's how it's done."
+              : progressPercentage >= 75
+              ? "Almost there. Don't stop now."
+              : progressPercentage >= 40
+              ? 'Solid pace. Keep grinding.'
+              : "Every job counts. Let's go."}
+          </div>
+        </div>
+      )}
+
       {/* Content */}
       <div className={`pb-20 ${showGantt ? 'hidden' : ''}`}>
         {sortedItems.length === 0 ? (
@@ -2012,26 +2037,6 @@ export default function ProjectOverviewPage({
         </button>
       )}
 
-      {/* Bud cameo — reacts to how this mission is going */}
-      {!showGantt && totalTaskCount > 0 && (
-        <div className="fixed bottom-24 left-4 flex items-end gap-2 z-10 max-w-[220px]">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/bud/bud-avatar.png"
-            alt="Bud"
-            className="w-11 h-11 rounded-full border-2 border-accent-yellow flex-shrink-0 object-cover shadow-lg"
-          />
-          <div className="bg-white text-black text-xs font-semibold px-3 py-2 rounded-2xl rounded-bl-sm shadow-lg">
-            {progressPercentage === 100
-              ? "Mission complete. That's how it's done."
-              : progressPercentage >= 75
-              ? "Almost there. Don't stop now."
-              : progressPercentage >= 40
-              ? 'Solid pace. Keep grinding.'
-              : "Every job counts. Let's go."}
-          </div>
-        </div>
-      )}
 
       {/* Edit Item Modal */}
       {editingItem && (

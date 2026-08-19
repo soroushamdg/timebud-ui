@@ -64,7 +64,7 @@ export function TaskActionMenu({
         <div className="p-6 pb-4">
           <div className="w-12 h-1 bg-[#333333] rounded-full mx-auto mb-4" />
           <h3 className="text-white font-semibold text-lg mb-1">{taskTitle}</h3>
-          <p className="text-text-sec text-sm">Task Actions</p>
+          <p className="text-text-sec text-sm">Job Actions</p>
         </div>
         
         <div className="border-t border-[#333333]" />
@@ -80,7 +80,7 @@ export function TaskActionMenu({
               </div>
               <div className="flex-1 text-left">
                 <h4 className="text-white font-semibold">Unpin from Planner</h4>
-                <p className="text-[#666666] text-sm">Remove from pinned tasks</p>
+                <p className="text-[#666666] text-sm">Remove from pinned jobs</p>
               </div>
             </button>
           ) : (
@@ -97,7 +97,7 @@ export function TaskActionMenu({
                     {pinned ? 'Unpin from Planner' : 'Pin to Planner'}
                   </h4>
                   <p className="text-[#666666] text-sm">
-                    {pinned ? 'Remove from pinned tasks' : 'Keep at top of planner list'}
+                    {pinned ? 'Remove from pinned jobs' : 'Keep at top of planner list'}
                   </p>
                 </div>
               </button>
@@ -110,7 +110,7 @@ export function TaskActionMenu({
                   <Calendar className="w-6 h-6 text-black" />
                 </div>
                 <div className="flex-1 text-left">
-                  <h4 className="text-white font-semibold">Defer Task</h4>
+                  <h4 className="text-white font-semibold">Defer Job</h4>
                   <p className="text-[#666666] text-sm">Move to a different date</p>
                 </div>
               </button>

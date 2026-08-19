@@ -51,11 +51,11 @@ export function PartialTaskCompletionDialog({
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100]">
       <div className="bg-bg-card rounded-2xl p-6 max-w-sm w-full mx-4">
-        <h2 className="text-xl font-semibold mb-2">Task Progress</h2>
+        <h2 className="text-xl font-semibold mb-2">Job Progress</h2>
         <p className="text-gray-400 mb-6">
-          {task.partial 
-            ? `You scheduled ${task.scheduledMinutes}min for this task. What is your new estimate for the remaining work?`
-            : `You're marking this task as partially complete. What is your new estimate for the remaining work?`
+          {task.partial
+            ? `You scheduled ${task.scheduledMinutes}min for this job. What is your new estimate for the remaining work?`
+            : `You're marking this job as partially complete. What is your new estimate for the remaining work?`
           }
         </p>
         
@@ -88,7 +88,7 @@ export function PartialTaskCompletionDialog({
             disabled={isSubmitting}
             className="w-full px-4 py-2 bg-accent-green text-white font-bold rounded-lg hover:bg-accent-green/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            I've finished the task
+            I've finished the job
           </button>
           
           <button

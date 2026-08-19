@@ -29,6 +29,7 @@ export default function NewTaskPage(props: { searchParams: Promise<{ projectId?:
   }, [props.searchParams])
   
   const [itemType, setItemType] = useState<'task' | 'milestone'>('task')
+  const itemLabel = itemType === 'milestone' ? 'Objective' : 'Job'
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -180,7 +181,7 @@ export default function NewTaskPage(props: { searchParams: Promise<{ projectId?:
       
       // Validation
       if (!itemData.title) {
-        throw new Error(`${data.itemType === 'milestone' ? 'Milestone' : 'Task'} title is required`)
+        throw new Error(`${data.itemType === 'milestone' ? 'Objective' : 'Job'} title is required`)
       }
       
       if (data.itemType === 'task' && (itemData as any).estimated_minutes && ((itemData as any).estimated_minutes < 1 || (itemData as any).estimated_minutes > 480)) {
@@ -225,8 +226,8 @@ export default function NewTaskPage(props: { searchParams: Promise<{ projectId?:
         code: error?.code,
         error_description: error?.error_description
       })
-      
-      let message = `Failed to create ${itemType}. Please try again.`
+
+      let message = `Failed to create ${itemLabel.toLowerCase()}. Please try again.`
       if (error?.message) {
         message = error.message
       } else if (error?.details) {
@@ -252,16 +253,16 @@ export default function NewTaskPage(props: { searchParams: Promise<{ projectId?:
     
     // Validation
     if (!formData.title.trim()) {
-      setTitleError(`${itemType === 'milestone' ? 'Milestone' : 'Task'} title is required`)
+      setTitleError(`${itemLabel} title is required`)
       return
     }
-    
+
     if (itemType === 'milestone' && !formData.project_id) {
-      setProjectError('Please select a project for this milestone')
+      setProjectError('Please select a mission for this objective')
       return
     }
-    
-    // Deadline validation: task/milestone deadline cannot be after project deadline
+
+    // Deadline validation: job/objective deadline cannot be after mission deadline
     if (formData.project_id && formData.due_date) {
       const selectedProject = projects.find(p => p.id === formData.project_id)
       if (selectedProject && selectedProject.deadline) {
@@ -269,7 +270,7 @@ export default function NewTaskPage(props: { searchParams: Promise<{ projectId?:
         const projectDeadline = parseDateLocal(selectedProject.deadline)
 
         if (taskDeadline > projectDeadline) {
-          setDeadlineError(`${itemType === 'milestone' ? 'Milestone' : 'Task'} deadline cannot be after project deadline (${parseDateLocal(selectedProject.deadline).toLocaleDateString()})`)
+          setDeadlineError(`${itemLabel} deadline cannot be after mission deadline (${parseDateLocal(selectedProject.deadline).toLocaleDateString()})`)
           return
         }
       }
@@ -312,7 +313,7 @@ export default function NewTaskPage(props: { searchParams: Promise<{ projectId?:
           <ChevronLeft size={20} />
         </button>
         <h1 className="text-2xl font-bold text-white">
-          {itemType === 'milestone' ? 'New Milestone' : 'New Task'}
+          New {itemLabel}
         </h1>
         <div className="w-10" />
       </div>
@@ -337,7 +338,7 @@ export default function NewTaskPage(props: { searchParams: Promise<{ projectId?:
                 : 'text-text-sec'
             }`}
           >
-            Task
+            Job
           </button>
           <button
             type="button"
@@ -348,18 +349,18 @@ export default function NewTaskPage(props: { searchParams: Promise<{ projectId?:
                 : 'text-text-sec'
             }`}
           >
-            Milestone
+            Objective
           </button>
         </div>
 
         {/* Title */}
         <div>
           <label className="text-text-sec text-sm font-medium mb-2 block">
-            {itemType === 'milestone' ? 'Milestone title' : 'Task title'}
+            {itemLabel} title
           </label>
           <input
             type="text"
-            placeholder={itemType === 'milestone' ? 'e.g. Beta release, Design handoff' : 'Enter task title'}
+            placeholder={itemType === 'milestone' ? 'e.g. Beta release, Design handoff' : 'Enter job title'}
             value={formData.title}
             onChange={(e) => handleInputChange('title', e.target.value)}
             className="w-full bg-bg-card border border-border-card rounded-2xl px-5 py-3.5 text-white placeholder-text-sec focus:outline-none focus:border-accent-yellow transition-colors"
@@ -389,7 +390,7 @@ export default function NewTaskPage(props: { searchParams: Promise<{ projectId?:
         {/* Project selection */}
         <div>
           <label className="text-text-sec text-sm font-medium mb-2 block">
-            {itemType === 'milestone' ? 'Project (required)' : 'Project (optional)'}
+            {itemType === 'milestone' ? 'Mission (required)' : 'Mission (optional)'}
           </label>
           <select
             value={formData.project_id}
@@ -397,8 +398,8 @@ export default function NewTaskPage(props: { searchParams: Promise<{ projectId?:
             className="w-full bg-bg-card border border-border-card rounded-2xl px-5 py-3.5 text-white focus:outline-none focus:border-accent-yellow transition-colors"
             required={itemType === 'milestone'}
           >
-            {itemType === 'task' && <option value="">No project (General task)</option>}
-            {itemType === 'milestone' && <option value="">Select a project</option>}
+            {itemType === 'task' && <option value="">No mission (general job)</option>}
+            {itemType === 'milestone' && <option value="">Select a mission</option>}
             {projects.map((project: DbProject) => (
               <option key={project.id} value={project.id}>
                 {project.name}
@@ -455,7 +456,7 @@ export default function NewTaskPage(props: { searchParams: Promise<{ projectId?:
               <RefreshCw className="w-4 h-4 text-accent-yellow" />
               <div>
                 <span className="text-white font-medium">Repeats</span>
-                <p className="text-text-sec text-sm mt-0.5">Make this a recurring task</p>
+                <p className="text-text-sec text-sm mt-0.5">Make this a recurring job</p>
               </div>
             </div>
             <button
@@ -624,7 +625,7 @@ export default function NewTaskPage(props: { searchParams: Promise<{ projectId?:
               <ChevronDoubleUpIcon className="w-4 h-4 text-accent-yellow" />
               <div>
                 <span className="text-white font-medium">High Priority</span>
-                <p className="text-text-sec text-sm mt-0.5">Mark as high priority task</p>
+                <p className="text-text-sec text-sm mt-0.5">Mark as high priority job</p>
               </div>
             </div>
             <button
@@ -693,7 +694,7 @@ export default function NewTaskPage(props: { searchParams: Promise<{ projectId?:
                       type="text"
                       value={depSearch}
                       onChange={e => setDepSearch(e.target.value)}
-                      placeholder="Search tasks..."
+                      placeholder="Search jobs..."
                       className="flex-1 bg-transparent text-white text-sm outline-none placeholder-text-sec"
                     />
                     <button type="button" onClick={() => setShowDepPicker(false)} className="text-text-sec hover:text-white">
@@ -719,7 +720,7 @@ export default function NewTaskPage(props: { searchParams: Promise<{ projectId?:
                       ))
                     }
                     {projectTasks.filter(t => !pendingDeps.includes(t.id) && !wouldCreateCycle(t.id)).filter(t => t.title.toLowerCase().includes(depSearch.toLowerCase())).length === 0 && (
-                      <p className="px-4 py-2.5 text-text-sec text-sm">No tasks available.</p>
+                      <p className="px-4 py-2.5 text-text-sec text-sm">No jobs available.</p>
                     )}
                   </div>
                 </div>
@@ -735,7 +736,7 @@ export default function NewTaskPage(props: { searchParams: Promise<{ projectId?:
             disabled={createTask.isPending}
             className="w-full bg-accent-yellow text-black font-bold text-lg py-4 rounded-2xl hover:bg-yellow-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
           >
-            {createTask.isPending ? 'Creating...' : `Create ${itemType === 'milestone' ? 'Milestone' : 'Task'}`}
+            {createTask.isPending ? 'Creating...' : `Create ${itemLabel}`}
           </button>
         </div>
       </form>

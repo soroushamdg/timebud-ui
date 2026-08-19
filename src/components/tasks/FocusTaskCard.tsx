@@ -157,10 +157,17 @@ export function FocusTaskCard({
           paddingLeft: task.isPartOfChain && task.chainPosition && task.chainPosition > 0 ? '28px' : '16px',
           opacity: isLocked ? 0.6 : 1,
         }}
-        className={`flex-1 min-w-0 bg-bg-card rounded-none py-3 pr-4 flex items-center gap-3 border border-[#ffffff] cursor-pointer transition-all hover:bg-bg-card-hover relative ${
+        className={`flex-1 min-w-0 bg-bg-card rounded-none py-3 pr-4 flex items-center gap-3 border border-[#ffffff] cursor-pointer transition-all hover:bg-bg-card-hover relative overflow-hidden ${
           task.done ? "bg-bg-card-done border-accent-green/30" : ""
         }`}
       >
+        {/* Mission color accent */}
+        {task.projectId && !task.done && (
+          <div
+            className="absolute left-0 top-0 bottom-0 w-1"
+            style={{ backgroundColor: task.projectColor || '#f5c518' }}
+          />
+        )}
         {/* Lock icon for locked tasks */}
         {isLocked && (
           <div className="absolute top-2 right-2">

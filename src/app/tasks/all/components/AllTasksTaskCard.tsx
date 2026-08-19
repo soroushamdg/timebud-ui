@@ -116,10 +116,17 @@ export function AllTasksTaskCard({
       <div
         onClick={handleCardClick}
         onDoubleClick={handleDoubleClick}
-        className={`flex-1 min-w-0 bg-bg-card rounded-none px-4 py-3 flex items-center gap-3 border border-[#ffffff] cursor-pointer transition-colors hover:bg-bg-card-hover min-h-[72px] ${
+        className={`flex-1 min-w-0 bg-bg-card rounded-none px-4 py-3 flex items-center gap-3 border border-[#ffffff] cursor-pointer transition-colors hover:bg-bg-card-hover min-h-[72px] relative overflow-hidden ${
           completed ? 'bg-bg-card-done border-accent-green/30' : ''
         }`}
       >
+        {/* Mission color accent */}
+        {task.project_id && !completed && (
+          <div
+            className="absolute left-0 top-0 bottom-0 w-1"
+            style={{ backgroundColor: projectColor || '#f5c518' }}
+          />
+        )}
         {/* Checkbox */}
         <input
           type="checkbox"

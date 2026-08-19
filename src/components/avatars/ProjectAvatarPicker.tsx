@@ -280,7 +280,7 @@ export function ProjectAvatarPicker({
 
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border-card">
-          <h2 className="text-white font-bold text-xl">Project Avatar</h2>
+          <h2 className="text-white font-bold text-xl">Mission Avatar</h2>
           <button
             onClick={onClose}
             className="w-8 h-8 rounded-lg bg-bg-primary flex items-center justify-center text-text-sec hover:text-white transition-colors"

@@ -732,28 +732,37 @@ export default function Home() {
           <div className="px-6 pt-4 mb-6 flex items-center justify-between">
             <button
               onClick={() => router.push("/profile")}
-              className="flex items-center gap-3"
+              className="flex items-center gap-3 min-w-0"
             >
               <div className="relative flex-shrink-0">
                 <AvatarImage
                   src={userProfile?.profile_image_url}
                   fallbackType="profile"
                   fallbackSeed={`${userProfile?.first_name || ''}${userProfile?.last_name || ''}`}
-                  size={48}
+                  size={52}
                   className="border-4 border-white"
                 />
-                <div className="absolute -right-1 -bottom-1 w-5 h-5 rounded-full bg-accent-yellow border-2 border-black flex items-center justify-center">
-                  <span className="text-black text-[10px] font-black leading-none">{levelProgress.level}</span>
+                <div className="absolute -right-1.5 -bottom-1.5 w-7 h-7 rounded-full bg-accent-yellow border-[3px] border-black flex items-center justify-center shadow-[0_0_10px_rgba(245,197,24,0.5)]">
+                  <span className="text-black text-[11px] font-black leading-none">{levelProgress.level}</span>
                 </div>
               </div>
-              <div className="text-left">
-                <span className="text-white text-base font-semibold block">
+              <div className="text-left min-w-0">
+                <span className="text-white text-base font-bold block">
                   {userProfile?.first_name ? `Hey, ${userProfile.first_name}` : 'Your studio'}
                 </span>
-                <span className="text-text-sec text-xs flex items-center gap-1">
+                <span className="text-text-sec text-xs flex items-center gap-1 mt-0.5">
                   {currentStreak > 0 && <>&#128293; {currentStreak}-day grind &middot; </>}
-                  {levelProgress.xpIntoLevel}/{levelProgress.xpForNextLevel} XP
+                  Level {levelProgress.level} &middot; {levelProgress.levelTitle}
                 </span>
+                <div className="h-1.5 w-28 rounded-full bg-[#2a2a2a] overflow-hidden mt-1.5">
+                  <div
+                    className="h-full rounded-full"
+                    style={{
+                      width: `${Math.min(100, (levelProgress.xpIntoLevel / Math.max(1, levelProgress.xpForNextLevel)) * 100)}%`,
+                      background: 'linear-gradient(90deg,#f5c518,#ffdf6b)',
+                    }}
+                  />
+                </div>
               </div>
             </button>
             <div className="flex items-center gap-2">
@@ -797,21 +806,26 @@ export default function Home() {
                     onClick={() => router.push(`/projects/${project.id}`)}
                     className="flex-shrink-0 transition-all relative hover:scale-110 hover:z-20 hover:shadow-xl hover:shadow-black/50 flex flex-col items-center gap-0.5"
                   >
-                    <div
-                      className="rounded-full p-[3px]"
-                      style={{
-                        background: `conic-gradient(#f5c518 ${project.completion.percentage * 3.6}deg, #2a2a2a ${project.completion.percentage * 3.6}deg 360deg)`,
-                      }}
-                    >
+                    <div className="shadow-[0_0_16px_rgba(245,197,24,0.2)]">
                       <AvatarImage
                         src={project.project_avatar_url}
                         fallbackType="project"
                         fallbackLabel={project.name}
                         fallbackColor={project.color || undefined}
                         size={76}
-                        className="border-2 border-black border-4 border-black"
+                        className="border-2 border-white"
                       />
                     </div>
+                    <div className="w-[76px] h-1.5 rounded-full bg-[#333] overflow-hidden mt-1">
+                      <div
+                        className="h-full rounded-full"
+                        style={{
+                          width: `${project.completion.percentage}%`,
+                          background: project.completion.isCompleted ? '#2ecc71' : '#f5c518',
+                        }}
+                      />
+                    </div>
+                    <span className="text-[10px] font-bold text-text-sec">{project.completion.percentage}%</span>
                     {project.completion.isCompleted && (
                       <div className="absolute -top-0.5 -right-0.5 w-6 h-6 rounded-full bg-accent-green border-2 border-black flex items-center justify-center z-10">
                         <span className="text-black text-xs font-black leading-none">&#10003;</span>
@@ -921,7 +935,7 @@ export default function Home() {
               disabled={plannedTasks.length === 0 || isLoading}
               className="w-full bg-accent-yellow text-black font-bold text-lg py-4 rounded-none hover:bg-yellow-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed border-4 border-white"
             >
-              Start work
+              Start Run
             </button>
           </div>
         </div>
