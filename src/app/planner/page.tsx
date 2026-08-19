@@ -12,8 +12,9 @@ import { useProjects } from '@/hooks/useProjects'
 import { useTasks } from '@/hooks/useTasks'
 import { useUIStore } from '@/stores/uiStore'
 import { planWeek, PlannedTaskResult, PlannerTask } from '@/lib/planner'
-import { DbProject, DbTask } from '@/types/database'
+import { DbProject, DbTask, MissionDifficulty } from '@/types/database'
 import { formatMinutesLabel } from '@/lib/dates'
+import { getJobXpPreview } from '@/lib/gamification/xp'
 
 interface PlannedTask {
   taskId: string
@@ -197,7 +198,7 @@ export default function PlannerPage() {
           <button onClick={() => router.back()} className="text-white">
             <ChevronLeft className="w-6 h-6" />
           </button>
-          <h1 className="text-white text-xl font-bold">This week</h1>
+          <h1 className="text-white text-xl font-bold">Week Ahead</h1>
         </div>
 
         {isLoading ? (
@@ -209,11 +210,11 @@ export default function PlannerPage() {
             {plan.unscheduledCount > 0 && (
               <div className="mx-6 mb-6 bg-bg-card border border-border-card rounded-xl px-4 py-3">
                 <p className="text-text-sec text-sm">
-                  {plan.unscheduledCount} task{plan.unscheduledCount === 1 ? '' : 's'} won&apos;t fit in the next 7
+                  {plan.unscheduledCount} job{plan.unscheduledCount === 1 ? '' : 's'} won&apos;t fit in the next 7
                   days at {formatMinutesLabel(preferredBudgetMinutes)}/day. Consider raising your daily budget or
                   reprioritizing in{' '}
                   <button onClick={() => router.push('/tasks/all')} className="text-accent-yellow font-semibold">
-                    all tasks
+                    all jobs
                   </button>
                   .
                 </p>
@@ -229,9 +230,17 @@ export default function PlannerPage() {
                     {day.tasks.length === 0 ? (
                       <p className="text-text-sec text-sm py-2">Nothing planned.</p>
                     ) : (
-                      day.tasks.map((task) => (
-                        <TaskCard key={task.taskId} task={task} onClick={() => handleTaskClick(task)} />
-                      ))
+                      day.tasks.map((task) => {
+                        const difficulty = (task.projectId ? projects?.find(p => p.id === task.projectId)?.difficulty : undefined) as MissionDifficulty | undefined
+                        return (
+                          <TaskCard
+                            key={task.taskId}
+                            task={task}
+                            onClick={() => handleTaskClick(task)}
+                            xpReward={getJobXpPreview(difficulty || 'medium')}
+                          />
+                        )
+                      })
                     )}
                   </div>
                 </div>

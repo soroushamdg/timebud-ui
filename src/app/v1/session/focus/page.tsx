@@ -9,7 +9,7 @@ import { useUpdateFocusSession, useCreateFocusSession, useCreateCompletedFocusSe
 import { toUtcString } from '@/lib/dates'
 import { createClient } from '@/lib/supabase/client'
 import { PlannedTask } from '@/stores/sessionStore'
-import { FocusTaskCard } from '@/components/tasks/FocusTaskCard'
+import { FocusTaskCard } from '@/components/v1/tasks/FocusTaskCard'
 import { PartialTaskCompletionDialog } from '@/components/dialogs/PartialTaskCompletionDialog'
 import { TaskOverviewDialog } from '@/components/dialogs/TaskOverviewDialog'
 import { useFocusSessionGuard } from '@/hooks/useSessionGuard'

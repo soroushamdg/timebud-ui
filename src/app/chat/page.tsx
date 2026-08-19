@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Sparkles, RotateCcw, Coins, X, AlertCircle } from "lucide-react";
+import { RotateCcw, Coins, X, AlertCircle } from "lucide-react";
 import { useChatStore } from "@/stores/chatStore";
 import { MessageBubble } from "@/components/chat/MessageBubble";
 import { ChatInput } from "@/components/chat/ChatInput";
@@ -386,13 +386,13 @@ export default function ChatPage() {
         ? "Plan my day"
         : hour < 17
         ? "Review my progress"
-        : "Summarize completed tasks";
+        : "Summarize completed jobs";
 
     return [
       timeBasedSuggestion,
-      "Show my active projects",
-      "Create a new project",
-      "What tasks are due soon?",
+      "Show my active missions",
+      "Create a new mission",
+      "What jobs are due soon?",
     ];
   };
 
@@ -403,9 +403,17 @@ export default function ChatPage() {
     <AppShell showTabBar={true}>
       <div className="flex flex-col h-[calc(100vh-6rem)] bg-bg-primary">
         <div className="flex items-center justify-between p-4 border-b border-border-card flex-shrink-0">
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-6 h-6 text-accent-yellow" />
-            <h1 className="text-white font-bold text-xl">AI Assistant</h1>
+          <div className="flex items-center gap-3">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/bud/bud-avatar.png"
+              alt="Bud"
+              className="w-9 h-9 rounded-full flex-shrink-0 border-[1.5px] border-accent-yellow object-cover"
+            />
+            <div>
+              <h1 className="text-white font-bold text-lg leading-tight">Bud</h1>
+              <p className="text-accent-green text-[11px] leading-tight">&#9679; your run manager</p>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             {creditsLoading ? (
@@ -460,13 +468,13 @@ export default function ChatPage() {
         <div className="flex-1 overflow-y-auto px-4 py-4">
           {messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-center px-6">
-              <Sparkles className="w-16 h-16 text-accent-yellow mb-4" />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/bud/bud-avatar.png" alt="Bud" className="w-20 h-20 rounded-full border-2 border-accent-yellow mb-4 object-cover" />
               <h2 className="text-white text-2xl font-bold mb-2">
-                Hi {(user as any)?.first_name || "there"}!
+                Hey {(user as any)?.first_name || "there"}, I&apos;m Bud
               </h2>
               <p className="text-text-sec mb-6">
-                I'm your AI assistant. Ask me anything about your projects and
-                tasks.
+                Ask me anything about your missions and jobs, or tell me what to add.
               </p>
               <div className="flex flex-wrap gap-2 justify-center">
                 {getEmptyStateSuggestions().map((suggestion, idx) => (

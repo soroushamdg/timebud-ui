@@ -27,13 +27,17 @@ import { useProject, useDeleteProject } from "@/hooks/useProjects";
 import { AvatarImage } from "@/components/ui/AvatarImage";
 import { ProjectAvatarPicker } from "@/components/avatars/ProjectAvatarPicker";
 import { formatLocal, formatLocalSmart, parseDateLocal } from "@/lib/dates";
-import { DbTask, TaskStatus } from "@/types/database";
+import { DbTask, TaskStatus, MissionDifficulty } from "@/types/database";
 import { TaskCardSkeleton } from "@/components/ui/Skeleton";
 import { createClient } from "@/lib/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { useMemories, useDeleteMemory } from "@/hooks/useMemories";
 import { formatDistanceToNow } from "date-fns";
 import { GanttChart } from "@/components/gantt/GanttChart";
+import { getJobXpPreview, MISSION_COMPLETE_BONUS_XP } from "@/lib/gamification/xp";
+import { useLevelUpWatcher } from "@/hooks/useLevelUpWatcher";
+import { LevelUpModal } from "@/components/gamification/LevelUpModal";
+import { MissionCompleteModal } from "@/components/gamification/MissionCompleteModal";
 
 // Mobile device detection
 const isMobileDevice = () => {
@@ -151,6 +155,7 @@ export default function ProjectOverviewPage({
     description: "",
     deadline: "",
     color: "",
+    difficulty: "medium" as MissionDifficulty,
   });
 
   // Toast state
@@ -328,6 +333,7 @@ export default function ProjectOverviewPage({
         description: project.description || "",
         deadline: formatDateForInput(project.deadline),
         color: project.color || "",
+        difficulty: project.difficulty || "medium",
       });
     }
   }, [project, editingProject]);
@@ -473,6 +479,33 @@ export default function ProjectOverviewPage({
     totalTaskCount > 0
       ? Math.round((completedTaskCount / totalTaskCount) * 100)
       : 0;
+  // Mirrors the tasks_award_xp DB trigger's math (same per-job multiplier, same
+  // one-time mission bonus) purely for display — the persisted xp_total is the
+  // real source of truth, this just previews what this mission has earned.
+  const earnedXp = project
+    ? completedTaskCount * getJobXpPreview(project.difficulty) +
+      (project.mission_bonus_awarded ? MISSION_COMPLETE_BONUS_XP : 0)
+    : 0;
+
+  // Mission-complete celebration: fires once when progress crosses into 100% during
+  // this session (not on initial load — the ref primes silently on first render, same
+  // pattern as useLevelUpWatcher). The durable XP bonus itself already came from the
+  // Phase 2 DB trigger; this only decides when to show the modal.
+  const wasCompleteRef = useRef<boolean | null>(null);
+  const [showMissionComplete, setShowMissionComplete] = useState(false);
+  useEffect(() => {
+    const isComplete = totalTaskCount > 0 && progressPercentage === 100;
+    if (wasCompleteRef.current === null) {
+      wasCompleteRef.current = isComplete;
+      return;
+    }
+    if (isComplete && !wasCompleteRef.current) {
+      setShowMissionComplete(true);
+    }
+    wasCompleteRef.current = isComplete;
+  }, [totalTaskCount, progressPercentage]);
+
+  const { newLevel, dismiss: dismissLevelUp } = useLevelUpWatcher();
 
   // Sequential task numbering - only count tasks
   const getTaskNumber = useCallback(
@@ -851,8 +884,8 @@ export default function ProjectOverviewPage({
       if (itemDeadline > projectDeadline) {
         setEditFormError(
           `${
-            editFormData.item_type === "milestone" ? "Milestone" : "Task"
-          } deadline cannot be after project deadline (${parseDateLocal(
+            editFormData.item_type === "milestone" ? "Objective" : "Job"
+          } deadline cannot be after mission deadline (${parseDateLocal(
             project.deadline,
           ).toLocaleDateString()})`,
         );
@@ -953,6 +986,7 @@ export default function ProjectOverviewPage({
         description: project.description || "",
         deadline: formatDateForInput(project.deadline),
         color: project.color || "",
+        difficulty: project.difficulty || "medium",
       });
       setEditingProject(true);
     }
@@ -970,6 +1004,7 @@ export default function ProjectOverviewPage({
           description: projectFormData.description.trim() || null,
           deadline: projectFormData.deadline || null,
           color: projectFormData.color || null,
+          difficulty: projectFormData.difficulty,
         })
         .eq("id", project.id);
 
@@ -1485,7 +1520,7 @@ export default function ProjectOverviewPage({
                   className="w-full flex items-center gap-3 bg-accent-green/20 text-accent-green p-4 rounded-2xl hover:bg-accent-green/30 transition-colors"
                 >
                   <Check size={20} />
-                  <span className="font-medium">Complete Task</span>
+                  <span className="font-medium">Complete Job</span>
                 </button>
               )
             )}
@@ -1503,7 +1538,7 @@ export default function ProjectOverviewPage({
               className="w-full flex items-center gap-3 bg-red-500/20 text-red-500 p-4 rounded-2xl hover:bg-red-500/30 transition-colors"
             >
               <Trash2 size={20} />
-              <span className="font-medium">Delete Task</span>
+              <span className="font-medium">Delete Job</span>
             </button>
           </div>
         </div>
@@ -1533,7 +1568,7 @@ export default function ProjectOverviewPage({
       {showEditToast && (
         <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 px-4 py-2 bg-bg-card border border-border-card rounded-lg shadow-lg transition-all duration-300">
           <p className="text-text-sec text-sm">
-            Double-click to edit task or milestone
+            Double-click to edit job or objective
           </p>
         </div>
       )}
@@ -1554,7 +1589,7 @@ export default function ProjectOverviewPage({
           className={`absolute top-4 right-4 z-10 px-3 py-1 bg-bg-card rounded-full text-sm flex items-center gap-1 transition-colors ${
             showGantt ? 'text-accent-yellow border border-accent-yellow/40' : 'text-text-sec'
           }`}
-          title={showGantt ? 'Show task list' : 'Show timeline'}
+          title={showGantt ? 'Show job list' : 'Show timeline'}
         >
           <BarChart2 size={14} />
         </button>
@@ -1608,14 +1643,28 @@ export default function ProjectOverviewPage({
 
           {/* Hero content */}
           <div className="absolute bottom-4 left-4 right-4">
-            <h1 className="text-3xl font-bold text-white mb-2">
-              {project.name}
-            </h1>
+            <div className="flex items-center gap-2 mb-2">
+              <h1 className="text-3xl font-bold text-white">
+                {project.name}
+              </h1>
+              <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide flex-shrink-0 ${
+                project.difficulty === 'hard' ? 'bg-accent-pink/90 text-white'
+                  : project.difficulty === 'easy' ? 'bg-accent-green/90 text-black'
+                  : 'bg-accent-yellow/90 text-black'
+              }`}>
+                {project.difficulty}
+              </span>
+            </div>
             <div className="flex justify-between items-end">
               <div className="flex flex-col gap-0.5">
                 {totalTaskCount > 0 && (
                   <div className="text-4xl font-bold text-white">
                     {progressPercentage}%
+                  </div>
+                )}
+                {earnedXp > 0 && (
+                  <div className="text-xs font-bold text-accent-yellow">
+                    {earnedXp} XP earned
                   </div>
                 )}
                 {onHoldCount > 0 && (
@@ -1750,14 +1799,14 @@ export default function ProjectOverviewPage({
                 className="w-full px-4 py-3 flex items-center justify-center gap-3 text-text-sec hover:text-white transition-colors"
               >
                 <Plus size={20} className="flex-shrink-0" />
-                <span className="text-base">Add new task</span>
+                <span className="text-base">Add new job</span>
               </button>
               <button
                 onClick={() => handleStartCreation("milestone")}
                 className="w-full px-4 py-3 flex items-center justify-center gap-3 text-text-sec hover:text-white transition-colors"
               >
                 <Plus size={20} className="flex-shrink-0" />
-                <span className="text-base">Add new milestone</span>
+                <span className="text-base">Add new objective</span>
               </button>
             </div>
 
@@ -1766,7 +1815,7 @@ export default function ProjectOverviewPage({
               <div className="mt-4 w-full">
                 <div className="rounded-2xl px-4 py-3 flex items-center gap-3 border border-border-card bg-bg-card">
                   <div className="w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 bg-bg-card text-white">
-                    {creatingTask ? "T" : "M"}
+                    {creatingTask ? "J" : "O"}
                   </div>
                   <input
                     ref={inputRef}
@@ -1775,12 +1824,12 @@ export default function ProjectOverviewPage({
                     onChange={(e) => setNewItemTitle(e.target.value)}
                     onKeyDown={handleKeyDown}
                     placeholder={`Enter ${
-                      creatingTask ? "task" : "milestone"
+                      creatingTask ? "job" : "objective"
                     } name...`}
                     className="flex-1 bg-transparent text-white placeholder-text-sec outline-none text-base font-semibold"
                   />
                   <div className="text-text-sec text-sm">
-                    {creatingTask ? "Task" : "Milestone"}
+                    {creatingTask ? "Job" : "Objective"}
                   </div>
                 </div>
               </div>
@@ -1847,7 +1896,7 @@ export default function ProjectOverviewPage({
               {(creatingTask || creatingMilestone) && (
                 <div className="mb-3 rounded-2xl px-4 py-3 flex items-center gap-3 border border-border-card bg-bg-card">
                   <div className="w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 bg-bg-card text-white">
-                    {creatingTask ? "T" : "M"}
+                    {creatingTask ? "J" : "O"}
                   </div>
                   <input
                     ref={inputRef}
@@ -1856,12 +1905,12 @@ export default function ProjectOverviewPage({
                     onChange={(e) => setNewItemTitle(e.target.value)}
                     onKeyDown={handleKeyDown}
                     placeholder={`Enter ${
-                      creatingTask ? "task" : "milestone"
+                      creatingTask ? "job" : "objective"
                     } name...`}
                     className="flex-1 bg-transparent text-white placeholder-text-sec outline-none text-base font-semibold"
                   />
                   <div className="text-text-sec text-sm">
-                    {creatingTask ? "Task" : "Milestone"}
+                    {creatingTask ? "Job" : "Objective"}
                   </div>
                 </div>
               )}
@@ -1874,14 +1923,14 @@ export default function ProjectOverviewPage({
                     className="w-full px-4 py-3 flex items-center gap-3 text-text-sec hover:text-white transition-colors"
                   >
                     <Plus size={20} className="flex-shrink-0" />
-                    <span className="text-base">Add new task</span>
+                    <span className="text-base">Add new job</span>
                   </button>
                   <button
                     onClick={() => handleStartCreation("milestone")}
                     className="w-full px-4 py-3 flex items-center gap-3 text-text-sec hover:text-white transition-colors"
                   >
                     <Plus size={20} className="flex-shrink-0" />
-                    <span className="text-base">Add new milestone</span>
+                    <span className="text-base">Add new objective</span>
                   </button>
                 </>
               )}
@@ -1963,6 +2012,27 @@ export default function ProjectOverviewPage({
         </button>
       )}
 
+      {/* Bud cameo — reacts to how this mission is going */}
+      {!showGantt && totalTaskCount > 0 && (
+        <div className="fixed bottom-24 left-4 flex items-end gap-2 z-10 max-w-[220px]">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/bud/bud-avatar.png"
+            alt="Bud"
+            className="w-11 h-11 rounded-full border-2 border-accent-yellow flex-shrink-0 object-cover shadow-lg"
+          />
+          <div className="bg-white text-black text-xs font-semibold px-3 py-2 rounded-2xl rounded-bl-sm shadow-lg">
+            {progressPercentage === 100
+              ? "Mission complete. That's how it's done."
+              : progressPercentage >= 75
+              ? "Almost there. Don't stop now."
+              : progressPercentage >= 40
+              ? 'Solid pace. Keep grinding.'
+              : "Every job counts. Let's go."}
+          </div>
+        </div>
+      )}
+
       {/* Edit Item Modal */}
       {editingItem && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4">
@@ -1970,7 +2040,7 @@ export default function ProjectOverviewPage({
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold text-white">
-                  Edit {editingItem.item_type}
+                  Edit {editingItem.item_type === "milestone" ? "Objective" : "Job"}
                 </h2>
                 <button
                   onClick={handleCancelEditItem}
@@ -2000,7 +2070,7 @@ export default function ProjectOverviewPage({
                           : "bg-bg-card text-text-sec hover:text-white"
                       }`}
                     >
-                      Task
+                      Job
                     </button>
                     <button
                       onClick={() =>
@@ -2015,7 +2085,7 @@ export default function ProjectOverviewPage({
                           : "bg-bg-card text-text-sec hover:text-white"
                       }`}
                     >
-                      Milestone
+                      Objective
                     </button>
                   </div>
                 </div>
@@ -2126,7 +2196,7 @@ export default function ProjectOverviewPage({
                                   type="text"
                                   value={depSearch}
                                   onChange={e => setDepSearch(e.target.value)}
-                                  placeholder="Search tasks..."
+                                  placeholder="Search jobs..."
                                   className="flex-1 bg-transparent text-white text-sm outline-none placeholder-text-sec"
                                 />
                                 <button type="button" onClick={() => setShowDepPicker(false)} className="text-text-sec hover:text-white">
@@ -2315,7 +2385,7 @@ export default function ProjectOverviewPage({
         <div className="fixed inset-0 bg-black/50 z-[100] overflow-y-auto min-h-screen">
           <div className="bg-bg-primary rounded-2xl p-4 sm:p-6 w-full max-w-md mx-auto">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-white">Edit Project</h2>
+                <h2 className="text-xl font-bold text-white">Edit Mission</h2>
                 <button
                   onClick={handleCancelEditProject}
                   className="text-text-sec hover:text-white transition-colors"
@@ -2347,10 +2417,10 @@ export default function ProjectOverviewPage({
               </div>
 
               <div className="space-y-4">
-                {/* Project Name */}
+                {/* Mission Name */}
                 <div>
                   <label className="text-text-sec text-sm mb-2 block">
-                    Project Name
+                    Mission Name
                   </label>
                   <input
                     type="text"
@@ -2362,8 +2432,31 @@ export default function ProjectOverviewPage({
                       }))
                     }
                     className="w-full px-4 py-2 bg-bg-card border border-border-card rounded-lg text-white placeholder-text-sec outline-none focus:border-accent-yellow transition-colors"
-                    placeholder="Enter project name..."
+                    placeholder="Enter mission name..."
                   />
+                </div>
+
+                {/* Difficulty */}
+                <div>
+                  <label className="text-text-sec text-sm mb-2 block">
+                    Difficulty
+                  </label>
+                  <div className="flex gap-2">
+                    {(["easy", "medium", "hard"] as MissionDifficulty[]).map((d) => (
+                      <button
+                        key={d}
+                        type="button"
+                        onClick={() => setProjectFormData((prev) => ({ ...prev, difficulty: d }))}
+                        className={`flex-1 px-4 py-2 rounded-lg text-sm font-semibold capitalize transition-colors ${
+                          projectFormData.difficulty === d
+                            ? "bg-accent-yellow text-black"
+                            : "bg-bg-card text-text-sec hover:text-white"
+                        }`}
+                      >
+                        {d}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 {/* Description */}
@@ -2406,7 +2499,7 @@ export default function ProjectOverviewPage({
                 {/* Color */}
                 <div>
                   <label className="text-text-sec text-sm mb-2 block">
-                    Project Color
+                    Mission Color
                   </label>
                   <div className="flex gap-2 flex-wrap">
                     {[
@@ -2469,7 +2562,7 @@ export default function ProjectOverviewPage({
                   onClick={() => setShowDeleteConfirm(true)}
                   className="px-4 py-2 bg-accent-pink text-white font-semibold rounded-lg hover:bg-red-600 transition-colors"
                 >
-                  Delete Project
+                  Delete Mission
                 </button>
                 <button
                   onClick={handleSaveEditProject}
@@ -2488,11 +2581,11 @@ export default function ProjectOverviewPage({
         <div className="fixed inset-0 bg-black/70 z-[100] flex items-center justify-center">
           <div className="bg-bg-card rounded-none p-6 max-w-sm mx-4">
             <h3 className="text-white font-bold text-lg mb-4">
-              Delete Project
+              Delete Mission
             </h3>
             <p className="text-text-sec mb-6">
-              Are you sure you want to delete this project? This will
-              permanently delete all tasks and memories associated with it. This
+              Are you sure you want to delete this mission? This will
+              permanently delete all jobs and memories associated with it. This
               action cannot be undone.
             </p>
             <div className="flex gap-4">
@@ -2554,7 +2647,7 @@ export default function ProjectOverviewPage({
               <div className="flex items-center justify-between mb-5">
                 <div className="flex items-center gap-2">
                   <RefreshCw size={18} className="text-accent-yellow" />
-                  <h3 className="text-white text-lg font-semibold">Recurring Task</h3>
+                  <h3 className="text-white text-lg font-semibold">Recurring Job</h3>
                 </div>
                 <button onClick={() => { setRecurrenceSheetTask(null); setShowStopRecurringConfirm(false); }} className="text-text-sec hover:text-white transition-colors">
                   <X size={24} />
@@ -2586,7 +2679,7 @@ export default function ProjectOverviewPage({
                 </button>
               ) : (
                 <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-4">
-                  <p className="text-white text-sm font-medium mb-1">Stop this recurring task?</p>
+                  <p className="text-white text-sm font-medium mb-1">Stop this recurring job?</p>
                   <p className="text-text-sec text-xs mb-4">No new occurrences will be created. Existing tasks remain untouched.</p>
                   <div className="flex gap-3">
                     <button
@@ -2625,6 +2718,16 @@ export default function ProjectOverviewPage({
           }}
         />
       )}
+
+      {showMissionComplete && project && (
+        <MissionCompleteModal
+          missionName={project.name}
+          xpEarned={earnedXp}
+          onDismiss={() => setShowMissionComplete(false)}
+        />
+      )}
+
+      {newLevel && <LevelUpModal levelProgress={newLevel} onDismiss={dismissLevelUp} />}
     </div>
   );
 }

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import webpush, { WebPushError } from 'web-push'
 import { createServiceClient } from '@/lib/supabase/server'
-import { getLocalDateString } from '@/lib/dates'
 import {
   buildDeadlineAlertPayload,
   buildInactivityPayload,
@@ -11,11 +10,8 @@ import {
   NotificationContext,
   ProducerResult,
 } from '@/lib/notifications/producers'
+import { buildActivityDates } from '@/lib/gamification/activity'
 import { DbProject, DbTask, DbUserAISettings } from '@/types/database'
-
-// Wide enough to cover the streak walk-back (up to 120 days); reused for the "touched
-// today" signal too, which only needs the last day or so.
-const LOOKBACK_MS = 121 * 24 * 60 * 60 * 1000
 
 const PRODUCERS = [
   buildMorningPayload,
@@ -47,7 +43,6 @@ export async function GET(request: NextRequest) {
   const debugNowParam = request.nextUrl.searchParams.get('debugNow')
   const debugNow = debugNowParam ? new Date(debugNowParam) : null
   const now = debugNow && !Number.isNaN(debugNow.getTime()) ? debugNow : new Date()
-  const lookbackSince = new Date(now.getTime() - LOOKBACK_MS).toISOString()
   // Also a testing aid, same gating as debugNow: computes and reports what would be
   // sent without actually calling webpush or persisting any dedupe state (marking a
   // session reminded / bumping a streak milestone), so a dry run can't suppress the
@@ -105,17 +100,7 @@ export async function GET(request: NextRequest) {
     const projects = (projectsResult.data ?? []) as DbProject[]
     const sessions = sessionsResult.data ?? []
 
-    const activityDates = new Set<string>()
-    for (const t of tasks) {
-      if (t.created_at && new Date(t.created_at).getTime() >= new Date(lookbackSince).getTime()) {
-        activityDates.add(getLocalDateString(new Date(t.created_at), timezone))
-      }
-    }
-    for (const s of sessions) {
-      if (s.start_time && new Date(s.start_time).getTime() >= new Date(lookbackSince).getTime()) {
-        activityDates.add(getLocalDateString(new Date(s.start_time), timezone))
-      }
-    }
+    const activityDates = buildActivityDates(tasks, sessions, timezone, now)
 
     const ctx: NotificationContext = { tasks, projects, sessions, settings, now, timezone, activityDates }
 
@@ -165,7 +150,10 @@ export async function GET(request: NextRequest) {
       if (result.newStreakMilestone !== undefined) {
         await supabase
           .from('user_ai_settings')
-          .update({ last_streak_milestone: result.newStreakMilestone })
+          .update({
+            last_streak_milestone: result.newStreakMilestone,
+            ...(result.xpBonus ? { xp_total: (settings.xp_total ?? 0) + result.xpBonus } : {}),
+          })
           .eq('user_id', settings.user_id)
       }
     }

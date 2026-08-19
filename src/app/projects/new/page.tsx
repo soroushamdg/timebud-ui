@@ -11,6 +11,13 @@ import { ImageCropDialog } from '@/components/avatars/ImageCropDialog'
 import { LegoTransformSheet } from '@/components/avatars/LegoTransformSheet'
 import { useStaticAvatars, useSetProjectAvatar } from '@/hooks/useProjectAvatar'
 import { validateImageFile, createImagePreviewUrl, revokeImagePreviewUrl } from '@/lib/avatars/imageProcessing'
+import { MissionDifficulty } from '@/types/database'
+
+const DIFFICULTIES: { value: MissionDifficulty; label: string }[] = [
+  { value: 'easy', label: 'Easy' },
+  { value: 'medium', label: 'Medium' },
+  { value: 'hard', label: 'Hard' },
+]
 
 const COLOR_SWATCHES = [
   '#F5C518',
@@ -32,7 +39,8 @@ export default function NewProjectPage() {
     name: '',
     description: '',
     deadline: '',
-    priority: false
+    priority: false,
+    difficulty: 'medium' as MissionDifficulty
   })
   const [nameError, setNameError] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
@@ -78,6 +86,7 @@ export default function NewProjectPage() {
         description: data.description || null,
         deadline: data.deadline || null,
         priority: data.priority,
+        difficulty: data.difficulty,
         color: selectedColor,
         project_avatar_url: selectedAvatarUrl,
         user_id: user.id,
@@ -98,8 +107,8 @@ export default function NewProjectPage() {
       router.replace(`/projects/${previewId}`)
     },
     onError: (error: any) => {
-      console.error('Failed to create project:', error)
-      const message = error?.message || error?.error_description || 'Failed to create project. Please try again.'
+      console.error('Failed to create mission:', error)
+      const message = error?.message || error?.error_description || 'Failed to create mission. Please try again.'
       setErrorMessage(message)
     }
   })
@@ -200,7 +209,7 @@ export default function NewProjectPage() {
     
     // Validation
     if (!formData.name.trim()) {
-      setNameError('Project name is required')
+      setNameError('Mission name is required')
       return
     }
     
@@ -227,7 +236,7 @@ export default function NewProjectPage() {
           <ChevronLeft size={20} />
         </button>
         <h1 className="text-2xl font-bold text-white">
-          New Project
+          New Mission
         </h1>
         <div className="w-10" />
       </div>
@@ -238,7 +247,7 @@ export default function NewProjectPage() {
           <AvatarImage
             src={selectedAvatarUrl}
             fallbackType="project"
-            fallbackLabel={formData.name || 'New Project'}
+            fallbackLabel={formData.name || 'New Mission'}
             fallbackColor={selectedColor}
             size={128}
             className="shadow-lg border-4 border-white"
@@ -262,14 +271,14 @@ export default function NewProjectPage() {
 
       {/* Form */}
       <form onSubmit={handleSubmit} className="px-6 space-y-4">
-        {/* Project name */}
+        {/* Mission name */}
         <div>
           <label className="text-text-sec text-sm font-medium mb-2 block">
-            Project name
+            Mission name
           </label>
           <input
             type="text"
-            placeholder="Enter project name"
+            placeholder="Enter mission name"
             value={formData.name}
             onChange={(e) => handleInputChange('name', e.target.value)}
             className="w-full bg-bg-card border border-border-card rounded-2xl px-5 py-3.5 text-white placeholder-text-sec focus:outline-none focus:border-accent-yellow transition-colors"
@@ -316,7 +325,7 @@ export default function NewProjectPage() {
           <div className="flex items-center gap-2">
             <ChevronDoubleUpIcon className="w-4 h-4 text-accent-yellow" />
             <div className="text-left">
-              <span className="text-white font-medium">Priority Project</span>
+              <span className="text-white font-medium">Priority Mission</span>
               <p className="text-text-sec text-sm mt-0.5">Mark as high priority</p>
             </div>
           </div>
@@ -332,11 +341,37 @@ export default function NewProjectPage() {
             />
           </div>
         </button>
-        
+
+        {/* Difficulty — sets the XP multiplier every job in this mission earns */}
+        <div className="bg-bg-card border border-border-card rounded-2xl p-5">
+          <label className="text-white font-medium mb-1 block">
+            Difficulty
+          </label>
+          <p className="text-text-sec text-sm mb-3">Harder missions pay out more XP per job</p>
+          <div className="flex gap-2">
+            {DIFFICULTIES.map(({ value, label }) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setFormData(prev => ({ ...prev, difficulty: value }))}
+                className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-colors ${
+                  formData.difficulty === value
+                    ? value === 'hard' ? 'bg-accent-pink/20 text-accent-pink border border-accent-pink'
+                      : value === 'easy' ? 'bg-accent-green/20 text-accent-green border border-accent-green'
+                      : 'bg-accent-yellow/20 text-accent-yellow border border-accent-yellow'
+                    : 'bg-bg-primary text-text-sec border border-border-card'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Color swatches */}
         <div className="bg-bg-card border border-border-card rounded-2xl p-5">
           <label className="text-white font-medium mb-3 block">
-            Project Color
+            Mission Color
           </label>
           <div className="flex justify-between gap-2">
             {COLOR_SWATCHES.map((color) => (
@@ -366,7 +401,7 @@ export default function NewProjectPage() {
             disabled={createProject.isPending}
             className="w-full bg-accent-yellow text-black font-bold text-lg py-4 rounded-2xl hover:bg-yellow-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
           >
-            {createProject.isPending ? 'Creating...' : 'Create Project'}
+            {createProject.isPending ? 'Creating...' : 'Create Mission'}
           </button>
         </div>
       </form>

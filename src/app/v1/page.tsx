@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { QuickCaptureSheet } from "@/components/capture/QuickCaptureSheet";
 import { AppShell } from "@/components/v1/layout/AppShell";
-import { TaskCard } from "@/components/tasks/TaskCard";
+import { TaskCard } from "@/components/v1/tasks/TaskCard";
 import { TaskCardSkeleton } from "@/components/tasks/TaskCardSkeleton";
 import { UnfinishedSessionModal } from "@/components/sessions/UnfinishedSessionModal";
 import { ChangeSessionTimeDialog } from "@/components/sessions/ChangeSessionTimeDialog";
@@ -32,8 +32,8 @@ import { useCurrentUser } from '@/hooks/useAuth'
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { addDays } from 'date-fns'
-import { TodayOverviewSection } from '@/components/planner/TodayOverviewSection'
-import { WeekDayChipData } from '@/components/planner/WeekAheadStrip'
+import { TodayOverviewSection } from '@/components/v1/planner/TodayOverviewSection'
+import { WeekDayChipData } from '@/components/v1/planner/WeekAheadStrip'
 
 interface PlannedTask {
   taskId: string;

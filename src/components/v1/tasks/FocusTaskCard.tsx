@@ -10,7 +10,6 @@ interface FocusTaskCardProps {
   onClick?: () => void;
   onHold?: () => void;
   isLoading?: boolean;
-  xpReward?: number;
 }
 
 export function FocusTaskCard({
@@ -19,7 +18,6 @@ export function FocusTaskCard({
   onClick,
   onHold,
   isLoading,
-  xpReward,
 }: FocusTaskCardProps) {
   // Debug: Log chain metadata for tasks
   if (task.isPartOfChain || task.isLocked) {
@@ -116,7 +114,7 @@ export function FocusTaskCard({
         onClick={handleCheckmarkClick}
         className="flex-shrink-0 w-6 h-6 rounded-none flex items-center justify-center transition-colors"
         disabled={isLoading || isLocked}
-        title={isLocked ? "Complete the previous job first" : undefined}
+        title={isLocked ? "Complete the previous task first" : undefined}
       >
         {isLoading ? (
           <div className="w-4 h-4 border-2 border-accent-pink border-t-transparent rounded-full animate-spin"></div>
@@ -232,28 +230,21 @@ export function FocusTaskCard({
               </>
             ) : (
               <p className="text-text-sec text-sm truncate">
-                {task.projectName || task.milestoneTitle || "Solo Job"}
+                {task.projectName || task.milestoneTitle || "Solo Task"}
                 {task.priority && " • High Priority"}
               </p>
             )}
           </div>
         </div>
 
-        {/* Estimated Time + XP reward */}
-        <div className="flex-shrink-0 flex flex-col items-end gap-1 px-2">
-          {task.estimatedMinutes && (
-            <div className="text-text-sec text-sm font-medium">
-              {task.partial && task.scheduledMinutes
-                ? `${task.scheduledMinutes}min/${task.estimatedMinutes}min`
-                : `${task.estimatedMinutes}min`}
-            </div>
-          )}
-          {xpReward !== undefined && !task.done && (
-            <span className="text-[10px] font-bold text-accent-yellow bg-accent-yellow/10 px-1.5 py-0.5 rounded">
-              +{xpReward} XP
-            </span>
-          )}
-        </div>
+        {/* Estimated Time */}
+        {task.estimatedMinutes && (
+          <div className="flex-shrink-0 text-text-sec text-sm font-medium px-2">
+            {task.partial && task.scheduledMinutes
+              ? `${task.scheduledMinutes}min/${task.estimatedMinutes}min`
+              : `${task.estimatedMinutes}min`}
+          </div>
+        )}
 
         {/* Partial completion option overlay */}
         {showPartialOption && !task.partial && !task.done && (

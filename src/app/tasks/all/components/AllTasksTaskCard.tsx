@@ -5,13 +5,15 @@ import { AvatarImage } from '@/components/ui/AvatarImage';
 import { ChevronDoubleUpIcon, CalendarIcon } from '@heroicons/react/24/outline';
 import { formatLocalSmart, parseDateLocal } from '@/lib/dates';
 import { Check, X, MoreVertical, Trash2, Edit } from 'lucide-react';
-import { DbTask } from '@/types/database';
+import { DbTask, MissionDifficulty } from '@/types/database';
+import { getJobXpPreview } from '@/lib/gamification/xp';
 
 interface AllTasksTaskCardProps {
   task: DbTask;
   projectName?: string;
   projectColor?: string;
   projectAvatarUrl?: string;
+  projectDifficulty?: MissionDifficulty;
   onUpdateTask: (id: string, updates: Partial<DbTask>) => Promise<void>;
   onDeleteTask: (id: string) => Promise<void>;
   onEditTask: (task: DbTask) => void;
@@ -19,13 +21,14 @@ interface AllTasksTaskCardProps {
   onDoubleClick: (task: DbTask) => void;
 }
 
-export function AllTasksTaskCard({ 
-  task, 
-  projectName, 
-  projectColor, 
+export function AllTasksTaskCard({
+  task,
+  projectName,
+  projectColor,
   projectAvatarUrl,
-  onUpdateTask, 
-  onDeleteTask, 
+  projectDifficulty,
+  onUpdateTask,
+  onDeleteTask,
   onEditTask,
   onSingleClick,
   onDoubleClick
@@ -180,12 +183,19 @@ export function AllTasksTaskCard({
           </div>
         </div>
 
-        {/* Estimated Minutes */}
-        {task.estimated_minutes !== undefined && (
-          <div className="flex-shrink-0 text-text-sec text-sm font-medium px-2">
-            {task.estimated_minutes}min
-          </div>
-        )}
+        {/* Estimated Minutes + XP reward */}
+        <div className="flex-shrink-0 flex flex-col items-end gap-1 px-2">
+          {task.estimated_minutes !== undefined && (
+            <div className="text-text-sec text-sm font-medium">
+              {task.estimated_minutes}min
+            </div>
+          )}
+          {!completed && (
+            <span className="text-[10px] font-bold text-accent-yellow bg-accent-yellow/10 px-1.5 py-0.5 rounded">
+              +{getJobXpPreview(projectDifficulty || 'medium')} XP
+            </span>
+          )}
+        </div>
 
         {/* Menu button */}
         <div className="relative">

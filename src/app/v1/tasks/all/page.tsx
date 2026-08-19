@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { AppShell } from "@/components/v1/layout/AppShell";
-import { TaskCard } from "@/components/tasks/TaskCard";
+import { TaskCard } from "@/components/v1/tasks/TaskCard";
 import { TaskCardSkeleton } from "@/components/tasks/TaskCardSkeleton";
 import { useTasks, useUpdateTask, useDeleteTask } from "@/hooks/useTasks";
 import { useProjects } from "@/hooks/useProjects";

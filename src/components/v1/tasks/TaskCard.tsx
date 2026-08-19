@@ -28,10 +28,9 @@ interface PlannedTask {
 interface TaskCardProps {
   task: PlannedTask
   onClick?: () => void
-  xpReward?: number
 }
 
-export function TaskCard({ task, onClick, xpReward }: TaskCardProps) {
+export function TaskCard({ task, onClick }: TaskCardProps) {
   // Debug: Log chain metadata for tasks
   if (task.isPartOfChain || task.isLocked) {
     console.log('[TaskCard] Chain task:', {
@@ -153,22 +152,15 @@ export function TaskCard({ task, onClick, xpReward }: TaskCardProps) {
           </div>
         </div>
 
-        {/* Estimated Minutes + XP reward */}
-        <div className="flex-shrink-0 flex flex-col items-end gap-1 px-2">
-          {task.estimatedMinutes !== undefined && (
-            <div className="text-text-sec text-sm font-medium">
-              {task.partial && task.scheduledMinutes
-                ? `${task.scheduledMinutes}min/${task.estimatedMinutes}min`
-                : `${task.estimatedMinutes}min`
-              }
-            </div>
-          )}
-          {xpReward !== undefined && !task.done && (
-            <span className="text-[10px] font-bold text-accent-yellow bg-accent-yellow/10 px-1.5 py-0.5 rounded">
-              +{xpReward} XP
-            </span>
-          )}
-        </div>
+        {/* Estimated Minutes */}
+        {task.estimatedMinutes !== undefined && (
+          <div className="flex-shrink-0 text-text-sec text-sm font-medium px-2">
+            {task.partial && task.scheduledMinutes 
+              ? `${task.scheduledMinutes}min/${task.estimatedMinutes}min`
+              : `${task.estimatedMinutes}min`
+            }
+          </div>
+        )}
       </div>
     </div>
   )

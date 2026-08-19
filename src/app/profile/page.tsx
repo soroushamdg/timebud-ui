@@ -22,6 +22,11 @@ import { AIProvider } from '@/types/database'
 import { useTotalCredits } from '@/hooks/useCredits'
 import { useUIStore } from '@/stores/uiStore'
 import { TimezoneSettingsRow } from '@/components/settings/TimezoneSettingsRow'
+import { useTasks } from '@/hooks/useTasks'
+import { useProjects } from '@/hooks/useProjects'
+import { getLevelProgress } from '@/lib/gamification/xp'
+import { computeCurrentStreak } from '@/lib/gamification/streak'
+import { buildActivityDates } from '@/lib/gamification/activity'
 
 export default function ProfilePage() {
   const router = useRouter()
@@ -94,6 +99,27 @@ export default function ProfilePage() {
       return sum + minutes
     }, 0)
   const tasksDone = completedTasks.length
+
+  // Gamification: level/XP + streak (same shared lib Home uses), plus a few
+  // lightweight, purely-derived badges — no new schema, just thresholds on stats
+  // already computed here.
+  const { data: allTasks } = useTasks()
+  const { data: allProjects } = useProjects()
+  const levelProgress = getLevelProgress(aiSettings?.xp_total ?? 0)
+  const currentStreak = (() => {
+    if (!allTasks || !focusSessions) return 0
+    const timezone = aiSettings?.timezone || 'UTC'
+    const activityDates = buildActivityDates(allTasks, focusSessions, timezone)
+    return computeCurrentStreak(activityDates, new Date(), timezone)
+  })()
+  const missionsCompleted = allProjects?.filter(p => p.mission_bonus_awarded).length ?? 0
+  const badges = [
+    { emoji: '🔥', unlocked: currentStreak >= 7, label: '7-day grind' },
+    { emoji: '🏆', unlocked: missionsCompleted >= 1, label: 'First mission complete' },
+    { emoji: '🎯', unlocked: tasksDone >= 50, label: '50 jobs done' },
+    { emoji: '⚡', unlocked: levelProgress.level >= 5, label: 'Level 5' },
+    { emoji: '💯', unlocked: missionsCompleted >= 5, label: '5 missions complete' },
+  ]
 
   // Format time display
   const formatTimeDisplay = (minutes: number) => {
@@ -178,48 +204,74 @@ export default function ProfilePage() {
 
         {/* Profile section */}
         <div className="flex flex-col items-center px-6">
-          {/* Profile Header */}
-          <div className="flex items-center gap-4 mb-8">
-            <div className="relative">
-              <AvatarImage
-                src={userProfile?.profile_image_url}
-                fallbackType="profile"
-                fallbackSeed={`${userProfile?.first_name || ''}${userProfile?.last_name || ''}`}
-                size={80}
-                className="cursor-pointer border-4 border-white"
-                onClick={() => setIsAvatarEditorOpen(true)}
-              />
-              <button
-                onClick={() => setIsAvatarEditorOpen(true)}
-                className="absolute bottom-0 right-0 w-6 h-6 rounded-full bg-bg-card flex items-center justify-center text-white hover:opacity-90 transition-opacity"
-              >
-                <PencilIcon className="w-3 h-3" />
-              </button>
-            </div>
-            <div className="flex-1">
-              <div className="flex items-center gap-2">
-                <h1 className="text-white text-2xl font-bold truncate">{getDisplayName()}</h1>
+          {/* ID Card */}
+          <div
+            className="w-full rounded-2xl p-5 mb-6 relative overflow-hidden border border-[#2a2a2a]"
+            style={{ background: 'linear-gradient(150deg,#1c1c1c,#131313)' }}
+          >
+            <div className="flex items-center gap-4">
+              <div className="relative flex-shrink-0">
+                <AvatarImage
+                  src={userProfile?.profile_image_url}
+                  fallbackType="profile"
+                  fallbackSeed={`${userProfile?.first_name || ''}${userProfile?.last_name || ''}`}
+                  size={72}
+                  className="cursor-pointer border-4 border-white"
+                  onClick={() => setIsAvatarEditorOpen(true)}
+                />
+                <div className="absolute -right-1.5 -bottom-1.5 w-7 h-7 rounded-full bg-accent-yellow border-[3px] border-black flex items-center justify-center">
+                  <span className="text-black text-[11px] font-black leading-none">{levelProgress.level}</span>
+                </div>
                 <button
-                  onClick={() => setIsEditProfileOpen(true)}
-                  className="w-6 h-6 rounded-full bg-bg-card border border-border-card flex items-center justify-center text-text-sec hover:text-white hover:bg-bg-card-hover transition-colors flex-shrink-0"
+                  onClick={() => setIsAvatarEditorOpen(true)}
+                  className="absolute -top-1 -left-1 w-6 h-6 rounded-full bg-bg-card flex items-center justify-center text-white hover:opacity-90 transition-opacity"
                 >
-                  <Edit3 size={12} />
+                  <PencilIcon className="w-3 h-3" />
                 </button>
-                {proSubscriber && (
-                  <div className="bg-accent-yellow text-black text-xs font-bold px-2 py-0.5 rounded flex-shrink-0">
-                    PRO
-                  </div>
-                )}
               </div>
-              <p className="text-text-sec truncate">{user?.email || 'user@example.com'}</p>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <h1 className="text-white text-xl font-bold truncate">{getDisplayName()}</h1>
+                  <button
+                    onClick={() => setIsEditProfileOpen(true)}
+                    className="w-6 h-6 rounded-full bg-bg-card border border-border-card flex items-center justify-center text-text-sec hover:text-white hover:bg-bg-card-hover transition-colors flex-shrink-0"
+                  >
+                    <Edit3 size={12} />
+                  </button>
+                  {proSubscriber && (
+                    <div className="bg-accent-yellow text-black text-xs font-bold px-2 py-0.5 rounded flex-shrink-0">
+                      PRO
+                    </div>
+                  )}
+                </div>
+                <p className="text-accent-yellow text-xs font-semibold mt-0.5">
+                  Level {levelProgress.level} &middot; {levelProgress.levelTitle}
+                  {currentStreak > 0 && <> &middot; &#128293; {currentStreak}-day grind</>}
+                </p>
+                <p className="text-text-sec text-xs truncate mt-0.5">{user?.email || 'user@example.com'}</p>
+              </div>
+            </div>
+
+            <div className="h-2 rounded-full bg-black mt-4 overflow-hidden">
+              <div
+                className="h-full rounded-full"
+                style={{
+                  width: `${Math.min(100, (levelProgress.xpIntoLevel / Math.max(1, levelProgress.xpForNextLevel)) * 100)}%`,
+                  background: 'linear-gradient(90deg,#f5c518,#ffdf6b)',
+                }}
+              />
+            </div>
+            <div className="flex justify-between mt-1.5 text-[11px] text-text-sec">
+              <span>{levelProgress.xpIntoLevel}/{levelProgress.xpForNextLevel} XP</span>
+              <span>{levelProgress.xpTotal} total</span>
             </div>
           </div>
 
           {/* Stats row */}
-          <div className="flex gap-3 w-full mb-8">
+          <div className="flex gap-3 w-full mb-6">
             <div className="flex-1 bg-bg-card rounded-none p-3 text-center">
               <div className="text-white font-bold text-lg">{totalSessions}</div>
-              <div className="text-text-sec text-xs">Sessions</div>
+              <div className="text-text-sec text-xs">Runs</div>
             </div>
             <div className="flex-1 bg-bg-card rounded-none p-3 text-center">
               <div className="text-white font-bold text-lg">{formatTimeDisplay(totalMinutes)}</div>
@@ -227,7 +279,25 @@ export default function ProfilePage() {
             </div>
             <div className="flex-1 bg-bg-card rounded-none p-3 text-center">
               <div className="text-white font-bold text-lg">{tasksDone}</div>
-              <div className="text-text-sec text-xs">Tasks</div>
+              <div className="text-text-sec text-xs">Jobs done</div>
+            </div>
+          </div>
+
+          {/* Badges */}
+          <div className="w-full mb-8">
+            <h2 className="text-white text-sm font-semibold mb-2">Badges</h2>
+            <div className="flex gap-2.5">
+              {badges.map((badge) => (
+                <div
+                  key={badge.label}
+                  title={badge.label}
+                  className={`w-12 h-12 rounded-xl flex items-center justify-center text-xl flex-shrink-0 ${
+                    badge.unlocked ? 'bg-bg-card border border-accent-yellow/40' : 'bg-bg-card opacity-30'
+                  }`}
+                >
+                  {badge.unlocked ? badge.emoji : '🔒'}
+                </div>
+              ))}
             </div>
           </div>
 
@@ -267,7 +337,7 @@ export default function ProfilePage() {
                 onClick={() => setIsPartialDialogOpen(true)}
                 className="w-full bg-bg-card rounded-none px-4 py-4 mb-2 flex justify-between items-center hover:bg-bg-card/80 transition-colors"
               >
-                <span className="text-white">Partial tasks</span>
+                <span className="text-white">Partial jobs</span>
                 <ChevronRight className="w-5 h-5 text-text-sec" />
               </button>
               
@@ -346,7 +416,7 @@ export default function ProfilePage() {
                     <Brain className="w-5 h-5 text-accent-yellow" />
                     <div>
                       <p className="text-white font-medium">Thinking Mode</p>
-                      <p className="text-xs text-text-sec">Extended reasoning for complex tasks</p>
+                      <p className="text-xs text-text-sec">Extended reasoning for complex jobs</p>
                     </div>
                   </div>
                   <button

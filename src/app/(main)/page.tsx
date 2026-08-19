@@ -34,6 +34,14 @@ import { createClient } from '@/lib/supabase/client'
 import { addDays } from 'date-fns'
 import { TodayOverviewSection } from '@/components/planner/TodayOverviewSection'
 import { WeekDayChipData } from '@/components/planner/WeekAheadStrip'
+import { useAISettings } from '@/hooks/useAISettings'
+import { useFocusSessions } from '@/hooks/useSessions'
+import { getLevelProgress, getJobXpPreview } from '@/lib/gamification/xp'
+import { computeCurrentStreak } from '@/lib/gamification/streak'
+import { buildActivityDates } from '@/lib/gamification/activity'
+import { useLevelUpWatcher } from '@/hooks/useLevelUpWatcher'
+import { LevelUpModal } from '@/components/gamification/LevelUpModal'
+import { MissionDifficulty } from '@/types/database'
 
 interface PlannedTask {
   taskId: string;
@@ -185,6 +193,21 @@ export default function Home() {
     
     return [...incompleteProjects, ...completedProjects]
   }, [projectsWithCompletion])
+
+  // Gamification: level/XP from the persisted total (src/lib/gamification/xp.ts,
+  // driven by the tasks_award_xp DB trigger), streak from the same walk-back the
+  // notification producer already validated (src/lib/gamification/streak.ts).
+  const { data: aiSettings } = useAISettings()
+  const { data: focusSessions } = useFocusSessions()
+  const levelProgress = useMemo(() => getLevelProgress(aiSettings?.xp_total ?? 0), [aiSettings?.xp_total])
+  const currentStreak = useMemo(() => {
+    if (!tasks || !focusSessions) return 0
+    const timezone = aiSettings?.timezone || 'UTC'
+    const activityDates = buildActivityDates(tasks, focusSessions, timezone)
+    return computeCurrentStreak(activityDates, new Date(), timezone)
+  }, [tasks, focusSessions, aiSettings?.timezone])
+
+  const { newLevel, dismiss: dismissLevelUp } = useLevelUpWatcher()
 
   const createFocusSession = useCreateFocusSession();
   const deleteFocusSession = useDeleteFocusSession();
@@ -711,22 +734,33 @@ export default function Home() {
               onClick={() => router.push("/profile")}
               className="flex items-center gap-3"
             >
-              <AvatarImage
-                src={userProfile?.profile_image_url}
-                fallbackType="profile"
-                fallbackSeed={`${userProfile?.first_name || ''}${userProfile?.last_name || ''}`}
-                size={48}
-                className="border-4 border-white"
-              />
-              <span className="text-white text-base font-medium">
-                Your studio &gt;
-              </span>
+              <div className="relative flex-shrink-0">
+                <AvatarImage
+                  src={userProfile?.profile_image_url}
+                  fallbackType="profile"
+                  fallbackSeed={`${userProfile?.first_name || ''}${userProfile?.last_name || ''}`}
+                  size={48}
+                  className="border-4 border-white"
+                />
+                <div className="absolute -right-1 -bottom-1 w-5 h-5 rounded-full bg-accent-yellow border-2 border-black flex items-center justify-center">
+                  <span className="text-black text-[10px] font-black leading-none">{levelProgress.level}</span>
+                </div>
+              </div>
+              <div className="text-left">
+                <span className="text-white text-base font-semibold block">
+                  {userProfile?.first_name ? `Hey, ${userProfile.first_name}` : 'Your studio'}
+                </span>
+                <span className="text-text-sec text-xs flex items-center gap-1">
+                  {currentStreak > 0 && <>&#128293; {currentStreak}-day grind &middot; </>}
+                  {levelProgress.xpIntoLevel}/{levelProgress.xpForNextLevel} XP
+                </span>
+              </div>
             </button>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => router.push("/chat")}
                 className="w-11 h-11 bg-[#2A2A2A] rounded-full flex items-center justify-center hover:bg-[#2A2A2A]/80 transition-colors"
-                title="AI Assistant"
+                title="Chat with Bud"
               >
                 <Sparkles className="w-5 h-5 text-accent-yellow" />
               </button>
@@ -734,15 +768,15 @@ export default function Home() {
                 onClick={() => router.push("/tasks/all")}
                 className="bg-[#2A2A2A] text-white rounded-full px-4 py-2 text-sm font-medium hover:text-[#d7d7d7] transition-colors"
               >
-                All tasks
+                All jobs
               </button>
             </div>
           </div>
 
-          {/* Target Projects */}
+          {/* Missions */}
           <div className="mb-6 overflow-visible">
             <div className="flex items-center justify-between mb-2 px-6">
-              <h2 className="text-white text-xl font-bold">Target projects</h2>
+              <h2 className="text-white text-xl font-bold">Your Missions</h2>
               <button
                 onClick={() => router.push("/projects/select")}
                 className="bg-[#FFD233] text-black rounded-full px-5 py-1.5 text-sm font-semibold hover:bg-[#FFD233]/90 transition-colors flex items-center gap-2"
@@ -753,7 +787,7 @@ export default function Home() {
             </div>
             {!projects || projects.length === 0 ? (
               <div className="flex items-center justify-center h-20 px-6">
-                <p className="text-text-sec text-center">No projects</p>
+                <p className="text-text-sec text-center">No missions yet</p>
               </div>
             ) : (
               <div className="flex gap-4 overflow-x-auto pb-2 pt-6 scrollbar-hide px-6">
@@ -763,28 +797,30 @@ export default function Home() {
                     onClick={() => router.push(`/projects/${project.id}`)}
                     className="flex-shrink-0 transition-all relative hover:scale-110 hover:z-20 hover:shadow-xl hover:shadow-black/50 flex flex-col items-center gap-0.5"
                   >
-                    <AvatarImage
-                      src={project.project_avatar_url}
-                      fallbackType="project"
-                      fallbackLabel={project.name}
-                      fallbackColor={project.color || undefined}
-                      size={80}
-                      className="border-2 border-black border-4 border-white"
-                    />
+                    <div
+                      className="rounded-full p-[3px]"
+                      style={{
+                        background: `conic-gradient(#f5c518 ${project.completion.percentage * 3.6}deg, #2a2a2a ${project.completion.percentage * 3.6}deg 360deg)`,
+                      }}
+                    >
+                      <AvatarImage
+                        src={project.project_avatar_url}
+                        fallbackType="project"
+                        fallbackLabel={project.name}
+                        fallbackColor={project.color || undefined}
+                        size={76}
+                        className="border-2 border-black border-4 border-black"
+                      />
+                    </div>
+                    {project.completion.isCompleted && (
+                      <div className="absolute -top-0.5 -right-0.5 w-6 h-6 rounded-full bg-accent-green border-2 border-black flex items-center justify-center z-10">
+                        <span className="text-black text-xs font-black leading-none">&#10003;</span>
+                      </div>
+                    )}
                     {project.completion.onHoldCount > 0 && (
                       <span className="text-[9px] text-text-sec leading-none">
                         {project.completion.onHoldCount} on hold
                       </span>
-                    )}
-                    {/* 100% completion ribbon */}
-                    {project.completion.isCompleted && (
-                      <div className="absolute -top-1 -right-1 w-20 h-20 overflow-hidden pointer-events-none z-10">
-                        <div className="absolute top-4 -right-7 w-[120%] bg-yellow-400 text-black text-center py-1.5 transform rotate-45 font-bold text-xs shadow-lg">
-                          100%
-                          <div className="absolute bottom-0 left-0 w-0 h-0 border-b-[6px] border-l-[6px] border-transparent border-b-yellow-700 -translate-x-full"></div>
-                          <div className="absolute bottom-0 right-0 w-0 h-0 border-b-[6px] border-r-[6px] border-transparent border-b-yellow-700 translate-x-full"></div>
-                        </div>
-                      </div>
                     )}
                   </button>
                 ))}
@@ -802,16 +838,16 @@ export default function Home() {
             />
           )}
 
-          {/* Tasks Header with Time Button and Add Button */}
+          {/* Jobs Header with Time Button and Add Button */}
           <div className="flex items-center justify-between px-6 mb-4">
             <div className="flex items-center gap-3">
               <h3 className="text-white text-lg font-semibold">
-                {isLoading ? "..." : plannedTasks.length} Tasks
+                {isLoading ? "..." : plannedTasks.length} Jobs
               </h3>
               <button
                 onClick={() => setShowAddTaskDialog(true)}
                 className="w-8 h-8 bg-accent-yellow rounded-full flex items-center justify-center hover:bg-yellow-400 transition-colors"
-                title="Add task to planner"
+                title="Add job to planner"
               >
                 <Plus className="w-5 h-5 text-black" />
               </button>
@@ -844,15 +880,18 @@ export default function Home() {
         <div className="flex-1 min-h-0 overflow-y-auto px-6">
           {isLoading ? (
             <div className="flex items-center justify-center h-32">
-              <p className="text-text-sec text-center">Loading tasks...</p>
+              <p className="text-text-sec text-center">Loading jobs...</p>
             </div>
           ) : plannedTasks.length === 0 ? (
             <div className="flex items-center justify-center h-32">
-              <p className="text-text-sec text-center">No tasks planned. Adjust your settings or add tasks to get started.</p>
+              <p className="text-text-sec text-center">No jobs planned. Adjust your settings or add jobs to get started.</p>
             </div>
           ) : (
             <div className="space-y-3 pb-4">
-              {plannedTasks.map((task) => (
+              {plannedTasks.map((task) => {
+                const taskProject = task.projectId ? projects?.find((p) => p.id === task.projectId) : undefined
+                const xpReward = getJobXpPreview((taskProject?.difficulty as MissionDifficulty) || 'medium')
+                return (
                 <div
                   key={task.taskId}
                   onTouchStart={(e) => handleTouchStart(e, task)}
@@ -864,10 +903,11 @@ export default function Home() {
                 >
                   <TaskCard
                     task={task}
+                    xpReward={xpReward}
                     onClick={() => handleTaskClick(task)}
                   />
                 </div>
-              ))}
+              )})}
             </div>
           )}
         </div>
@@ -958,6 +998,8 @@ export default function Home() {
         type={toastType}
         onDismiss={() => setShowToast(false)}
       />
+
+      {newLevel && <LevelUpModal levelProgress={newLevel} onDismiss={dismissLevelUp} />}
     </AppShell>
   );
 }

@@ -172,7 +172,7 @@ export function FilterDialog({
                 className="w-4 h-4 text-[#FFD233] bg-[#2A2A2A] border-gray-600"
               />
               <CheckSquare className="w-4 h-4 text-text-sec" />
-              <span className="text-white">Pending tasks</span>
+              <span className="text-white">Pending jobs</span>
             </label>
             <label className="flex items-center gap-3 cursor-pointer">
               <input
@@ -184,7 +184,7 @@ export function FilterDialog({
                 className="w-4 h-4 text-[#FFD233] bg-[#2A2A2A] border-gray-600"
               />
               <CheckSquare className="w-4 h-4 text-accent-green" />
-              <span className="text-white">Completed tasks</span>
+              <span className="text-white">Completed jobs</span>
             </label>
           </div>
         );
@@ -256,11 +256,11 @@ export function FilterDialog({
                 className="w-4 h-4 text-[#FFD233] bg-[#2A2A2A] border-gray-600 rounded"
               />
               <Folder className="w-4 h-4 text-text-sec" />
-              <span className="text-white">Solo tasks (no project)</span>
+              <span className="text-white">Solo jobs (no mission)</span>
             </label>
             
             <div className="border-t border-border-card pt-3">
-              <p className="text-text-sec text-sm mb-2">Select projects:</p>
+              <p className="text-text-sec text-sm mb-2">Select missions:</p>
               <div className="space-y-2 max-h-40 overflow-y-auto">
                 {projects.map((project) => (
                   <label key={project.id} className="flex items-center gap-3 cursor-pointer">

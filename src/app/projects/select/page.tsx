@@ -368,7 +368,7 @@ export default function SelectProjectsPage() {
         
         {/* Heading */}
         <h1 className="text-white text-xl font-bold px-4 mb-4">
-          Pick the project groups you want to work on:
+          Pick the missions you&apos;re running:
         </h1>
         
         {/* Loading skeleton */}
@@ -402,18 +402,18 @@ export default function SelectProjectsPage() {
       
       {/* Heading */}
       <h1 className="text-white text-xl font-bold px-4 mb-2">
-        Pick the project groups you want to work on:
+        Pick the missions you&apos;re running:
       </h1>
       <p className="text-text-sec text-sm px-4 mb-4">
         Tap to toggle active/paused • Long press for more options
       </p>
-      
+
       <div className="overflow-y-auto pb-8">
-        {/* Active and Paused Projects */}
+        {/* Active and Paused Missions */}
         {activeAndPausedProjects.length > 0 && (
           <div className="px-4 mb-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-white text-lg font-semibold">Active & Paused Projects</h2>
+              <h2 className="text-white text-lg font-semibold">Active Missions</h2>
               <button
                 onClick={cycleSortMode}
                 className="flex items-center gap-2 bg-[#2A2A2A] text-white rounded-full px-4 py-2 text-sm font-medium hover:bg-[#3A3A3A] transition-colors"
@@ -447,26 +447,33 @@ export default function SelectProjectsPage() {
                     />
                   </div>
                   
-                  {/* 100% completion ribbon */}
+                  {/* Mission-complete badge */}
                   {project.completion.isCompleted && (
-                    <div className="absolute -top-1 -right-1 w-20 h-20 overflow-hidden pointer-events-none z-10">
-                      <div className="absolute top-4 -right-7 bg-yellow-400 text-black text-center py-1.5 transform rotate-45 font-bold text-xs shadow-lg" style={{ width: '120%' }}>
-                        100%
-                        <div className="absolute bottom-0 left-0 w-0 h-0 border-b-[6px] border-l-[6px] border-transparent border-b-yellow-700 -translate-x-full"></div>
-                        <div className="absolute bottom-0 right-0 w-0 h-0 border-b-[6px] border-r-[6px] border-transparent border-b-yellow-700 translate-x-full"></div>
-                      </div>
+                    <div className="absolute top-2 right-2 w-7 h-7 rounded-full bg-accent-green border-2 border-black flex items-center justify-center z-10">
+                      <Check className="w-4 h-4 text-black" strokeWidth={3} />
                     </div>
                   )}
-                  
+
+                  {/* Difficulty tag */}
+                  {!project.completion.isCompleted && (
+                    <div className={`absolute top-2 right-2 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wide z-10 ${
+                      project.difficulty === 'hard' ? 'bg-accent-pink/90 text-white'
+                        : project.difficulty === 'easy' ? 'bg-accent-green/90 text-black'
+                        : 'bg-accent-yellow/90 text-black'
+                    }`}>
+                      {project.difficulty}
+                    </div>
+                  )}
+
                   {/* Status badge */}
                   <div className={`absolute top-2 left-2 px-2 py-1 rounded-none text-xs font-medium ${
-                    getProjectStatus(project) === 'active' 
-                      ? 'bg-accent-green text-white' 
+                    getProjectStatus(project) === 'active'
+                      ? 'bg-accent-green text-white'
                       : 'bg-text-sec text-white'
                   }`}>
                     {getProjectStatus(project) === 'active' ? 'Active' : 'Paused'}
                   </div>
-                  
+
                   {/* Active state badge */}
                   {isActive(project) && (
                     <div className="absolute bottom-1 right-1 bg-accent-yellow rounded-none w-[20%] aspect-square flex items-center justify-center z-20">
@@ -501,10 +508,10 @@ export default function SelectProjectsPage() {
           </div>
         )}
         
-        {/* Archived Projects */}
+        {/* Archived Missions */}
         {archivedProjects.length > 0 && (
           <div className="px-4">
-            <h2 className="text-text-sec text-lg font-semibold mb-4">Archived Projects</h2>
+            <h2 className="text-text-sec text-lg font-semibold mb-4">Archived Missions</h2>
             <div className="grid grid-cols-2 gap-4">
               {archivedProjects.map(project => (
                 <div
@@ -528,20 +535,16 @@ export default function SelectProjectsPage() {
                     />
                   </div>
                   
-                  {/* 100% completion ribbon */}
+                  {/* Mission-complete badge */}
                   {project.completion.isCompleted && (
-                    <div className="absolute -top-1 -right-1 w-20 h-20 overflow-hidden pointer-events-none z-10">
-                      <div className="absolute top-4 -right-7 bg-yellow-400 text-black text-center py-1.5 transform rotate-45 font-bold text-xs shadow-lg" style={{ width: '120%' }}>
-                        100%
-                        <div className="absolute bottom-0 left-0 w-0 h-0 border-b-[6px] border-l-[6px] border-transparent border-b-yellow-700 -translate-x-full"></div>
-                        <div className="absolute bottom-0 right-0 w-0 h-0 border-b-[6px] border-r-[6px] border-transparent border-b-yellow-700 translate-x-full"></div>
-                      </div>
+                    <div className="absolute top-2 right-2 w-7 h-7 rounded-full bg-accent-green border-2 border-black flex items-center justify-center z-10">
+                      <Check className="w-4 h-4 text-black" strokeWidth={3} />
                     </div>
                   )}
-                  
-                  {/* Project name overlay */}
+
+                  {/* Mission name overlay */}
                   <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent p-2">
-                    <AutoSizeText 
+                    <AutoSizeText
                       text={project.name}
                       avatarHeight={avatarHeights[project.id]}
                       maxFontSize={18}
@@ -554,7 +557,7 @@ export default function SelectProjectsPage() {
           </div>
         )}
       </div>
-      
+
       {/* Context Menu */}
       {contextMenu.projectId && (() => {
         const project = projects.find(p => p.id === contextMenu.projectId)
@@ -614,9 +617,9 @@ export default function SelectProjectsPage() {
       {deleteConfirm && (
         <div className="fixed inset-0 bg-black/70 z-[100] flex items-center justify-center">
           <div className="bg-bg-card rounded-none p-6 max-w-sm mx-4">
-            <h3 className="text-white font-bold text-lg mb-4">Delete Project</h3>
+            <h3 className="text-white font-bold text-lg mb-4">Delete Mission</h3>
             <p className="text-text-sec mb-6">
-              Are you sure you want to delete this project? This action cannot be undone.
+              Are you sure you want to delete this mission? This action cannot be undone.
             </p>
             <div className="flex gap-4">
               <button

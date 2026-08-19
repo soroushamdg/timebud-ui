@@ -86,7 +86,7 @@ export function buildSystemPrompt(
   }
 ): string {
   const projectList = projects
-    .map(p => `- ${p.name} (${p.status}, ${p.taskCount} tasks) [ID: ${p.id}]`)
+    .map(p => `- ${p.name} (${p.status}, ${p.taskCount} jobs) [ID: ${p.id}]`)
     .join('\n')
 
   if (!template) {
@@ -142,15 +142,15 @@ export function buildContextBlock(
 
   return `[CONTEXT LOADED]
 
-PROJECT: ${project.name}
+MISSION: ${project.name}
 Status: ${project.status}
 ${project.description ? `Description: ${project.description}` : ''}
 ${project.deadline ? `Deadline: ${project.deadline}` : ''}
 ${project.priority ? 'Priority: HIGH' : ''}
-Project ID: ${project.id}
+Mission ID: ${project.id}
 
-TASKS (${tasks.length}):
-${taskList || '(No tasks)'}
+JOBS (${tasks.length}):
+${taskList || '(No jobs)'}
 
 MEMORIES (${memories.length}):
 ${memoryList || '(No memories saved)'}
@@ -168,17 +168,17 @@ export const ROUTING_RULES = {
 }
 
 export const TOOL_DESCRIPTIONS = {
-  load_project_context: 'Load full task list and memories for a project',
-  create_task: 'Create a single task or milestone',
-  edit_task: 'Update any fields of an existing task',
-  delete_task: 'Delete a task (requires confirmation)',
-  bulk_create_tasks: 'Create multiple tasks at once',
-  create_milestone: 'Create a milestone',
-  edit_milestone: 'Edit a milestone',
-  delete_milestone: 'Delete a milestone (requires confirmation)',
-  create_project: 'Create a new project (requires confirmation)',
-  add_memory: 'Save important context to project memories',
+  load_project_context: 'Load full job list and memories for a mission',
+  create_task: 'Create a single job or objective',
+  edit_task: 'Update any fields of an existing job',
+  delete_task: 'Delete a job (requires confirmation)',
+  bulk_create_tasks: 'Create multiple jobs at once',
+  create_milestone: 'Create an objective',
+  edit_milestone: 'Edit an objective',
+  delete_milestone: 'Delete an objective (requires confirmation)',
+  create_project: 'Create a new mission (requires confirmation)',
+  add_memory: 'Save important context to mission memories',
   remove_memory: 'Delete a memory (requires confirmation)',
-  mark_task_complete: 'Mark a task as completed',
-  set_task_dependency: 'Set or clear task dependency',
+  mark_task_complete: 'Mark a job as completed',
+  set_task_dependency: 'Set or clear job dependency',
 }

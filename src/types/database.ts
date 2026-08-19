@@ -1,6 +1,7 @@
 export type ProjectStatus = "active" | "paused" | "archived";
 export type TaskStatus = "pending" | "completed";
 export type ItemType = "task" | "milestone";
+export type MissionDifficulty = "easy" | "medium" | "hard";
 export interface DbUser {
   id: string;
   email: string;
@@ -20,6 +21,8 @@ export interface DbProject {
   color: string | null;
   project_avatar_url: string | null;
   created_at: string;
+  difficulty: MissionDifficulty;
+  mission_bonus_awarded: boolean;
 }
 export interface DbTask {
   id: string;
@@ -102,6 +105,7 @@ export interface DbUserAISettings {
   unfinished_session_alerts_enabled?: boolean;
   streak_alerts_enabled?: boolean;
   last_streak_milestone?: number;
+  xp_total?: number;
 }
 
 export interface DbPushSubscription {

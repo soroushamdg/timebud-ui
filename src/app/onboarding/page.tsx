@@ -6,23 +6,23 @@ import { useCurrentUser } from '@/hooks/useAuth'
 
 const ONBOARDING_STEPS = [
   {
-    title: 'Welcome to TimeBud',
-    description: 'Your personal focus companion to help you manage time and achieve your goals.',
-    emoji: '👋',
+    title: "I'm Bud, your guide",
+    description: "Every project's now a Mission. Every task, a Job that earns XP. I'll keep score so you don't have to.",
+    image: '/bud/bud-fullbody.png',
   },
   {
-    title: 'Plan Your Day',
-    description: 'TimeBud helps you plan focused work sessions based on your tasks and available time.',
-    emoji: '📅',
+    title: 'Plan Your Missions',
+    description: 'TimeBud plans focused runs based on your jobs and available time — no more guessing what to work on next.',
+    emoji: '🗓️',
   },
   {
-    title: 'Track Your Progress',
-    description: 'Monitor your productivity and see how much time you spend on each project.',
-    emoji: '📊',
+    title: 'Level Up As You Go',
+    description: "Finish jobs, complete missions, watch your XP and streak grow. Cruising doesn't count — running missions does.",
+    emoji: '🔥',
   },
   {
     title: 'Stay Focused',
-    description: 'Use our focus timer to stay on track and minimize distractions during work sessions.',
+    description: 'Start a Run to stay on track and minimize distractions while you work.',
     emoji: '🎯',
   },
 ]
@@ -91,7 +91,12 @@ export default function OnboardingPage() {
         {/* Content area - scrollable */}
         <div className="flex-1 overflow-y-auto px-6 py-8">
           <div className="flex flex-col items-center justify-center min-h-full text-center">
-            <div className="text-8xl mb-8">{step.emoji}</div>
+            {step.image ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={step.image} alt="Bud" className="w-56 h-auto mb-6 drop-shadow-[0_0_40px_rgba(245,197,24,0.15)]" />
+            ) : (
+              <div className="text-8xl mb-8">{step.emoji}</div>
+            )}
             <h1 className="text-3xl font-bold text-white mb-4">{step.title}</h1>
             <p className="text-lg text-text-sec max-w-sm">{step.description}</p>
           </div>
@@ -103,9 +108,9 @@ export default function OnboardingPage() {
             onClick={handleNext}
             className="w-full bg-accent-yellow text-black font-bold text-lg py-4 rounded-none hover:bg-yellow-400 transition-colors border border-white"
           >
-            {currentStep === ONBOARDING_STEPS.length - 1 ? "Let's go to the app" : 'Next'}
+            {currentStep === ONBOARDING_STEPS.length - 1 ? "Let's run it" : 'Next'}
           </button>
-          
+
           {currentStep > 0 && (
             <button
               onClick={handlePrevious}
@@ -114,7 +119,7 @@ export default function OnboardingPage() {
               Previous
             </button>
           )}
-          
+
           {currentStep < ONBOARDING_STEPS.length - 1 && (
             <button
               onClick={handleComplete}

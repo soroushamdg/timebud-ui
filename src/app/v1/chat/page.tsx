@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Sparkles, RotateCcw, Coins, X, AlertCircle } from "lucide-react";
 import { useChatStore } from "@/stores/chatStore";
-import { MessageBubble } from "@/components/chat/MessageBubble";
+import { MessageBubble } from "@/components/v1/chat/MessageBubble";
 import { ChatInput } from "@/components/chat/ChatInput";
 import { TypingIndicator } from "@/components/chat/TypingIndicator";
 import { ProviderErrorBanner } from "@/components/chat/ProviderErrorBanner";

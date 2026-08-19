@@ -1,13 +1,13 @@
 export const TOOL_SCHEMAS = {
   load_project_context: {
     name: "load_project_context",
-    description: "Load full task list and memories for a project",
+    description: "Load full job list and memories for a mission",
     inputSchema: {
       type: "object",
       properties: {
         projectId: {
           type: "string",
-          description: "The ID of the project to load context for",
+          description: "The ID of the mission to load context for",
         },
       },
       required: ["projectId"],
@@ -16,21 +16,21 @@ export const TOOL_SCHEMAS = {
 
   create_task: {
     name: "create_task",
-    description: "Create a single task",
+    description: "Create a single job",
     inputSchema: {
       type: "object",
       properties: {
         projectId: {
           type: "string",
-          description: "The ID of the project this task belongs to",
+          description: "The ID of the mission this job belongs to",
         },
         title: {
           type: "string",
-          description: "The task title",
+          description: "The job title",
         },
         description: {
           type: "string",
-          description: "Optional task description",
+          description: "Optional job description",
         },
         estimatedMinutes: {
           type: "number",
@@ -43,11 +43,11 @@ export const TOOL_SCHEMAS = {
         },
         priority: {
           type: "boolean",
-          description: "Whether this is a high priority task",
+          description: "Whether this is a high priority job",
         },
         dependsOnTask: {
           type: "string",
-          description: "ID of task this depends on",
+          description: "ID of job this depends on",
         },
       },
       required: ["projectId", "title"],
@@ -56,13 +56,13 @@ export const TOOL_SCHEMAS = {
 
   edit_task: {
     name: "edit_task",
-    description: "Update fields of an existing task",
+    description: "Update fields of an existing job",
     inputSchema: {
       type: "object",
       properties: {
         taskId: {
           type: "string",
-          description: "The ID of the task to edit",
+          description: "The ID of the job to edit",
         },
         updates: {
           type: "object",
@@ -86,13 +86,13 @@ export const TOOL_SCHEMAS = {
 
   delete_task: {
     name: "delete_task",
-    description: "Delete a task (requires confirmation)",
+    description: "Delete a job (requires confirmation)",
     inputSchema: {
       type: "object",
       properties: {
         taskId: {
           type: "string",
-          description: "The ID of the task to delete",
+          description: "The ID of the job to delete",
         },
       },
       required: ["taskId"],
@@ -102,17 +102,17 @@ export const TOOL_SCHEMAS = {
   bulk_create_tasks: {
     name: "bulk_create_tasks",
     description:
-      "Create multiple tasks at once. Supports setting dependencies between tasks using dependsOnTaskIndex (single, 0-based index in same batch) or dependsOnTaskIndices (array of indices, for multi-dep within batch). Use dependsOnTaskId (single UUID) or dependsOnTaskIds (array of UUIDs) for existing tasks. Example: task C depends on A(index 0) and B(index 1) → dependsOnTaskIndices: [0, 1].",
+      "Create multiple jobs at once. Supports setting dependencies between jobs using dependsOnTaskIndex (single, 0-based index in same batch) or dependsOnTaskIndices (array of indices, for multi-dep within batch). Use dependsOnTaskId (single UUID) or dependsOnTaskIds (array of UUIDs) for existing jobs. Example: job C depends on A(index 0) and B(index 1) → dependsOnTaskIndices: [0, 1].",
     inputSchema: {
       type: "object",
       properties: {
         projectId: {
           type: "string",
-          description: "The ID of the project",
+          description: "The ID of the mission",
         },
         tasks: {
           type: "array",
-          description: "Array of tasks to create",
+          description: "Array of jobs to create",
           items: {
             type: "object",
             properties: {
@@ -127,24 +127,24 @@ export const TOOL_SCHEMAS = {
               dependsOnTaskIndex: {
                 type: "number",
                 description:
-                  "0-based index of a single task in this same array that this task depends on",
+                  "0-based index of a single job in this same array that this job depends on",
               },
               dependsOnTaskIndices: {
                 type: "array",
                 items: { type: "number" },
                 description:
-                  "0-based indices of multiple tasks in this same array that this task depends on (use for multi-dependency within the batch)",
+                  "0-based indices of multiple jobs in this same array that this job depends on (use for multi-dependency within the batch)",
               },
               dependsOnTaskId: {
                 type: "string",
                 description:
-                  "UUID of a single existing task that this task depends on",
+                  "UUID of a single existing job that this job depends on",
               },
               dependsOnTaskIds: {
                 type: "array",
                 items: { type: "string" },
                 description:
-                  "UUIDs of multiple existing tasks that this task depends on (use for multi-dependency on pre-existing tasks)",
+                  "UUIDs of multiple existing jobs that this job depends on (use for multi-dependency on pre-existing jobs)",
               },
             },
             required: ["title"],
@@ -157,17 +157,17 @@ export const TOOL_SCHEMAS = {
 
   create_milestone: {
     name: "create_milestone",
-    description: "Create a milestone",
+    description: "Create an objective",
     inputSchema: {
       type: "object",
       properties: {
         projectId: {
           type: "string",
-          description: "The ID of the project",
+          description: "The ID of the mission",
         },
         title: {
           type: "string",
-          description: "The milestone title",
+          description: "The objective title",
         },
         dueDate: {
           type: "string",
@@ -184,13 +184,13 @@ export const TOOL_SCHEMAS = {
 
   edit_milestone: {
     name: "edit_milestone",
-    description: "Edit a milestone",
+    description: "Edit an objective",
     inputSchema: {
       type: "object",
       properties: {
         milestoneId: {
           type: "string",
-          description: "The ID of the milestone to edit",
+          description: "The ID of the objective to edit",
         },
         updates: {
           type: "object",
@@ -210,13 +210,13 @@ export const TOOL_SCHEMAS = {
 
   delete_milestone: {
     name: "delete_milestone",
-    description: "Delete a milestone (requires confirmation)",
+    description: "Delete an objective (requires confirmation)",
     inputSchema: {
       type: "object",
       properties: {
         milestoneId: {
           type: "string",
-          description: "The ID of the milestone to delete",
+          description: "The ID of the objective to delete",
         },
       },
       required: ["milestoneId"],
@@ -226,25 +226,25 @@ export const TOOL_SCHEMAS = {
   create_project: {
     name: "create_project",
     description:
-      "Create a new project (requires confirmation via preview_creation)",
+      "Create a new mission (requires confirmation via preview_creation)",
     inputSchema: {
       type: "object",
       properties: {
         name: {
           type: "string",
-          description: "Project name",
+          description: "Mission name",
         },
         description: {
           type: "string",
-          description: "Project description",
+          description: "Mission description",
         },
         deadline: {
           type: "string",
-          description: "Project deadline in plain calendar-date format (YYYY-MM-DD)",
+          description: "Mission deadline in plain calendar-date format (YYYY-MM-DD)",
         },
         color: {
           type: "string",
-          description: "Project color hex code",
+          description: "Mission color hex code",
         },
       },
       required: ["name"],
@@ -253,13 +253,13 @@ export const TOOL_SCHEMAS = {
 
   add_memory: {
     name: "add_memory",
-    description: "Save important context to project memories",
+    description: "Save important context to mission memories",
     inputSchema: {
       type: "object",
       properties: {
         projectId: {
           type: "string",
-          description: "The ID of the project",
+          description: "The ID of the mission",
         },
         content: {
           type: "string",
@@ -287,13 +287,13 @@ export const TOOL_SCHEMAS = {
 
   mark_task_complete: {
     name: "mark_task_complete",
-    description: "Mark a task as completed",
+    description: "Mark a job as completed",
     inputSchema: {
       type: "object",
       properties: {
         taskId: {
           type: "string",
-          description: "The ID of the task to mark complete",
+          description: "The ID of the job to mark complete",
         },
       },
       required: ["taskId"],
@@ -302,22 +302,22 @@ export const TOOL_SCHEMAS = {
 
   set_task_dependency: {
     name: "set_task_dependency",
-    description: "Set or replace ALL dependencies for a task. Deletes existing deps and inserts new ones. Use dependsOnTaskIds (array) for 2+ dependencies. Pass neither field to clear all dependencies.",
+    description: "Set or replace ALL dependencies for a job. Deletes existing deps and inserts new ones. Use dependsOnTaskIds (array) for 2+ dependencies. Pass neither field to clear all dependencies.",
     inputSchema: {
       type: "object",
       properties: {
         taskId: {
           type: "string",
-          description: "The ID of the task",
+          description: "The ID of the job",
         },
         dependsOnTaskId: {
           type: "string",
-          description: "The ID of a single task this depends on (use dependsOnTaskIds for multiple)",
+          description: "The ID of a single job this depends on (use dependsOnTaskIds for multiple)",
         },
         dependsOnTaskIds: {
           type: "array",
           items: { type: "string" },
-          description: "Array of task IDs this task depends on. Replaces all existing dependencies. Use this when a task has 2+ dependencies.",
+          description: "Array of job IDs this job depends on. Replaces all existing dependencies. Use this when a job has 2+ dependencies.",
         },
       },
       required: ["taskId"],

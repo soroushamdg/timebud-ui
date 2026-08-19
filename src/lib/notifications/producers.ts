@@ -1,6 +1,8 @@
 import { addDays } from 'date-fns'
 import { getLocalDateString, getLocalHour, parseDateLocal, formatMinutesLabel } from '@/lib/dates'
 import { planSession, planWeek, PlannerProject, PlannerTask } from '@/lib/planner'
+import { computeCurrentStreak } from '@/lib/gamification/streak'
+import { STREAK_MILESTONE_BONUS_XP } from '@/lib/gamification/xp'
 import { DbProject, DbTask, DbUserAISettings } from '@/types/database'
 
 export interface NotificationPayload {
@@ -13,6 +15,10 @@ export interface ProducerResult {
   payload: NotificationPayload | null
   markSessionId?: string
   newStreakMilestone?: number
+  // Set alongside newStreakMilestone when a milestone is newly crossed — the cron route
+  // applies it in the same update call that persists newStreakMilestone, so the streak
+  // bonus can't be double-awarded or missed independent of that existing dedupe.
+  xpBonus?: number
 }
 
 export interface SessionContext {
@@ -94,7 +100,7 @@ export function buildMorningPayload(ctx: NotificationContext): ProducerResult | 
       (max, d) => (d.totalUsedMinutes > (max?.totalUsedMinutes ?? -1) ? d : max),
       week.days[0] ?? null
     )
-    const parts = [`${pool.length} task${pool.length === 1 ? '' : 's'} across the week`]
+    const parts = [`${pool.length} job${pool.length === 1 ? '' : 's'} across the week`]
     if (heaviestDay && heaviestDay.totalUsedMinutes > 0) {
       const dayName = new Intl.DateTimeFormat('en-US', { weekday: 'long' }).format(parseDateLocal(heaviestDay.date))
       parts.push(`${dayName} is heaviest (${formatMinutesLabel(heaviestDay.totalUsedMinutes)})`)
@@ -113,7 +119,7 @@ export function buildMorningPayload(ctx: NotificationContext): ProducerResult | 
   return {
     payload: {
       title: 'Good morning!',
-      body: `${plan.taskCount} task${plan.taskCount === 1 ? '' : 's'} planned today, ${formatMinutesLabel(plan.totalUsedMinutes)} of ${formatMinutesLabel(budgetMinutes)}. First up: ${first.title}.`,
+      body: `${plan.taskCount} job${plan.taskCount === 1 ? '' : 's'} planned today, ${formatMinutesLabel(plan.totalUsedMinutes)} of ${formatMinutesLabel(budgetMinutes)}. First up: ${first.title}.`,
       url: '/',
     },
   }
@@ -138,7 +144,7 @@ export function buildDeadlineAlertPayload(ctx: NotificationContext): ProducerRes
       body:
         dueTomorrow.length === 1
           ? `"${dueTomorrow[0].title}" is due tomorrow.`
-          : `${dueTomorrow.length} tasks are due tomorrow.`,
+          : `${dueTomorrow.length} jobs are due tomorrow.`,
       url: '/tasks/all',
     },
   }
@@ -155,7 +161,7 @@ export function buildInactivityPayload(ctx: NotificationContext): ProducerResult
   return {
     payload: {
       title: 'Got a minute for TimeBud?',
-      body: "You haven't added anything today — jot down a task before you forget.",
+      body: "You haven't added anything today — jot down a job before you forget.",
       url: '/?capture=1',
     },
   }
@@ -177,7 +183,7 @@ export function buildUnfinishedSessionPayload(ctx: NotificationContext): Produce
   return {
     payload: {
       title: 'Still working on it?',
-      body: "You started a focus session a couple hours ago and didn't wrap it up — pick back up?",
+      body: "You started a run a couple hours ago and didn't wrap it up — pick back up?",
       url: '/',
     },
     markSessionId: stale.id,
@@ -189,12 +195,7 @@ export function buildUnfinishedSessionPayload(ctx: NotificationContext): Produce
 export function buildStreakPayload(ctx: NotificationContext): ProducerResult | null {
   if (!ctx.settings.streak_alerts_enabled) return null
 
-  let streak = 0
-  for (let i = 1; i <= 120; i++) {
-    const day = getLocalDateString(addDays(ctx.now, -i), ctx.timezone)
-    if (ctx.activityDates.has(day)) streak++
-    else break
-  }
+  const streak = computeCurrentStreak(ctx.activityDates, ctx.now, ctx.timezone)
 
   const lastMilestone = ctx.settings.last_streak_milestone ?? 0
 
@@ -209,10 +210,11 @@ export function buildStreakPayload(ctx: NotificationContext): ProducerResult | n
 
   return {
     payload: {
-      title: `🔥 ${nextMilestone}-day streak!`,
-      body: `You've used TimeBud ${nextMilestone} days in a row. Keep it going.`,
+      title: `🔥 ${nextMilestone}-day grind!`,
+      body: `You've run TimeBud ${nextMilestone} days in a row, and earned ${STREAK_MILESTONE_BONUS_XP} bonus XP. Keep the grind going.`,
       url: '/',
     },
     newStreakMilestone: nextMilestone,
+    xpBonus: STREAK_MILESTONE_BONUS_XP,
   }
 }

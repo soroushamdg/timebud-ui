@@ -14,6 +14,9 @@ import { PartialTaskCompletionDialog } from '@/components/dialogs/PartialTaskCom
 import { TaskOverviewDialog } from '@/components/dialogs/TaskOverviewDialog'
 import { useFocusSessionGuard } from '@/hooks/useSessionGuard'
 import { useReplan } from '@/contexts/ReplanContext'
+import { useProjects } from '@/hooks/useProjects'
+import { getJobXpPreview } from '@/lib/gamification/xp'
+import { MissionDifficulty } from '@/types/database'
 
 export default function FocusSession() {
   const router = useRouter()
@@ -23,7 +26,16 @@ export default function FocusSession() {
   const createFocusSession = useCreateFocusSession()
   const createCompletedFocusSession = useCreateCompletedFocusSession()
   const { triggerReplan } = useReplan()
-  
+  const { data: projects } = useProjects()
+
+  const xpForTask = (task: PlannedTask) => {
+    const difficulty = (task.projectId ? projects?.find(p => p.id === task.projectId)?.difficulty : undefined) as MissionDifficulty | undefined
+    return getJobXpPreview(difficulty || 'medium')
+  }
+  const xpSoFar = focusSessionStore.plannedTasks
+    .filter(t => t.done)
+    .reduce((sum, t) => sum + xpForTask(t), 0)
+
   // Debug: Log session data
   console.log('[FocusSession] Session data:', {
     taskCount: focusSessionStore.plannedTasks.length,
@@ -344,12 +356,20 @@ export default function FocusSession() {
 
       {/* Timer display */}
       <div className="flex flex-col items-center justify-center mt-32">
+        <div className="text-[11px] font-extrabold tracking-[0.14em] text-text-sec uppercase mb-2">
+          Run in progress
+        </div>
         <div className="flex items-center gap-2">
           <div className="w-2.5 h-2.5 bg-accent-pink rounded-full"></div>
           <div className="text-white text-5xl font-bold">
             {formatTime(elapsedSeconds)}
           </div>
         </div>
+        {xpSoFar > 0 && (
+          <div className="mt-3 text-xs font-bold text-accent-yellow bg-accent-yellow/10 px-3.5 py-1.5 rounded-full">
+            &#9889; +{xpSoFar} XP so far this run
+          </div>
+        )}
       </div>
 
       {/* Task list */}
@@ -372,6 +392,7 @@ export default function FocusSession() {
                 onClick={() => handleTaskClick(task)}
                 onHold={() => handleTaskHold(task.taskId)}
                 isLoading={loadingTaskIds.has(task.taskId)}
+                xpReward={xpForTask(task)}
               />
             );
           })}
@@ -390,8 +411,8 @@ export default function FocusSession() {
       {showStopConfirmDialog && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100]">
           <div className="bg-bg-card rounded-2xl p-6 max-w-sm w-full mx-4">
-            <h2 className="text-xl font-semibold mb-2">Finish session?</h2>
-            <p className="text-gray-400 mb-6">This session will be saved and completed.</p>
+            <h2 className="text-xl font-semibold mb-2">Finish this run?</h2>
+            <p className="text-gray-400 mb-6">This run will be saved and completed.</p>
             <div className="flex gap-3">
               <button
                 onClick={() => setShowStopConfirmDialog(false)}
@@ -403,7 +424,7 @@ export default function FocusSession() {
                 onClick={handleStopConfirm}
                 className="flex-1 px-4 py-2 bg-accent-pink text-white font-bold rounded-lg hover:bg-accent-pink/90 transition-colors"
               >
-                Finish Session
+                Finish Run
               </button>
             </div>
           </div>
@@ -414,8 +435,8 @@ export default function FocusSession() {
       {showConfirmDialog && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100]">
           <div className="bg-bg-card rounded-2xl p-6 max-w-sm w-full mx-4">
-            <h2 className="text-xl font-semibold mb-2">End session?</h2>
-            <p className="text-gray-400 mb-6">This session won't be saved.</p>
+            <h2 className="text-xl font-semibold mb-2">End this run?</h2>
+            <p className="text-gray-400 mb-6">This run won't be saved.</p>
             <div className="flex gap-3">
               <button
                 onClick={() => setShowConfirmDialog(false)}

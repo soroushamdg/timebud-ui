@@ -98,7 +98,7 @@ export default function NotificationSettingsPage() {
 
             <ToggleRow
               label="Morning briefing"
-              description="Today's task count, planned time, and what to start with"
+              description="Today's job count, planned time, and what to start with"
               checked={morningBriefingOn}
               onChange={(v) => update({ morning_briefing_enabled: v })}
             />
@@ -134,14 +134,14 @@ export default function NotificationSettingsPage() {
             )}
 
             <ToggleRow
-              label="Unfinished focus session"
+              label="Unfinished run"
               description="A nudge to resume if you left one open ~2 hours ago"
               checked={aiSettings?.unfinished_session_alerts_enabled !== false}
               onChange={(v) => update({ unfinished_session_alerts_enabled: v })}
             />
 
             <ToggleRow
-              label="Streak celebrations"
+              label="Grind milestones"
               description="A one-off nudge at 3, 7, 14, 30+ days in a row"
               checked={aiSettings?.streak_alerts_enabled === true}
               onChange={(v) => update({ streak_alerts_enabled: v })}

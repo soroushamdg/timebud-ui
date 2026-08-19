@@ -127,7 +127,7 @@ async function createTask(
 
   return {
     success: true,
-    summary: `Created task: ${title}`,
+    summary: `Created job: ${title}`,
     data,
   }
 }
@@ -158,7 +158,7 @@ async function editTask(
 
   return {
     success: true,
-    summary: `Updated task: ${data.title}`,
+    summary: `Updated job: ${data.title}`,
     data,
   }
 }
@@ -178,9 +178,9 @@ async function deleteTask(
     .eq('user_id', userId)
     .single()
 
-  if (fetchError) throw new Error(`Task not found: ${taskId}`)
+  if (fetchError) throw new Error(`Job not found: ${taskId}`)
 
-  const taskTitle = task?.title || 'Unknown task'
+  const taskTitle = task?.title || 'Unknown job'
 
   // Delete the task
   const { error } = await supabase
@@ -193,7 +193,7 @@ async function deleteTask(
 
   return {
     success: true,
-    summary: `Deleted task: ${taskTitle}`,
+    summary: `Deleted job: ${taskTitle}`,
   }
 }
 
@@ -227,12 +227,12 @@ async function bulkCreateTasks(
 
       // Validate index is within bounds
       if (depIndex < 0 || depIndex >= tasks.length) {
-        throw new Error(`Task "${task.title}" has invalid dependsOnTaskIndex: ${depIndex}. Must be between 0 and ${tasks.length - 1}`)
+        throw new Error(`Job "${task.title}" has invalid dependsOnTaskIndex: ${depIndex}. Must be between 0 and ${tasks.length - 1}`)
       }
 
       // Prevent self-reference
       if (depIndex === i) {
-        throw new Error(`Task "${task.title}" cannot depend on itself`)
+        throw new Error(`Job "${task.title}" cannot depend on itself`)
       }
 
       dependencyCount++
@@ -241,10 +241,10 @@ async function bulkCreateTasks(
     if (Array.isArray(task.dependsOnTaskIndices)) {
       for (const depIndex of task.dependsOnTaskIndices) {
         if (depIndex < 0 || depIndex >= tasks.length) {
-          throw new Error(`Task "${task.title}" has invalid dependsOnTaskIndices entry: ${depIndex}. Must be between 0 and ${tasks.length - 1}`)
+          throw new Error(`Job "${task.title}" has invalid dependsOnTaskIndices entry: ${depIndex}. Must be between 0 and ${tasks.length - 1}`)
         }
         if (depIndex === i) {
-          throw new Error(`Task "${task.title}" cannot depend on itself`)
+          throw new Error(`Job "${task.title}" cannot depend on itself`)
         }
         dependencyCount++
       }
@@ -332,9 +332,9 @@ async function bulkCreateTasks(
     if (depError) throw depError
   }
 
-  const summary = dependencyCount > 0 
-    ? `Created ${tasks.length} tasks with ${dependencyCount} ${dependencyCount === 1 ? 'dependency' : 'dependencies'}`
-    : `Created ${tasks.length} tasks`
+  const summary = dependencyCount > 0
+    ? `Created ${tasks.length} jobs with ${dependencyCount} ${dependencyCount === 1 ? 'dependency' : 'dependencies'}`
+    : `Created ${tasks.length} jobs`
 
   return {
     success: true,
@@ -382,7 +382,7 @@ async function createMilestone(
 
   return {
     success: true,
-    summary: `Created milestone: ${title}`,
+    summary: `Created objective: ${title}`,
     data,
   }
 }
@@ -411,7 +411,7 @@ async function editMilestone(
 
   return {
     success: true,
-    summary: `Updated milestone: ${data.title}`,
+    summary: `Updated objective: ${data.title}`,
     data,
   }
 }
@@ -432,9 +432,9 @@ async function deleteMilestone(
     .eq('item_type', 'milestone')
     .single()
 
-  if (fetchError) throw new Error(`Milestone not found: ${milestoneId}`)
+  if (fetchError) throw new Error(`Objective not found: ${milestoneId}`)
 
-  const milestoneTitle = milestone?.title || 'Unknown milestone'
+  const milestoneTitle = milestone?.title || 'Unknown objective'
 
   // Delete the milestone
   const { error } = await supabase
@@ -448,7 +448,7 @@ async function deleteMilestone(
 
   return {
     success: true,
-    summary: `Deleted milestone: ${milestoneTitle}`,
+    summary: `Deleted objective: ${milestoneTitle}`,
   }
 }
 
@@ -480,7 +480,7 @@ async function createProject(
 
   return {
     success: true,
-    summary: `Created project: ${name}`,
+    summary: `Created mission: ${name}`,
     data,
   }
 }
@@ -513,7 +513,7 @@ async function editProject(
 
   return {
     success: true,
-    summary: `Updated project: ${data.name}`,
+    summary: `Updated mission: ${data.name}`,
     data,
   }
 }

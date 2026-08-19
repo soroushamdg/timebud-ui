@@ -5,11 +5,11 @@ import { Check, Loader2, Pin } from 'lucide-react'
 import { useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { WarningBanner } from './WarningBanner'
-import { SessionPlanPreview } from './SessionPlanPreview'
-import { LearningOpportunity } from './LearningOpportunity'
-import { ActionButtonGroup } from './ActionButtonGroup'
-import { SuggestedActions } from './SuggestedActions'
+import { WarningBanner } from '@/components/chat/WarningBanner'
+import { SessionPlanPreview } from '@/components/chat/SessionPlanPreview'
+import { LearningOpportunity } from '@/components/chat/LearningOpportunity'
+import { ActionButtonGroup } from '@/components/chat/ActionButtonGroup'
+import { SuggestedActions } from '@/components/chat/SuggestedActions'
 
 interface MessageBubbleProps {
   message: ChatMessage
@@ -99,13 +99,7 @@ export function MessageBubble({
 
   // Assistant messages
   return (
-    <div className="flex justify-start items-start gap-2 mb-4">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src="/bud/bud-avatar.png"
-        alt="Bud"
-        className="w-6 h-6 rounded-full flex-shrink-0 mt-1 object-cover"
-      />
+    <div className="flex justify-start mb-4">
       <div className="max-w-[85%]">
         {message.isPinned && (
           <div className="flex items-center gap-1 text-xs text-text-sec mb-1">
@@ -186,7 +180,7 @@ export function MessageBubble({
                           ))}
                           {message.confirmationPayload.preview.tasks.length > 6 && (
                             <p className="text-xs text-text-sec pl-4">
-                              +{message.confirmationPayload.preview.tasks.length - 6} more jobs
+                              +{message.confirmationPayload.preview.tasks.length - 6} more tasks
                             </p>
                           )}
                         </div>

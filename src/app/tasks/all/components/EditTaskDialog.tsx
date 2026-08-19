@@ -98,7 +98,7 @@ export function EditTaskDialog({
     <div className="fixed inset-0 bg-black/50 z-[100] overflow-y-auto min-h-screen">
       <div className="bg-bg-card rounded-none border border-border-card p-4 sm:p-6 w-full max-w-md mx-auto">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-white text-lg font-semibold">Edit task</h3>
+          <h3 className="text-white text-lg font-semibold">Edit job</h3>
           <button
             onClick={onClose}
             className="text-text-sec hover:text-white transition-colors"
@@ -125,7 +125,7 @@ export function EditTaskDialog({
                 onChange={(e) => handleInputChange('project_id', e.target.value || null)}
                 className="w-full bg-[#2A2A2A] border border-border-card rounded-lg px-3 py-2 text-white focus:outline-none focus:border-[#FFD233] appearance-none"
               >
-                <option value="">No project (solo task)</option>
+                <option value="">No mission (solo job)</option>
                 {projects.map((project) => (
                   <option key={project.id} value={project.id}>
                     {project.name}
@@ -158,7 +158,7 @@ export function EditTaskDialog({
                 value={formData.title}
                 onChange={(e) => handleInputChange('title', e.target.value)}
                 className="w-full bg-[#2A2A2A] border border-border-card rounded-lg px-3 py-2 pr-8 text-white focus:outline-none focus:border-[#FFD233]"
-                placeholder="Task title"
+                placeholder="Job title"
                 required
               />
               {formData.title && (
@@ -183,7 +183,7 @@ export function EditTaskDialog({
                 value={formData.description}
                 onChange={(e) => handleInputChange('description', e.target.value)}
                 className="w-full bg-[#2A2A2A] border border-border-card rounded-lg px-3 py-2 pr-8 text-white focus:outline-none focus:border-[#FFD233] resize-none"
-                placeholder="Task description (optional)"
+                placeholder="Job description (optional)"
                 rows={3}
               />
               {formData.description && (

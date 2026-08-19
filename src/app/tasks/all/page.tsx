@@ -360,7 +360,7 @@ export default function AllTasksPage() {
     const projectName = project?.name || undefined;
     const projectColor = project?.color || undefined;
     const projectAvatarUrl = project?.project_avatar_url || undefined;
-    
+
     return (
       <AllTasksTaskCard
         key={task.id}
@@ -368,6 +368,7 @@ export default function AllTasksPage() {
         projectName={projectName}
         projectColor={projectColor}
         projectAvatarUrl={projectAvatarUrl}
+        projectDifficulty={project?.difficulty}
         onUpdateTask={handleUpdateTask}
         onDeleteTask={handleDeleteTask}
         onEditTask={handleEditTask}
@@ -382,7 +383,7 @@ export default function AllTasksPage() {
       {/* Edit Toast */}
       {showEditToast && (
         <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 px-4 py-2 bg-bg-card border border-border-card rounded-lg shadow-lg transition-all duration-300">
-          <p className="text-text-sec text-sm">Double-click to edit task</p>
+          <p className="text-text-sec text-sm">Double-click to edit job</p>
         </div>
       )}
       
@@ -402,7 +403,7 @@ export default function AllTasksPage() {
                 <ChevronLeft size={20} />
               </button>
               <h1 className="text-white text-xl font-bold">
-                All Tasks
+                All Jobs
               </h1>
             </div>
             <button
@@ -461,7 +462,7 @@ export default function AllTasksPage() {
           {taskElements.length === 0 ? (
             <div className="flex items-center justify-center h-32">
               <p className="text-text-sec text-center">
-                {filters.length > 0 ? 'No tasks match your filters.' : 'No tasks found.'}
+                {filters.length > 0 ? 'No jobs match your filters.' : 'No jobs found.'}
               </p>
             </div>
           ) : (

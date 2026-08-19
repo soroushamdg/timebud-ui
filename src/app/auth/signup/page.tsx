@@ -69,8 +69,10 @@ export default function SignupPage() {
       <div className="min-h-screen bg-black flex items-center justify-center px-6">
         <div className="w-full max-w-sm text-center">
           <div className="text-center mb-8">
-            <h1 className="text-accent-yellow text-3xl font-bold mb-4">TimeBud</h1>
-            <h2 className="text-white text-2xl font-bold">Check your email</h2>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/bud/bud-avatar.png" alt="Bud" className="w-16 h-16 rounded-full border-2 border-accent-yellow mb-3 mx-auto object-cover" />
+            <h1 className="text-accent-yellow text-3xl font-bold">TimeBud</h1>
+            <h2 className="text-white text-2xl font-bold mt-4">Check your email</h2>
           </div>
           
           <div className="text-text-sec mb-8">
@@ -92,13 +94,17 @@ export default function SignupPage() {
     <div className="min-h-screen bg-black flex items-center justify-center px-6">
       <div className="w-full max-w-sm">
         {/* Wordmark */}
-        <div className="text-center mb-2">
+        <div className="flex flex-col items-center mb-6">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/bud/bud-avatar.png" alt="Bud" className="w-16 h-16 rounded-full border-2 border-accent-yellow mb-3 object-cover" />
           <h1 className="text-accent-yellow text-3xl font-bold">TimeBud</h1>
+          <span className="text-text-sec text-[11px] font-bold tracking-[0.14em] uppercase mt-0.5">Missions</span>
         </div>
 
         {/* Welcome message */}
         <div className="text-center mb-8">
-          <h2 className="text-white text-2xl font-bold">Create account</h2>
+          <h2 className="text-white text-2xl font-bold">Start your first mission</h2>
+          <p className="text-text-sec text-sm mt-1">Bud&apos;s ready when you are.</p>
         </div>
 
         {/* Form */}

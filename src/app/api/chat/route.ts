@@ -355,7 +355,7 @@ export async function POST(request: NextRequest) {
           } as ChatAPIResponse, { status: 200 })
         }
 
-        // Post-creation dependency pass: if tasks were just created and we haven't done
+        // Post-creation dependency pass: if jobs were just created and we haven't done
         // this pass yet, inject the real IDs so the AI can call set_task_dependency.
         if (createdTasksContext.length > 0 && !postCreationPass && iterations <= 2) {
           postCreationPass = true
@@ -370,7 +370,7 @@ export async function POST(request: NextRequest) {
           })
           conversationHistory.push({
             role: 'user',
-            content: `Tasks were just created. Here are their real IDs — use set_task_dependency now if any cross-task dependencies are needed:\n${idList}`,
+            content: `Jobs were just created. Here are their real IDs — use set_task_dependency now if any cross-job dependencies are needed:\n${idList}`,
           })
 
           continue
