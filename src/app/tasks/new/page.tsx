@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, ElementType } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronLeft, X, Plus, Search, RefreshCw } from 'lucide-react'
+import { ChevronLeft, X, Plus, Search, RefreshCw, FileText, Calendar, Link2 } from 'lucide-react'
 import { ChevronDoubleUpIcon } from '@heroicons/react/24/outline'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
@@ -15,6 +15,17 @@ const PRIORITY_OPTIONS = [
   { value: false, label: 'Normal', color: 'text-text-sec' },
   { value: true, label: 'High Priority', color: 'text-accent-pink' }
 ]
+
+function SectionHeader({ icon: Icon, label }: { icon: ElementType; label: string }) {
+  return (
+    <div className="flex items-center gap-2 px-1 mb-3">
+      <div className="w-7 h-7 rounded-full bg-[#FFD233]/15 flex items-center justify-center flex-shrink-0">
+        <Icon className="w-3.5 h-3.5 text-[#FFD233]" />
+      </div>
+      <h2 className="text-white text-sm font-bold uppercase tracking-wide">{label}</h2>
+    </div>
+  )
+}
 
 export default function NewTaskPage(props: { searchParams: Promise<{ projectId?: string }> }) {
   const router = useRouter()
@@ -326,9 +337,9 @@ export default function NewTaskPage(props: { searchParams: Promise<{ projectId?:
       )}
 
       {/* Form */}
-      <form onSubmit={handleSubmit} className="px-6 space-y-4">
+      <form onSubmit={handleSubmit} className="px-6 space-y-8 pt-2">
         {/* Segmented Control */}
-        <div className="bg-bg-card rounded-2xl p-1 flex w-full">
+        <div className="bg-bg-card rounded-2xl p-1 flex w-full shadow-[0_4px_16px_rgba(0,0,0,0.35)]">
           <button
             type="button"
             onClick={() => setItemType('task')}
@@ -353,132 +364,175 @@ export default function NewTaskPage(props: { searchParams: Promise<{ projectId?:
           </button>
         </div>
 
-        {/* Title */}
+        {/* Basics section */}
         <div>
-          <label className="text-text-sec text-sm font-medium mb-2 block">
-            {itemLabel} title
-          </label>
-          <input
-            type="text"
-            placeholder={itemType === 'milestone' ? 'e.g. Beta release, Design handoff' : 'Enter job title'}
-            value={formData.title}
-            onChange={(e) => handleInputChange('title', e.target.value)}
-            className="w-full bg-bg-card border border-border-card rounded-2xl px-5 py-3.5 text-white placeholder-text-sec focus:outline-none focus:border-accent-yellow transition-colors"
-            required
-          />
-          {titleError && (
-            <p className="text-accent-pink text-sm mt-2">{titleError}</p>
-          )}
-        </div>
-        
-        {/* Description - Task only */}
-        {itemType === 'task' && (
-          <div>
-            <label className="text-text-sec text-sm font-medium mb-2 block">
-              Description (optional)
-            </label>
-            <textarea
-              placeholder="Add a description..."
-              rows={4}
-              value={formData.description}
-              onChange={(e) => handleInputChange('description', e.target.value)}
-              className="w-full bg-bg-card border border-border-card rounded-2xl px-5 py-3.5 text-white placeholder-text-sec focus:outline-none focus:border-accent-yellow resize-none transition-colors"
-            />
+          <SectionHeader icon={FileText} label="Basics" />
+          <div className="space-y-4">
+            {/* Title */}
+            <div>
+              <label className="text-text-sec text-sm font-medium mb-2 block">
+                {itemLabel} title
+              </label>
+              <input
+                type="text"
+                placeholder={itemType === 'milestone' ? 'e.g. Beta release, Design handoff' : 'Enter job title'}
+                value={formData.title}
+                onChange={(e) => handleInputChange('title', e.target.value)}
+                className="w-full bg-bg-card border border-border-card rounded-2xl px-5 py-3.5 text-white placeholder-text-sec focus:outline-none focus:border-accent-yellow transition-colors"
+                required
+              />
+              {titleError && (
+                <p className="text-accent-pink text-sm mt-2">{titleError}</p>
+              )}
+            </div>
+
+            {/* Description - Task only */}
+            {itemType === 'task' && (
+              <div>
+                <label className="text-text-sec text-sm font-medium mb-2 block">
+                  Description (optional)
+                </label>
+                <textarea
+                  placeholder="Add a description..."
+                  rows={4}
+                  value={formData.description}
+                  onChange={(e) => handleInputChange('description', e.target.value)}
+                  className="w-full bg-bg-card border border-border-card rounded-2xl px-5 py-3.5 text-white placeholder-text-sec focus:outline-none focus:border-accent-yellow resize-none transition-colors"
+                />
+              </div>
+            )}
+
+            {/* Project selection */}
+            <div>
+              <label className="text-text-sec text-sm font-medium mb-2 block">
+                {itemType === 'milestone' ? 'Mission (required)' : 'Mission (optional)'}
+              </label>
+              <select
+                value={formData.project_id}
+                onChange={(e) => handleInputChange('project_id', e.target.value)}
+                className="w-full bg-bg-card border border-border-card rounded-2xl px-5 py-3.5 text-white focus:outline-none focus:border-accent-yellow transition-colors"
+                required={itemType === 'milestone'}
+              >
+                {itemType === 'task' && <option value="">No mission (general job)</option>}
+                {itemType === 'milestone' && <option value="">Select a mission</option>}
+                {projects.map((project: DbProject) => (
+                  <option key={project.id} value={project.id}>
+                    {project.name}
+                  </option>
+                ))}
+              </select>
+              {projectError && (
+                <p className="text-accent-pink text-sm mt-2">{projectError}</p>
+              )}
+            </div>
           </div>
-        )}
-        
-        {/* Project selection */}
+        </div>
+
+        {/* Schedule section */}
         <div>
-          <label className="text-text-sec text-sm font-medium mb-2 block">
-            {itemType === 'milestone' ? 'Mission (required)' : 'Mission (optional)'}
-          </label>
-          <select
-            value={formData.project_id}
-            onChange={(e) => handleInputChange('project_id', e.target.value)}
-            className="w-full bg-bg-card border border-border-card rounded-2xl px-5 py-3.5 text-white focus:outline-none focus:border-accent-yellow transition-colors"
-            required={itemType === 'milestone'}
-          >
-            {itemType === 'task' && <option value="">No mission (general job)</option>}
-            {itemType === 'milestone' && <option value="">Select a mission</option>}
-            {projects.map((project: DbProject) => (
-              <option key={project.id} value={project.id}>
-                {project.name}
-              </option>
-            ))}
-          </select>
-          {projectError && (
-            <p className="text-accent-pink text-sm mt-2">{projectError}</p>
-          )}
-        </div>
-        
-        {/* Estimated time - Task only, and only when project selected or solo */}
-        {itemType === 'task' && (formData.project_id || !formData.project_id) && (
-          <div>
-            <label className="text-text-sec text-sm font-medium mb-2 block">
-              Estimated time (minutes)
-            </label>
-            <input
-              type="number"
-              min="5"
-              max="480"
-              step="5"
-              value={formData.estimated_minutes}
-              onChange={(e) => handleInputChange('estimated_minutes', parseInt(e.target.value) || 25)}
-              className="w-full bg-bg-card border border-border-card rounded-2xl px-5 py-3.5 text-white focus:outline-none focus:border-accent-yellow transition-colors"
-            />
-          </div>
-        )}
-        
-        {/* Due date — hidden when recurrence is on */}
-        {!(isRecurring && itemType === 'task') && (
-          <div>
-            <label className="text-text-sec text-sm font-medium mb-2 block">
-              {itemType === 'milestone' ? 'Deadline (optional)' : 'Due date (optional)'}
-            </label>
-            <input
-              type="date"
-              value={formData.due_date}
-              onChange={(e) => handleInputChange('due_date', e.target.value)}
-              className={`w-full bg-bg-card border rounded-2xl px-5 py-3.5 text-white focus:outline-none transition-colors [&::-webkit-calendar-picker-indicator]:filter [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-70 [&::-webkit-calendar-picker-indicator]:hover:opacity-100 ${
-                deadlineError ? 'border-accent-pink' : 'border-border-card focus:border-accent-yellow'
-              }`}
-            />
-            {deadlineError && (
-              <p className="text-accent-pink text-sm mt-2">{deadlineError}</p>
+          <SectionHeader icon={Calendar} label="Schedule" />
+          <div className="space-y-4">
+            {/* Estimated time - Task only, and only when project selected or solo */}
+            {itemType === 'task' && (formData.project_id || !formData.project_id) && (
+              <div>
+                <label className="text-text-sec text-sm font-medium mb-2 block">
+                  Estimated time (minutes)
+                </label>
+                <input
+                  type="number"
+                  min="5"
+                  max="480"
+                  step="5"
+                  value={formData.estimated_minutes}
+                  onChange={(e) => handleInputChange('estimated_minutes', parseInt(e.target.value) || 25)}
+                  className="w-full bg-bg-card border border-border-card rounded-2xl px-5 py-3.5 text-white focus:outline-none focus:border-accent-yellow transition-colors"
+                />
+              </div>
+            )}
+
+            {/* Due date — hidden when recurrence is on */}
+            {!(isRecurring && itemType === 'task') && (
+              <div>
+                <label className="text-text-sec text-sm font-medium mb-2 block">
+                  {itemType === 'milestone' ? 'Deadline (optional)' : 'Due date (optional)'}
+                </label>
+                <input
+                  type="date"
+                  value={formData.due_date}
+                  onChange={(e) => handleInputChange('due_date', e.target.value)}
+                  className={`w-full bg-bg-card border rounded-2xl px-5 py-3.5 text-white focus:outline-none transition-colors [&::-webkit-calendar-picker-indicator]:filter [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-70 [&::-webkit-calendar-picker-indicator]:hover:opacity-100 ${
+                    deadlineError ? 'border-accent-pink' : 'border-border-card focus:border-accent-yellow'
+                  }`}
+                />
+                {deadlineError && (
+                  <p className="text-accent-pink text-sm mt-2">{deadlineError}</p>
+                )}
+              </div>
+            )}
+
+            {/* Priority - Task only */}
+            {itemType === 'task' && (
+              <div className="flex items-center justify-between bg-bg-card border border-border-card rounded-2xl px-5 py-4">
+                <div className="flex items-center gap-2">
+                  <ChevronDoubleUpIcon className="w-4 h-4 text-accent-yellow" />
+                  <div>
+                    <span className="text-white font-medium">High Priority</span>
+                    <p className="text-text-sec text-sm mt-0.5">Mark as high priority job</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleInputChange('priority', !formData.priority)}
+                  className={`w-14 h-7 rounded-full transition-all duration-200 ${
+                    formData.priority ? 'bg-accent-yellow' : 'bg-border-card'
+                  } relative border-2 ${
+                    formData.priority ? 'border-accent-yellow' : 'border-border-card'
+                  }`}
+                >
+                  <div
+                    className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-transform duration-200 shadow-sm ${
+                      formData.priority ? 'translate-x-7' : 'translate-x-0.5'
+                    }`}
+                  />
+                </button>
+              </div>
             )}
           </div>
-        )}
-        
-        {/* Recurrence toggle - Task only */}
-        {itemType === 'task' && (
-          <div className="flex items-center justify-between bg-bg-card border border-border-card rounded-2xl px-5 py-4">
-            <div className="flex items-center gap-2">
-              <RefreshCw className="w-4 h-4 text-accent-yellow" />
-              <div>
-                <span className="text-white font-medium">Repeats</span>
-                <p className="text-text-sec text-sm mt-0.5">Make this a recurring job</p>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => setIsRecurring(r => !r)}
-              className={`w-14 h-7 rounded-full transition-all duration-200 ${
-                isRecurring ? 'bg-accent-yellow' : 'bg-border-card'
-              } relative border-2 ${
-                isRecurring ? 'border-accent-yellow' : 'border-border-card'
-              }`}
-            >
-              <div
-                className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-transform duration-200 shadow-sm ${
-                  isRecurring ? 'translate-x-7' : 'translate-x-0.5'
-                }`}
-              />
-            </button>
-          </div>
-        )}
+        </div>
 
-        {/* Recurrence config section */}
-        {isRecurring && itemType === 'task' && (
+        {/* Recurrence section - Task only */}
+        {itemType === 'task' && (
+        <div>
+          <SectionHeader icon={RefreshCw} label="Recurrence" />
+          <div className="space-y-4">
+            {/* Recurrence toggle */}
+            <div className="flex items-center justify-between bg-bg-card border border-border-card rounded-2xl px-5 py-4">
+              <div className="flex items-center gap-2">
+                <RefreshCw className="w-4 h-4 text-accent-yellow" />
+                <div>
+                  <span className="text-white font-medium">Repeats</span>
+                  <p className="text-text-sec text-sm mt-0.5">Make this a recurring job</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsRecurring(r => !r)}
+                className={`w-14 h-7 rounded-full transition-all duration-200 ${
+                  isRecurring ? 'bg-accent-yellow' : 'bg-border-card'
+                } relative border-2 ${
+                  isRecurring ? 'border-accent-yellow' : 'border-border-card'
+                }`}
+              >
+                <div
+                  className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-transform duration-200 shadow-sm ${
+                    isRecurring ? 'translate-x-7' : 'translate-x-0.5'
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* Recurrence config */}
+            {isRecurring && (
           <div className="bg-bg-card border border-border-card rounded-2xl px-5 py-4 space-y-5">
             {/* Pattern */}
             <div>
@@ -615,43 +669,16 @@ export default function NewTaskPage(props: { searchParams: Promise<{ projectId?:
                 </button>
               </div>
             </div>
-          </div>
-        )}
-
-        {/* Priority - Task only */}
-        {itemType === 'task' && (
-          <div className="flex items-center justify-between bg-bg-card border border-border-card rounded-2xl px-5 py-4">
-            <div className="flex items-center gap-2">
-              <ChevronDoubleUpIcon className="w-4 h-4 text-accent-yellow" />
-              <div>
-                <span className="text-white font-medium">High Priority</span>
-                <p className="text-text-sec text-sm mt-0.5">Mark as high priority job</p>
               </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => handleInputChange('priority', !formData.priority)}
-              className={`w-14 h-7 rounded-full transition-all duration-200 ${
-                formData.priority ? 'bg-accent-yellow' : 'bg-border-card'
-              } relative border-2 ${
-                formData.priority ? 'border-accent-yellow' : 'border-border-card'
-              }`}
-            >
-              <div
-                className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-transform duration-200 shadow-sm ${
-                  formData.priority ? 'translate-x-7' : 'translate-x-0.5'
-                }`}
-              />
-            </button>
+            )}
           </div>
+        </div>
         )}
 
         {/* Dependencies - Task only, and only when project selected */}
         {itemType === 'task' && formData.project_id && (
           <div>
-            <label className="text-text-sec text-sm font-medium mb-2 block">
-              Dependencies (optional)
-            </label>
+            <SectionHeader icon={Link2} label="Dependencies" />
             {/* Current deps list */}
             <div className="space-y-1 mb-2">
               {pendingDeps.length === 0 ? (
@@ -734,7 +761,7 @@ export default function NewTaskPage(props: { searchParams: Promise<{ projectId?:
           <button
             type="submit"
             disabled={createTask.isPending}
-            className="w-full bg-accent-yellow text-black font-bold text-lg py-4 rounded-2xl hover:bg-yellow-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+            className="w-full bg-[#FFD233] text-black font-bold text-lg py-4 rounded-2xl hover:bg-[#FFD233]/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_24px_rgba(255,210,51,0.35)]"
           >
             {createTask.isPending ? 'Creating...' : `Create ${itemLabel}`}
           </button>

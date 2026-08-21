@@ -1208,17 +1208,14 @@ export default function ProjectOverviewPage({
           onDragLeave={isDraggable ? handleDragLeave : undefined}
           onDrop={isDraggable ? (e) => handleDrop(e, index) : undefined}
         >
-          <div className="py-3 flex items-center gap-2 mx-2">
-            <div className="flex items-center gap-2">
-              <div className="w-2.5 h-2.5 border border-accent-yellow rotate-45 flex-shrink-0" />
-              <span
-                className="text-accent-yellow text-sm font-semibold cursor-pointer hover:text-white transition-colors"
-                onClick={() => handleMilestoneClick(item)}
-              >
-                {item.title}
-              </span>
-            </div>
-            <div className="flex-1 h-px bg-border-card" />
+          <div className="mt-4 mb-2 mx-1 px-4 py-2.5 rounded-xl bg-accent-yellow/10 border border-accent-yellow/25 flex items-center gap-2.5">
+            <div className="w-2 h-2 bg-accent-yellow rotate-45 flex-shrink-0" />
+            <span
+              className="flex-1 min-w-0 truncate text-accent-yellow text-sm font-bold uppercase tracking-wide cursor-pointer hover:text-white transition-colors"
+              onClick={() => handleMilestoneClick(item)}
+            >
+              {item.title}
+            </span>
             {item.due_date && (
               <span className="text-text-sec text-xs flex-shrink-0">
                 {formatLocal(item.due_date)}
@@ -1243,8 +1240,22 @@ export default function ProjectOverviewPage({
             .filter(Boolean) as string[]
         : [];
 
+      // Visual-only nesting: does this job fall after an objective in the base
+      // manual order? Purely a display cue — no change to sortedItems/reorder math.
+      const baseIndex = sortedItems.findIndex((i) => i.id === item.id);
+      let isNestedUnderObjective = false;
+      for (let i = baseIndex - 1; i >= 0; i--) {
+        if (sortedItems[i].item_type === "milestone") {
+          isNestedUnderObjective = true;
+          break;
+        }
+      }
+
       return (
-        <div key={item.id} className="relative">
+        <div key={item.id} className={`relative ${isNestedUnderObjective ? "pl-3" : ""}`}>
+          {isNestedUnderObjective && (
+            <div className="absolute left-1 top-0 bottom-3 w-px bg-accent-yellow/20" />
+          )}
           {/* Swipe action backgrounds (mobile only) */}
           {isMobile && isCurrentlySwipedTask && swipeDistance > 50 && (
             <>
@@ -1338,7 +1349,7 @@ export default function ProjectOverviewPage({
               touchAction: isMobile ? 'pan-y' : 'auto'
             }}
             className={`
-              mb-3 rounded-none px-4 py-3 flex items-center gap-3 border transition-all relative z-10
+              mb-3 rounded-2xl px-4 py-3 flex items-center gap-3 border transition-all relative z-10 shadow-[0_4px_16px_rgba(0,0,0,0.35)]
               ${
                 completed
                   ? "bg-bg-card-done border-accent-green/30"
@@ -1364,7 +1375,7 @@ export default function ProjectOverviewPage({
                 checked={completed}
                 onChange={(e) => handleCheckboxChange(item, e)}
                 disabled={locked || item.item_type !== "task"}
-                className="w-5 h-5 rounded flex-shrink-0 accent-accent-yellow cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+                className="w-6 h-6 rounded-md flex-shrink-0 accent-accent-yellow cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
               />
             ) : (
               <div
@@ -1454,28 +1465,30 @@ export default function ProjectOverviewPage({
                 >
                   <ChevronDoubleUpIcon className="w-4 h-4" />
                 </button>
-                <button
-                  onClick={(e) => handleTaskMenuToggle(item.id, e)}
-                  className="p-1.5 rounded-lg bg-red-500/20 text-red-500 hover:bg-red-500/30 transition-colors relative"
-                  title="More options"
-                >
-                  <MoreVertical size={16} />
+                <div className="relative">
+                  <button
+                    onClick={(e) => handleTaskMenuToggle(item.id, e)}
+                    className="p-1.5 rounded-lg bg-red-500/20 text-red-500 hover:bg-red-500/30 transition-colors"
+                    title="More options"
+                  >
+                    <MoreVertical size={16} />
+                  </button>
                   {/* Dropdown menu */}
                   {showMenu && (
-                    <div className="absolute right-0 top-full mt-1 w-32 bg-bg-card border border-border-card rounded-lg shadow-lg z-50">
+                    <div className="absolute right-0 top-full mt-2 w-36 bg-bg-card border border-border-card rounded-2xl shadow-[0_8px_24px_rgba(0,0,0,0.5)] z-50 overflow-hidden p-1">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           handleDeleteTask(item);
                         }}
-                        className="w-full px-3 py-2 text-left text-red-500 hover:bg-red-500/10 transition-colors flex items-center gap-2"
+                        className="w-full px-3 py-2.5 text-left text-red-500 hover:bg-red-500/10 rounded-xl transition-colors flex items-center gap-2"
                       >
                         <Trash2 size={16} />
                         Delete
                       </button>
                     </div>
                   )}
-                </button>
+                </div>
               </div>
             )}
 
@@ -1651,30 +1664,44 @@ export default function ProjectOverviewPage({
                 {project.name}
               </h1>
               <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide flex-shrink-0 ${
-                project.difficulty === 'hard' ? 'bg-accent-pink/90 text-white'
-                  : project.difficulty === 'easy' ? 'bg-accent-green/90 text-black'
-                  : 'bg-accent-yellow/90 text-black'
+                project.difficulty === 'hard' ? 'bg-accent-pink/90 text-white shadow-[0_0_8px_rgba(232,0,77,0.5)]'
+                  : project.difficulty === 'easy' ? 'bg-accent-green/90 text-black shadow-[0_0_8px_rgba(46,204,113,0.5)]'
+                  : 'bg-accent-yellow/90 text-black shadow-[0_0_8px_rgba(245,197,24,0.5)]'
               }`}>
                 {project.difficulty}
               </span>
             </div>
             <div className="flex justify-between items-end">
-              <div className="flex flex-col gap-0.5">
+              <div className="flex items-center gap-3">
                 {totalTaskCount > 0 && (
-                  <div className="text-4xl font-bold text-white">
-                    {progressPercentage}%
+                  <div className="relative w-16 h-16 flex-shrink-0">
+                    <svg className="w-16 h-16 -rotate-90" viewBox="0 0 64 64">
+                      <circle cx="32" cy="32" r="28" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="6" />
+                      <circle
+                        cx="32" cy="32" r="28" fill="none"
+                        stroke="var(--color-accent-yellow)" strokeWidth="6" strokeLinecap="round"
+                        strokeDasharray={2 * Math.PI * 28}
+                        strokeDashoffset={2 * Math.PI * 28 * (1 - progressPercentage / 100)}
+                        style={{ filter: 'drop-shadow(0 0 5px rgba(245,197,24,0.6))', transition: 'stroke-dashoffset 0.4s ease' }}
+                      />
+                    </svg>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <span className="text-base font-bold text-white">{progressPercentage}%</span>
+                    </div>
                   </div>
                 )}
-                {earnedXp > 0 && (
-                  <div className="text-xs font-bold text-accent-yellow">
-                    {earnedXp} XP earned
-                  </div>
-                )}
-                {onHoldCount > 0 && (
-                  <div className="text-xs text-text-sec">
-                    {onHoldCount} on hold
-                  </div>
-                )}
+                <div className="flex flex-col gap-0.5">
+                  {earnedXp > 0 && (
+                    <div className="text-xs font-bold text-accent-yellow">
+                      {earnedXp} XP earned
+                    </div>
+                  )}
+                  {onHoldCount > 0 && (
+                    <div className="text-xs text-text-sec">
+                      {onHoldCount} on hold
+                    </div>
+                  )}
+                </div>
               </div>
               <div className="text-right">
                 <div className="text-text-sec text-xs uppercase">DUE DATE</div>
@@ -2041,7 +2068,7 @@ export default function ProjectOverviewPage({
       {/* Edit Item Modal */}
       {editingItem && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4">
-          <div className="bg-bg-primary rounded-2xl w-full max-w-md">
+          <div className="bg-bg-primary rounded-2xl border border-border-card w-full max-w-md max-h-[85vh] overflow-y-auto shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold text-white">
@@ -2049,9 +2076,9 @@ export default function ProjectOverviewPage({
                 </h2>
                 <button
                   onClick={handleCancelEditItem}
-                  className="text-text-sec hover:text-white transition-colors"
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-text-sec hover:text-white hover:bg-bg-card transition-colors"
                 >
-                  <X size={24} />
+                  <X size={20} />
                 </button>
               </div>
 
@@ -2061,7 +2088,7 @@ export default function ProjectOverviewPage({
                   <label className="text-text-sec text-sm mb-2 block">
                     Type
                   </label>
-                  <div className="flex gap-2">
+                  <div className="bg-bg-card rounded-2xl p-1 flex">
                     <button
                       onClick={() =>
                         setEditFormData((prev) => ({
@@ -2069,10 +2096,10 @@ export default function ProjectOverviewPage({
                           item_type: "task",
                         }))
                       }
-                      className={`flex-1 px-4 py-2 rounded-lg transition-colors ${
+                      className={`flex-1 px-4 py-2 rounded-xl transition-colors ${
                         editFormData.item_type === "task"
-                          ? "bg-accent-yellow text-black font-semibold"
-                          : "bg-bg-card text-text-sec hover:text-white"
+                          ? "bg-accent-yellow text-black font-bold"
+                          : "text-text-sec hover:text-white"
                       }`}
                     >
                       Job
@@ -2084,10 +2111,10 @@ export default function ProjectOverviewPage({
                           item_type: "milestone",
                         }))
                       }
-                      className={`flex-1 px-4 py-2 rounded-lg transition-colors ${
+                      className={`flex-1 px-4 py-2 rounded-xl transition-colors ${
                         editFormData.item_type === "milestone"
-                          ? "bg-accent-yellow text-black font-semibold"
-                          : "bg-bg-card text-text-sec hover:text-white"
+                          ? "bg-accent-yellow text-black font-bold"
+                          : "text-text-sec hover:text-white"
                       }`}
                     >
                       Objective
@@ -2109,7 +2136,7 @@ export default function ProjectOverviewPage({
                         title: e.target.value,
                       }))
                     }
-                    className="w-full px-4 py-2 bg-bg-card border border-border-card rounded-lg text-white placeholder-text-sec outline-none focus:border-accent-yellow transition-colors"
+                    className="w-full px-5 py-3.5 bg-bg-card border border-border-card rounded-2xl text-white placeholder-text-sec outline-none focus:border-accent-yellow transition-colors"
                     placeholder="Enter title..."
                   />
                 </div>
@@ -2127,7 +2154,7 @@ export default function ProjectOverviewPage({
                         description: e.target.value,
                       }))
                     }
-                    className="w-full px-4 py-2 bg-bg-card border border-border-card rounded-lg text-white placeholder-text-sec outline-none focus:border-accent-yellow transition-colors resize-none"
+                    className="w-full px-5 py-3.5 bg-bg-card border border-border-card rounded-2xl text-white placeholder-text-sec outline-none focus:border-accent-yellow transition-colors resize-none"
                     placeholder="Enter description..."
                     rows={3}
                   />
@@ -2149,7 +2176,7 @@ export default function ProjectOverviewPage({
                             estimated_minutes: e.target.value,
                           }))
                         }
-                        className="w-full px-4 py-2 bg-bg-card border border-border-card rounded-lg text-white placeholder-text-sec outline-none focus:border-accent-yellow transition-colors"
+                        className="w-full px-5 py-3.5 bg-bg-card border border-border-card rounded-2xl text-white placeholder-text-sec outline-none focus:border-accent-yellow transition-colors"
                         placeholder="Enter estimated minutes..."
                         min="1"
                       />
@@ -2167,7 +2194,7 @@ export default function ProjectOverviewPage({
                             editDependencies.map(depId => {
                               const depTask = tasks.find(t => t.id === depId);
                               return (
-                                <div key={depId} className="flex items-center justify-between gap-2 px-3 py-1.5 bg-bg-card border border-border-card rounded-lg">
+                                <div key={depId} className="flex items-center justify-between gap-2 px-4 py-2 bg-bg-card border border-border-card rounded-2xl">
                                   <span className="text-white text-sm truncate">{depTask?.title ?? depId}</span>
                                   <button
                                     type="button"
@@ -2193,7 +2220,7 @@ export default function ProjectOverviewPage({
                               Add dependency
                             </button>
                           ) : (
-                            <div className="border border-border-card rounded-lg bg-bg-primary overflow-hidden">
+                            <div className="border border-border-card rounded-2xl bg-bg-primary overflow-hidden">
                               <div className="flex items-center gap-2 px-3 py-2 border-b border-border-card">
                                 <Search size={14} className="text-text-sec flex-shrink-0" />
                                 <input
@@ -2246,8 +2273,8 @@ export default function ProjectOverviewPage({
                     )}
 
                     {/* On Hold section */}
-                    <div className="border-t border-border-card pt-4">
-                      <div className="flex items-center justify-between mb-3">
+                    <div className="bg-bg-card border border-border-card rounded-2xl px-5 py-4">
+                      <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <PauseCircle size={16} className={editOnHold ? 'text-amber-400' : 'text-text-sec'} />
                           <label className="text-sm font-medium text-white">On Hold</label>
@@ -2255,13 +2282,13 @@ export default function ProjectOverviewPage({
                         <button
                           type="button"
                           onClick={() => { setEditOnHold(prev => !prev); setEditOnHoldError(''); }}
-                          className={`w-12 h-6 rounded-full transition-colors relative ${editOnHold ? 'bg-amber-500' : 'bg-bg-card border border-border-card'}`}
+                          className={`w-14 h-7 rounded-full transition-colors relative border-2 ${editOnHold ? 'bg-amber-500 border-amber-500' : 'bg-border-card border-border-card'}`}
                         >
-                          <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-transform shadow-sm ${editOnHold ? 'translate-x-6' : 'translate-x-0.5'}`} />
+                          <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-transform shadow-sm ${editOnHold ? 'translate-x-7' : 'translate-x-0.5'}`} />
                         </button>
                       </div>
                       {editOnHold && (
-                        <div className="space-y-3">
+                        <div className="space-y-3 mt-4">
                           {/* Type selector */}
                           <div className="flex gap-1.5">
                             {([
@@ -2273,10 +2300,10 @@ export default function ProjectOverviewPage({
                                 key={opt.value}
                                 type="button"
                                 onClick={() => setEditOnHoldType(opt.value)}
-                                className={`flex-1 px-2 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                                className={`flex-1 px-2 py-1.5 rounded-xl text-xs font-medium transition-colors ${
                                   editOnHoldType === opt.value
                                     ? 'bg-amber-500 text-white'
-                                    : 'bg-bg-card text-text-sec hover:text-white border border-border-card'
+                                    : 'bg-bg-primary text-text-sec hover:text-white border border-border-card'
                                 }`}
                               >
                                 {opt.label}
@@ -2290,7 +2317,7 @@ export default function ProjectOverviewPage({
                               value={editOnHoldReason}
                               onChange={e => { setEditOnHoldReason(e.target.value); if (editOnHoldError) setEditOnHoldError(''); }}
                               placeholder="What are you waiting for?"
-                              className={`w-full px-3 py-2 bg-bg-card border rounded-lg text-white text-sm placeholder-text-sec outline-none transition-colors ${editOnHoldError ? 'border-accent-pink' : 'border-border-card focus:border-amber-500'}`}
+                              className={`w-full px-4 py-2.5 bg-bg-primary border rounded-xl text-white text-sm placeholder-text-sec outline-none transition-colors ${editOnHoldError ? 'border-accent-pink' : 'border-border-card focus:border-amber-500'}`}
                             />
                             {editOnHoldError && <p className="text-accent-pink text-xs mt-1">{editOnHoldError}</p>}
                           </div>
@@ -2302,7 +2329,7 @@ export default function ProjectOverviewPage({
                                 type="date"
                                 value={editOnHoldUntil}
                                 onChange={e => setEditOnHoldUntil(e.target.value)}
-                                className="w-full px-3 py-2 bg-bg-card border border-border-card rounded-lg text-white text-sm outline-none focus:border-amber-500 transition-colors [&::-webkit-calendar-picker-indicator]:filter [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-70"
+                                className="w-full px-4 py-2.5 bg-bg-primary border border-border-card rounded-xl text-white text-sm outline-none focus:border-amber-500 transition-colors [&::-webkit-calendar-picker-indicator]:filter [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-70"
                               />
                             </div>
                           )}
@@ -2327,7 +2354,7 @@ export default function ProjectOverviewPage({
                       }));
                       if (editFormError) setEditFormError("");
                     }}
-                    className={`w-full px-4 py-2 bg-bg-card border rounded-lg text-white placeholder-text-sec outline-none transition-colors ${
+                    className={`w-full px-5 py-3.5 bg-bg-card border rounded-2xl text-white placeholder-text-sec outline-none transition-colors ${
                       editFormError
                         ? "border-accent-pink"
                         : "border-border-card focus:border-accent-yellow"
@@ -2341,8 +2368,11 @@ export default function ProjectOverviewPage({
                 </div>
 
                 {/* Priority */}
-                <div className="flex items-center justify-between">
-                  <label className="text-text-sec text-sm">Priority</label>
+                <div className="flex items-center justify-between bg-bg-card border border-border-card rounded-2xl px-5 py-4">
+                  <div className="flex items-center gap-2">
+                    <ChevronDoubleUpIcon className="w-4 h-4 text-accent-yellow" />
+                    <span className="text-white font-medium">Priority</span>
+                  </div>
                   <button
                     onClick={() =>
                       setEditFormData((prev) => ({
@@ -2350,14 +2380,14 @@ export default function ProjectOverviewPage({
                         priority: !prev.priority,
                       }))
                     }
-                    className={`w-12 h-6 rounded-full transition-colors ${
-                      editFormData.priority ? "bg-accent-yellow" : "bg-bg-card"
+                    className={`w-14 h-7 rounded-full transition-all duration-200 relative border-2 ${
+                      editFormData.priority ? "bg-accent-yellow border-accent-yellow" : "bg-border-card border-border-card"
                     }`}
                   >
                     <div
-                      className={`w-5 h-5 bg-white rounded-full transition-transform ${
+                      className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-transform duration-200 shadow-sm ${
                         editFormData.priority
-                          ? "translate-x-6"
+                          ? "translate-x-7"
                           : "translate-x-0.5"
                       }`}
                     />
@@ -2368,14 +2398,14 @@ export default function ProjectOverviewPage({
               <div className="flex gap-3 mt-6">
                 <button
                   onClick={handleCancelEditItem}
-                  className="flex-1 px-4 py-2 bg-bg-card text-text-sec rounded-lg hover:text-white transition-colors"
+                  className="flex-1 py-3 bg-bg-card text-white font-medium rounded-xl hover:bg-bg-card-hover transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleSaveEditItem}
                   disabled={!editFormData.title.trim()}
-                  className="flex-1 px-4 py-2 bg-accent-yellow text-black font-semibold rounded-lg hover:bg-yellow-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 py-3 bg-accent-yellow text-black font-bold rounded-xl hover:bg-yellow-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_16px_rgba(245,197,24,0.35)]"
                 >
                   Save
                 </button>
@@ -2387,15 +2417,15 @@ export default function ProjectOverviewPage({
 
       {/* Edit Project Modal */}
       {editingProject && (
-        <div className="fixed inset-0 bg-black/50 z-[100] overflow-y-auto min-h-screen">
-          <div className="bg-bg-primary rounded-2xl p-4 sm:p-6 w-full max-w-md mx-auto">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4">
+          <div className="bg-bg-primary rounded-2xl border border-border-card w-full max-w-md max-h-[85vh] overflow-y-auto shadow-[0_8px_32px_rgba(0,0,0,0.5)] p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold text-white">Edit Mission</h2>
                 <button
                   onClick={handleCancelEditProject}
-                  className="text-text-sec hover:text-white transition-colors"
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-text-sec hover:text-white hover:bg-bg-card transition-colors"
                 >
-                  <X size={24} />
+                  <X size={20} />
                 </button>
               </div>
 
@@ -2436,7 +2466,7 @@ export default function ProjectOverviewPage({
                         name: e.target.value,
                       }))
                     }
-                    className="w-full px-4 py-2 bg-bg-card border border-border-card rounded-lg text-white placeholder-text-sec outline-none focus:border-accent-yellow transition-colors"
+                    className="w-full px-5 py-3.5 bg-bg-card border border-border-card rounded-2xl text-white placeholder-text-sec outline-none focus:border-accent-yellow transition-colors"
                     placeholder="Enter mission name..."
                   />
                 </div>
@@ -2446,16 +2476,16 @@ export default function ProjectOverviewPage({
                   <label className="text-text-sec text-sm mb-2 block">
                     Difficulty
                   </label>
-                  <div className="flex gap-2">
+                  <div className="bg-bg-card rounded-2xl p-1 flex">
                     {(["easy", "medium", "hard"] as MissionDifficulty[]).map((d) => (
                       <button
                         key={d}
                         type="button"
                         onClick={() => setProjectFormData((prev) => ({ ...prev, difficulty: d }))}
-                        className={`flex-1 px-4 py-2 rounded-lg text-sm font-semibold capitalize transition-colors ${
+                        className={`flex-1 px-4 py-2 rounded-xl text-sm font-bold capitalize transition-colors ${
                           projectFormData.difficulty === d
                             ? "bg-accent-yellow text-black"
-                            : "bg-bg-card text-text-sec hover:text-white"
+                            : "text-text-sec hover:text-white"
                         }`}
                       >
                         {d}
@@ -2477,7 +2507,7 @@ export default function ProjectOverviewPage({
                         description: e.target.value,
                       }))
                     }
-                    className="w-full px-4 py-2 bg-bg-card border border-border-card rounded-lg text-white placeholder-text-sec outline-none focus:border-accent-yellow transition-colors resize-none"
+                    className="w-full px-5 py-3.5 bg-bg-card border border-border-card rounded-2xl text-white placeholder-text-sec outline-none focus:border-accent-yellow transition-colors resize-none"
                     placeholder="Enter description..."
                     rows={3}
                   />
@@ -2497,7 +2527,7 @@ export default function ProjectOverviewPage({
                         deadline: e.target.value,
                       }))
                     }
-                    className="w-full px-4 py-2 bg-bg-card border border-border-card rounded-lg text-white placeholder-text-sec outline-none focus:border-accent-yellow transition-colors"
+                    className="w-full px-5 py-3.5 bg-bg-card border border-border-card rounded-2xl text-white placeholder-text-sec outline-none focus:border-accent-yellow transition-colors [&::-webkit-calendar-picker-indicator]:filter [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-70"
                   />
                 </div>
 
@@ -2522,9 +2552,9 @@ export default function ProjectOverviewPage({
                         onClick={() =>
                           setProjectFormData((prev) => ({ ...prev, color }))
                         }
-                        className={`w-8 h-8 rounded-full border-2 transition-all relative ${
+                        className={`w-9 h-9 rounded-full border-2 transition-all relative ${
                           projectFormData.color === color
-                            ? "border-white scale-110"
+                            ? "border-white scale-110 shadow-[0_0_10px_rgba(255,255,255,0.4)]"
                             : "border-transparent hover:border-white/50"
                         }`}
                         style={{ backgroundColor: color }}
@@ -2544,9 +2574,9 @@ export default function ProjectOverviewPage({
                       onClick={() =>
                         setProjectFormData((prev) => ({ ...prev, color: "" }))
                       }
-                      className={`px-3 py-1 rounded-lg text-xs transition-colors ${
+                      className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-colors ${
                         !projectFormData.color
-                          ? "bg-accent-yellow text-black font-semibold"
+                          ? "bg-accent-yellow text-black font-bold"
                           : "bg-bg-card text-text-sec hover:text-white"
                       }`}
                     >
@@ -2556,23 +2586,23 @@ export default function ProjectOverviewPage({
                 </div>
               </div>
 
-              <div className="flex gap-3 mt-6">
+              <div className="flex flex-wrap gap-3 mt-6">
                 <button
                   onClick={handleCancelEditProject}
-                  className="flex-1 px-4 py-2 bg-bg-card text-text-sec rounded-lg hover:text-white transition-colors"
+                  className="flex-1 py-3 bg-bg-card text-white font-medium rounded-xl hover:bg-bg-card-hover transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={() => setShowDeleteConfirm(true)}
-                  className="px-4 py-2 bg-accent-pink text-white font-semibold rounded-lg hover:bg-red-600 transition-colors"
+                  className="py-3 px-4 bg-accent-pink/15 border border-accent-pink text-accent-pink font-bold rounded-xl hover:bg-accent-pink/25 transition-colors"
                 >
                   Delete Mission
                 </button>
                 <button
                   onClick={handleSaveEditProject}
                   disabled={!projectFormData.name.trim()}
-                  className="flex-1 px-4 py-2 bg-accent-yellow text-black font-semibold rounded-lg hover:bg-yellow-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 py-3 bg-accent-yellow text-black font-bold rounded-xl hover:bg-yellow-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_16px_rgba(245,197,24,0.35)]"
                 >
                   Save
                 </button>
@@ -2583,8 +2613,8 @@ export default function ProjectOverviewPage({
 
       {/* Delete Confirmation Dialog */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/70 z-[100] flex items-center justify-center">
-          <div className="bg-bg-card rounded-none p-6 max-w-sm mx-4">
+        <div className="fixed inset-0 bg-black/70 z-[100] flex items-center justify-center p-4">
+          <div className="bg-bg-card rounded-2xl border border-border-card p-6 max-w-sm w-full shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
             <h3 className="text-white font-bold text-lg mb-4">
               Delete Mission
             </h3>
@@ -2593,16 +2623,16 @@ export default function ProjectOverviewPage({
               permanently delete all jobs and memories associated with it. This
               action cannot be undone.
             </p>
-            <div className="flex gap-4">
+            <div className="flex gap-3">
               <button
                 onClick={() => setShowDeleteConfirm(false)}
-                className="flex-1 py-2 border border-border-card rounded-none text-white"
+                className="flex-1 py-3 border border-border-card rounded-xl text-white font-medium hover:bg-bg-card-hover transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleDeleteProject}
-                className="flex-1 py-2 bg-accent-pink rounded-none text-white"
+                className="flex-1 py-3 bg-accent-pink rounded-xl text-white font-bold hover:bg-red-600 transition-colors"
               >
                 Delete
               </button>

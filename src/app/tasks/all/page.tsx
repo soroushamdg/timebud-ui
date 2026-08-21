@@ -42,6 +42,32 @@ const SORT_OPTIONS: SortConfig[] = [
 
 const DEFAULT_SORT: SortOption = 'created_desc';
 
+type DateGroupKey = 'overdue' | 'today' | 'tomorrow' | 'this_week' | 'later' | 'no_deadline';
+
+const DATE_GROUP_ORDER: DateGroupKey[] = ['overdue', 'today', 'tomorrow', 'this_week', 'later', 'no_deadline'];
+const DATE_GROUP_LABELS: Record<DateGroupKey, string> = {
+  overdue: 'Overdue',
+  today: 'Today',
+  tomorrow: 'Tomorrow',
+  this_week: 'This Week',
+  later: 'Later',
+  no_deadline: 'No Deadline',
+};
+
+function getDateGroupKey(task: DbTask): DateGroupKey {
+  if (!task.due_date) return 'no_deadline';
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const dueDate = parseDateLocal(task.due_date);
+  const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
+  const weekEnd = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+  if (dueDate < today) return 'overdue';
+  if (dueDate.getTime() === today.getTime()) return 'today';
+  if (dueDate.getTime() === tomorrow.getTime()) return 'tomorrow';
+  if (dueDate < weekEnd) return 'this_week';
+  return 'later';
+}
+
 export default function AllTasksPage() {
   const router = useRouter();
   const [showSortDialog, setShowSortDialog] = useState(false);
@@ -219,6 +245,17 @@ export default function AllTasksPage() {
     return filtered;
   }, [allTasks, filters, sortOption]);
 
+  const groupedTasks = useMemo(() => {
+    const buckets = new Map<DateGroupKey, DbTask[]>();
+    DATE_GROUP_ORDER.forEach((key) => buckets.set(key, []));
+    filteredAndSortedTasks.forEach((task) => {
+      buckets.get(getDateGroupKey(task))!.push(task);
+    });
+    return DATE_GROUP_ORDER
+      .map((key) => ({ key, label: DATE_GROUP_LABELS[key], tasks: buckets.get(key)! }))
+      .filter((group) => group.tasks.length > 0);
+  }, [filteredAndSortedTasks]);
+
   const handleAddFilter = () => {
     setEditingFilter(null);
     setShowFilterDialog(true);
@@ -321,7 +358,7 @@ export default function AllTasksPage() {
             </div>
           </div>
           <div className="flex-1 px-6">
-            <div className="bg-bg-card rounded-none px-4 py-3 flex items-center gap-3 border border-[#ffffff] min-h-[72px] mb-3 animate-pulse">
+            <div className="bg-bg-card rounded-2xl px-4 py-3 flex items-center gap-3 border border-[#ffffff] min-h-[72px] mb-3 animate-pulse">
               <div className="w-5 h-5 bg-gray-700 rounded animate-pulse"></div>
               <div className="w-10 h-10 bg-gray-700 rounded animate-pulse"></div>
               <div className="flex-1">
@@ -330,7 +367,7 @@ export default function AllTasksPage() {
               </div>
               <div className="w-12 h-4 bg-gray-700 rounded animate-pulse"></div>
             </div>
-            <div className="bg-bg-card rounded-none px-4 py-3 flex items-center gap-3 border border-[#ffffff] min-h-[72px] mb-3 animate-pulse">
+            <div className="bg-bg-card rounded-2xl px-4 py-3 flex items-center gap-3 border border-[#ffffff] min-h-[72px] mb-3 animate-pulse">
               <div className="w-5 h-5 bg-gray-700 rounded animate-pulse"></div>
               <div className="w-10 h-10 bg-gray-700 rounded animate-pulse"></div>
               <div className="flex-1">
@@ -339,7 +376,7 @@ export default function AllTasksPage() {
               </div>
               <div className="w-12 h-4 bg-gray-700 rounded animate-pulse"></div>
             </div>
-            <div className="bg-bg-card rounded-none px-4 py-3 flex items-center gap-3 border border-[#ffffff] min-h-[72px] mb-3 animate-pulse">
+            <div className="bg-bg-card rounded-2xl px-4 py-3 flex items-center gap-3 border border-[#ffffff] min-h-[72px] mb-3 animate-pulse">
               <div className="w-5 h-5 bg-gray-700 rounded animate-pulse"></div>
               <div className="w-10 h-10 bg-gray-700 rounded animate-pulse"></div>
               <div className="flex-1">
@@ -355,19 +392,16 @@ export default function AllTasksPage() {
   }
 
   // Convert DbTask to TaskCard format and render with AllTasksTaskCard
-  const taskElements = filteredAndSortedTasks.map((task) => {
+  const renderTaskCard = (task: DbTask) => {
     const project = task.project_id ? projects.find(p => p.id === task.project_id) : undefined;
-    const projectName = project?.name || undefined;
-    const projectColor = project?.color || undefined;
-    const projectAvatarUrl = project?.project_avatar_url || undefined;
 
     return (
       <AllTasksTaskCard
         key={task.id}
         task={task}
-        projectName={projectName}
-        projectColor={projectColor}
-        projectAvatarUrl={projectAvatarUrl}
+        projectName={project?.name || undefined}
+        projectColor={project?.color || undefined}
+        projectAvatarUrl={project?.project_avatar_url || undefined}
         projectDifficulty={project?.difficulty}
         onUpdateTask={handleUpdateTask}
         onDeleteTask={handleDeleteTask}
@@ -376,7 +410,7 @@ export default function AllTasksPage() {
         onDoubleClick={handleDoubleClick}
       />
     );
-  });
+  };
 
   return (
     <AppShell>
@@ -459,15 +493,30 @@ export default function AllTasksPage() {
 
         {/* Scrollable Task List */}
         <div className="flex-1 min-h-0 overflow-y-auto px-6">
-          {taskElements.length === 0 ? (
+          {groupedTasks.length === 0 ? (
             <div className="flex items-center justify-center h-32">
               <p className="text-text-sec text-center">
                 {filters.length > 0 ? 'No jobs match your filters.' : 'No jobs found.'}
               </p>
             </div>
           ) : (
-            <div className="space-y-3 pb-4">
-              {taskElements}
+            <div className="pb-4">
+              {groupedTasks.map(({ key, label, tasks }) => (
+                <div key={key} className="mb-5">
+                  <div className="flex items-center gap-2 mb-3">
+                    {key === 'overdue' && <span className="w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0" />}
+                    {key === 'today' && <span className="w-1.5 h-1.5 rounded-full bg-blue-500 flex-shrink-0" />}
+                    <h2 className="text-white text-xs font-bold uppercase tracking-wider flex-shrink-0">
+                      {label}
+                    </h2>
+                    <span className="text-text-sec text-xs font-medium flex-shrink-0">{tasks.length}</span>
+                    <div className="flex-1 h-px bg-border-card" />
+                  </div>
+                  <div className="space-y-3">
+                    {tasks.map(renderTaskCard)}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>
@@ -475,7 +524,7 @@ export default function AllTasksPage() {
         {/* Sort Dialog */}
         {showSortDialog && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100]">
-            <div className="bg-bg-card rounded-none border border-border-card p-6 w-80">
+            <div className="bg-bg-card rounded-2xl border border-border-card p-6 w-80 shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
               <h3 className="text-white text-lg font-semibold mb-4">Sort by</h3>
               <div className="space-y-2">
                 {SORT_OPTIONS.map((option) => (

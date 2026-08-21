@@ -95,197 +95,200 @@ export function EditTaskDialog({
     : 'Solo task';
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-[100] overflow-y-auto min-h-screen">
-      <div className="bg-bg-card rounded-none border border-border-card p-4 sm:p-6 w-full max-w-md mx-auto">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-white text-lg font-semibold">Edit job</h3>
-          <button
-            onClick={onClose}
-            className="text-text-sec hover:text-white transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Project info */}
-          <div className="text-text-sec text-sm mb-4">
-            Current project: {projectName}
-          </div>
-
-          {/* Project Selection */}
-          <div className="mb-4">
-            <label className="block text-white text-sm font-medium mb-2">
-              <Folder className="w-4 h-4 inline mr-1" />
-              Project (optional)
-            </label>
-            <div className="relative">
-              <select
-                value={formData.project_id || ''}
-                onChange={(e) => handleInputChange('project_id', e.target.value || null)}
-                className="w-full bg-[#2A2A2A] border border-border-card rounded-lg px-3 py-2 text-white focus:outline-none focus:border-[#FFD233] appearance-none"
-              >
-                <option value="">No mission (solo job)</option>
-                {projects.map((project) => (
-                  <option key={project.id} value={project.id}>
-                    {project.name}
-                  </option>
-                ))}
-              </select>
-              {formData.project_id && (
-                <button
-                  type="button"
-                  onClick={handleClearProject}
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 text-text-sec hover:text-white transition-colors"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              )}
-            </div>
-            <p className="text-text-sec text-xs mt-1">
-              Leave empty to create a solo task
-            </p>
-          </div>
-
-          {/* Title */}
-          <div className="mb-4">
-            <label className="block text-white text-sm font-medium mb-2">
-              Title
-            </label>
-            <div className="relative">
-              <input
-                type="text"
-                value={formData.title}
-                onChange={(e) => handleInputChange('title', e.target.value)}
-                className="w-full bg-[#2A2A2A] border border-border-card rounded-lg px-3 py-2 pr-8 text-white focus:outline-none focus:border-[#FFD233]"
-                placeholder="Job title"
-                required
-              />
-              {formData.title && (
-                <button
-                  type="button"
-                  onClick={() => handleClearField('title')}
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 text-text-sec hover:text-white transition-colors"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Description */}
-          <div className="mb-4">
-            <label className="block text-white text-sm font-medium mb-2">
-              Description
-            </label>
-            <div className="relative">
-              <textarea
-                value={formData.description}
-                onChange={(e) => handleInputChange('description', e.target.value)}
-                className="w-full bg-[#2A2A2A] border border-border-card rounded-lg px-3 py-2 pr-8 text-white focus:outline-none focus:border-[#FFD233] resize-none"
-                placeholder="Job description (optional)"
-                rows={3}
-              />
-              {formData.description && (
-                <button
-                  type="button"
-                  onClick={() => handleClearField('description')}
-                  className="absolute right-2 top-2 text-text-sec hover:text-white transition-colors"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Estimated minutes */}
-          <div className="mb-4">
-            <label className="block text-white text-sm font-medium mb-2">
-              <Clock className="w-4 h-4 inline mr-1" />
-              Estimated time (minutes)
-            </label>
-            <div className="relative">
-              <input
-                type="number"
-                value={formData.estimated_minutes}
-                onChange={(e) => handleInputChange('estimated_minutes', e.target.value)}
-                className="w-full bg-[#2A2A2A] border border-border-card rounded-lg px-3 py-2 pr-8 text-white focus:outline-none focus:border-[#FFD233]"
-                placeholder="60"
-                min="1"
-              />
-              {formData.estimated_minutes && (
-                <button
-                  type="button"
-                  onClick={() => handleClearField('estimated_minutes')}
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 text-text-sec hover:text-white transition-colors"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Due date */}
-          <div className="mb-4">
-            <label className="block text-white text-sm font-medium mb-2">
-              <Calendar className="w-4 h-4 inline mr-1" />
-              Due date
-            </label>
-            <div className="relative">
-              <input
-                type="date"
-                value={formData.due_date}
-                onChange={(e) => handleInputChange('due_date', e.target.value)}
-                className="w-full bg-[#2A2A2A] border border-border-card rounded-lg px-3 py-2 pr-8 text-white focus:outline-none focus:border-[#FFD233]"
-              />
-              {formData.due_date && (
-                <button
-                  type="button"
-                  onClick={() => handleClearField('due_date')}
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 text-text-sec hover:text-white transition-colors"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Priority */}
-          <div className="flex items-center gap-3">
-            <input
-              type="checkbox"
-              id="priority"
-              checked={formData.priority}
-              onChange={(e) => handleInputChange('priority', e.target.checked)}
-              className="w-4 h-4 text-[#FFD233] bg-[#2A2A2A] border-gray-600 rounded"
-            />
-            <label htmlFor="priority" className="text-white text-sm font-medium">
-              High priority
-            </label>
-          </div>
-
-          {error && (
-            <p className="text-accent-pink text-sm">{error}</p>
-          )}
-
-          {/* Actions */}
-          <div className="flex gap-3 pt-4">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4">
+      <div className="bg-bg-primary rounded-2xl border border-border-card w-full max-w-md max-h-[85vh] overflow-y-auto shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
+        <div className="p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-white text-lg font-semibold">Edit Job</h3>
             <button
-              type="submit"
-              disabled={isSubmitting || !formData.title.trim()}
-              className="flex-1 bg-[#FFD233] text-black font-semibold py-2 rounded-lg hover:bg-[#FFD233]/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isSubmitting ? 'Saving...' : 'Save changes'}
-            </button>
-            <button
-              type="button"
               onClick={onClose}
-              className="flex-1 bg-[#2A2A2A] text-white py-2 rounded-lg hover:bg-[#2A2A2A]/80 transition-colors"
+              className="w-8 h-8 rounded-full flex items-center justify-center text-text-sec hover:text-white hover:bg-bg-card transition-colors"
             >
-              Cancel
+              <X className="w-5 h-5" />
             </button>
           </div>
-        </form>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Project info */}
+            <p className="text-text-sec text-sm">
+              Current mission: {projectName}
+            </p>
+
+            {/* Project Selection */}
+            <div>
+              <label className="flex items-center gap-1.5 text-text-sec text-sm font-medium mb-2">
+                <Folder className="w-4 h-4" />
+                Mission (optional)
+              </label>
+              <div className="relative">
+                <select
+                  value={formData.project_id || ''}
+                  onChange={(e) => handleInputChange('project_id', e.target.value || null)}
+                  className="w-full bg-bg-card border border-border-card rounded-2xl px-5 py-3.5 text-white focus:outline-none focus:border-[#FFD233] appearance-none"
+                >
+                  <option value="">No mission (solo job)</option>
+                  {projects.map((project) => (
+                    <option key={project.id} value={project.id}>
+                      {project.name}
+                    </option>
+                  ))}
+                </select>
+                {formData.project_id && (
+                  <button
+                    type="button"
+                    onClick={handleClearProject}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-text-sec hover:text-white transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Title */}
+            <div>
+              <label className="block text-text-sec text-sm font-medium mb-2">
+                Title
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={formData.title}
+                  onChange={(e) => handleInputChange('title', e.target.value)}
+                  className="w-full bg-bg-card border border-border-card rounded-2xl px-5 py-3.5 pr-10 text-white focus:outline-none focus:border-[#FFD233] transition-colors"
+                  placeholder="Job title"
+                  required
+                />
+                {formData.title && (
+                  <button
+                    type="button"
+                    onClick={() => handleClearField('title')}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-text-sec hover:text-white transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Description */}
+            <div>
+              <label className="block text-text-sec text-sm font-medium mb-2">
+                Description
+              </label>
+              <div className="relative">
+                <textarea
+                  value={formData.description}
+                  onChange={(e) => handleInputChange('description', e.target.value)}
+                  className="w-full bg-bg-card border border-border-card rounded-2xl px-5 py-3.5 pr-10 text-white focus:outline-none focus:border-[#FFD233] resize-none transition-colors"
+                  placeholder="Job description (optional)"
+                  rows={3}
+                />
+                {formData.description && (
+                  <button
+                    type="button"
+                    onClick={() => handleClearField('description')}
+                    className="absolute right-4 top-3 text-text-sec hover:text-white transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Estimated minutes */}
+            <div>
+              <label className="flex items-center gap-1.5 text-text-sec text-sm font-medium mb-2">
+                <Clock className="w-4 h-4" />
+                Estimated time (minutes)
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  value={formData.estimated_minutes}
+                  onChange={(e) => handleInputChange('estimated_minutes', e.target.value)}
+                  className="w-full bg-bg-card border border-border-card rounded-2xl px-5 py-3.5 pr-10 text-white focus:outline-none focus:border-[#FFD233] transition-colors"
+                  placeholder="60"
+                  min="1"
+                />
+                {formData.estimated_minutes && (
+                  <button
+                    type="button"
+                    onClick={() => handleClearField('estimated_minutes')}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-text-sec hover:text-white transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Due date */}
+            <div>
+              <label className="flex items-center gap-1.5 text-text-sec text-sm font-medium mb-2">
+                <Calendar className="w-4 h-4" />
+                Due date
+              </label>
+              <div className="relative">
+                <input
+                  type="date"
+                  value={formData.due_date}
+                  onChange={(e) => handleInputChange('due_date', e.target.value)}
+                  className="w-full bg-bg-card border border-border-card rounded-2xl px-5 py-3.5 pr-10 text-white focus:outline-none focus:border-[#FFD233] transition-colors [&::-webkit-calendar-picker-indicator]:filter [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-70"
+                />
+                {formData.due_date && (
+                  <button
+                    type="button"
+                    onClick={() => handleClearField('due_date')}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-text-sec hover:text-white transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Priority */}
+            <div className="flex items-center justify-between bg-bg-card border border-border-card rounded-2xl px-5 py-4">
+              <span className="text-white font-medium">High priority</span>
+              <button
+                type="button"
+                onClick={() => handleInputChange('priority', !formData.priority)}
+                className={`w-14 h-7 rounded-full transition-all duration-200 relative border-2 ${
+                  formData.priority ? 'bg-[#FFD233] border-[#FFD233]' : 'bg-border-card border-border-card'
+                }`}
+              >
+                <div
+                  className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-transform duration-200 shadow-sm ${
+                    formData.priority ? 'translate-x-7' : 'translate-x-0.5'
+                  }`}
+                />
+              </button>
+            </div>
+
+            {error && (
+              <p className="text-accent-pink text-sm">{error}</p>
+            )}
+
+            {/* Actions */}
+            <div className="flex gap-3 pt-2">
+              <button
+                type="submit"
+                disabled={isSubmitting || !formData.title.trim()}
+                className="flex-1 bg-[#FFD233] text-black font-bold py-3 rounded-xl hover:bg-[#FFD233]/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_16px_rgba(255,210,51,0.35)]"
+              >
+                {isSubmitting ? 'Saving...' : 'Save changes'}
+              </button>
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex-1 bg-[#2A2A2A] text-white font-medium py-3 rounded-xl hover:bg-[#2A2A2A]/80 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );

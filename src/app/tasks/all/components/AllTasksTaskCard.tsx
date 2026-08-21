@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import { AvatarImage } from '@/components/ui/AvatarImage';
 import { ChevronDoubleUpIcon, CalendarIcon } from '@heroicons/react/24/outline';
 import { formatLocalSmart, parseDateLocal } from '@/lib/dates';
@@ -34,15 +34,6 @@ export function AllTasksTaskCard({
   onDoubleClick
 }: AllTasksTaskCardProps) {
   const [showMenu, setShowMenu] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
-
-  // Mobile device detection
-  useState(() => {
-    if (typeof window !== 'undefined') {
-      setIsMobile(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || 
-                (window.innerWidth <= 768 && 'ontouchstart' in window));
-    }
-  });
 
   const handleCheckboxChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     e.stopPropagation();
@@ -116,14 +107,14 @@ export function AllTasksTaskCard({
       <div
         onClick={handleCardClick}
         onDoubleClick={handleDoubleClick}
-        className={`flex-1 min-w-0 bg-bg-card rounded-none px-4 py-3 flex items-center gap-3 border border-[#ffffff] cursor-pointer transition-colors hover:bg-bg-card-hover min-h-[72px] relative overflow-hidden ${
+        className={`flex-1 min-w-0 bg-bg-card rounded-2xl px-4 py-3 flex items-center gap-3 border border-[#ffffff] cursor-pointer transition-all hover:bg-bg-card-hover min-h-[72px] relative overflow-hidden shadow-[0_4px_16px_rgba(0,0,0,0.35)] ${
           completed ? 'bg-bg-card-done border-accent-green/30' : ''
         }`}
       >
         {/* Mission color accent */}
         {task.project_id && !completed && (
           <div
-            className="absolute left-0 top-0 bottom-0 w-1"
+            className="absolute left-0 top-0 bottom-0 w-1.5"
             style={{ backgroundColor: projectColor || '#f5c518' }}
           />
         )}
@@ -132,7 +123,7 @@ export function AllTasksTaskCard({
           type="checkbox"
           checked={completed}
           onChange={handleCheckboxChange}
-          className="w-5 h-5 rounded flex-shrink-0 accent-accent-yellow cursor-pointer"
+          className="w-6 h-6 rounded-md flex-shrink-0 accent-[#FFD233] cursor-pointer"
         />
 
         {/* Avatar */}
@@ -198,7 +189,7 @@ export function AllTasksTaskCard({
             </div>
           )}
           {!completed && (
-            <span className="text-[10px] font-bold text-accent-yellow bg-accent-yellow/10 px-1.5 py-0.5 rounded">
+            <span className="text-[10px] font-bold text-black bg-[#FFD233] px-2 py-0.5 rounded-full shadow-[0_0_8px_rgba(255,210,51,0.45)]">
               +{getJobXpPreview(projectDifficulty || 'medium')} XP
             </span>
           )}
@@ -211,31 +202,31 @@ export function AllTasksTaskCard({
               e.stopPropagation();
               setShowMenu(!showMenu);
             }}
-            className="p-1.5 rounded-lg hover:bg-[#2A2A2A] transition-colors"
+            className="p-1.5 rounded-xl hover:bg-[#2A2A2A] transition-colors"
           >
             <MoreVertical size={16} className="text-text-sec" />
           </button>
 
           {/* Dropdown menu */}
           {showMenu && (
-            <div className="absolute right-0 top-full mt-1 w-40 bg-bg-card border border-border-card rounded-lg shadow-lg z-50">
+            <div className="absolute right-0 top-full mt-2 w-44 bg-bg-card border border-border-card rounded-2xl shadow-[0_8px_24px_rgba(0,0,0,0.5)] z-50 overflow-hidden p-1">
               <button
                 onClick={handleEdit}
-                className="w-full px-3 py-2 text-left text-white hover:bg-[#2A2A2A] transition-colors flex items-center gap-2"
+                className="w-full px-3 py-2.5 text-left text-white hover:bg-[#2A2A2A] rounded-xl transition-colors flex items-center gap-2"
               >
                 <Edit size={16} />
                 Edit
               </button>
               <button
                 onClick={handleTogglePriority}
-                className="w-full px-3 py-2 text-left text-[#FFD233] hover:bg-[#FFD233]/10 transition-colors flex items-center gap-2"
+                className="w-full px-3 py-2.5 text-left text-[#FFD233] hover:bg-[#FFD233]/10 rounded-xl transition-colors flex items-center gap-2"
               >
                 <ChevronDoubleUpIcon className="w-4 h-4" />
                 {task.priority ? 'Normal priority' : 'High priority'}
               </button>
               <button
                 onClick={handleDelete}
-                className="w-full px-3 py-2 text-left text-red-500 hover:bg-red-500/10 transition-colors flex items-center gap-2"
+                className="w-full px-3 py-2.5 text-left text-red-500 hover:bg-red-500/10 rounded-xl transition-colors flex items-center gap-2"
               >
                 <Trash2 size={16} />
                 Delete

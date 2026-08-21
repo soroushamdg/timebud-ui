@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { BarChart2, List, Lock, Clock } from 'lucide-react'
 import { DbTask, DbProject } from '@/types/database'
 import { parseDateLocal } from '@/lib/dates'
+import { getJobXpPreview } from '@/lib/gamification/xp'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const DAY_WIDTH = 32
@@ -162,8 +163,8 @@ function TimelineView({ tasks, projects }: GanttChartProps) {
             <div className="relative flex-shrink-0" style={{ width: TOTAL_DAYS * DAY_WIDTH }}>
               {/* Today marker in header */}
               <div
-                className="absolute inset-y-0 w-0.5 bg-accent-yellow/60"
-                style={{ left: todayOffsetX }}
+                className="absolute inset-y-0 w-0.5 bg-accent-yellow"
+                style={{ left: todayOffsetX, boxShadow: '0 0 8px rgba(245,197,24,0.7)' }}
               />
               {ticks.map(tk => (
                 <span
@@ -188,11 +189,15 @@ function TimelineView({ tasks, projects }: GanttChartProps) {
                   style={{ height: ROW_HEIGHT }}
                 >
                   <div
-                    className="sticky left-0 z-20 bg-bg-card border-r border-border-card flex items-center gap-1.5 px-2 flex-shrink-0"
+                    className="absolute left-0 top-0 bottom-0 w-1 z-20"
+                    style={{ background: color }}
+                  />
+                  <div
+                    className="sticky left-0 z-20 bg-bg-card border-r border-border-card flex items-center gap-1.5 pl-3 pr-2 flex-shrink-0"
                     style={{ width: LABEL_WIDTH, minWidth: LABEL_WIDTH }}
                   >
-                    <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: color }} />
-                    <span className="text-white text-xs font-semibold truncate">{project.name}</span>
+                    <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: color, boxShadow: `0 0 6px ${color}99` }} />
+                    <span className="text-white text-xs font-bold truncate">{project.name}</span>
                   </div>
                   <div
                     className="relative flex-shrink-0"
@@ -230,7 +235,10 @@ function TimelineView({ tasks, projects }: GanttChartProps) {
                               onClick={() => handleBarClick(task)}
                               title={task.title}
                             >
-                              <div className="w-3 h-3 bg-accent-yellow rotate-45 group-hover:scale-125 transition-transform" />
+                              <div
+                                className="w-3 h-3 bg-accent-yellow rotate-45 group-hover:scale-125 transition-transform"
+                                style={{ boxShadow: '0 0 6px rgba(245,197,24,0.6)' }}
+                              />
                             </div>
                           )}
                         </div>
@@ -256,7 +264,7 @@ function TimelineView({ tasks, projects }: GanttChartProps) {
                       <div className="relative flex-shrink-0" style={{ width: TOTAL_DAYS * DAY_WIDTH, height: ROW_HEIGHT }}>
                         <div className="absolute inset-y-0 w-0.5 bg-accent-yellow/20" style={{ left: todayOffsetX }} />
                         <div
-                          className="absolute top-1/2 -translate-y-1/2 rounded flex items-center gap-0.5 px-1 overflow-hidden cursor-pointer hover:brightness-110 transition-[filter]"
+                          className="absolute top-1/2 -translate-y-1/2 rounded-full flex items-center gap-0.5 px-2 overflow-hidden cursor-pointer hover:brightness-110 transition-[filter] shadow-[0_2px_6px_rgba(0,0,0,0.4)]"
                           style={{
                             left: startX,
                             width,
@@ -285,7 +293,8 @@ function TimelineView({ tasks, projects }: GanttChartProps) {
           })}
 
           {groups.length === 0 && (
-            <div className="flex items-center justify-center py-16">
+            <div className="flex flex-col items-center justify-center py-16">
+              <div className="w-8 h-8 border border-accent-yellow rotate-45 mb-3" />
               <p className="text-text-sec text-sm">No jobs to display</p>
             </div>
           )}
@@ -295,20 +304,20 @@ function TimelineView({ tasks, projects }: GanttChartProps) {
       {/* Hover popover */}
       {popover && (
         <div
-          className="fixed z-50 bg-bg-card border border-border-card rounded-lg p-3 shadow-xl text-xs pointer-events-none"
+          className="fixed z-50 bg-bg-primary border border-border-card rounded-2xl p-4 shadow-[0_8px_24px_rgba(0,0,0,0.5)] text-xs pointer-events-none"
           style={{
             left: Math.min(popover.x + 14, window.innerWidth - 210),
             top: Math.max(8, popover.y - 80),
             maxWidth: 200,
           }}
         >
-          <p className="text-white font-semibold mb-1 leading-snug">{popover.task.title}</p>
-          {popover.projName && <p className="text-text-sec mb-0.5">{popover.projName}</p>}
-          {popover.task.due_date && <p className="text-text-sec mb-0.5">Due: {fmtFull(parseDateLocal(popover.task.due_date))}</p>}
+          <p className="text-white font-bold mb-1.5 leading-snug">{popover.task.title}</p>
+          {popover.projName && <p className="text-text-sec mb-1">{popover.projName}</p>}
+          {popover.task.due_date && <p className="text-text-sec mb-1">Due: {fmtFull(parseDateLocal(popover.task.due_date))}</p>}
           {popover.task.estimated_minutes != null && (
-            <p className="text-text-sec mb-0.5">Est: {fmtMins(popover.task.estimated_minutes)}</p>
+            <p className="text-text-sec mb-1">Est: {fmtMins(popover.task.estimated_minutes)}</p>
           )}
-          <p className="text-text-sec capitalize">
+          <p className="text-accent-yellow font-semibold capitalize">
             {popover.task.on_hold ? 'on hold' : (popover.task.status ?? 'pending')}
           </p>
         </div>
@@ -344,15 +353,18 @@ function ListView({ tasks, projects }: GanttChartProps) {
     return (
       <button
         key={task.id}
-        className="w-full flex items-center gap-2 px-4 py-2.5 hover:bg-bg-card transition-colors text-left min-w-0"
+        className="w-full flex items-center gap-2 px-4 py-3 mb-2 rounded-2xl bg-bg-card border border-border-card hover:bg-bg-card-hover transition-colors text-left min-w-0 relative overflow-hidden"
         onClick={() => task.project_id && router.push(`/projects/${task.project_id}`)}
       >
+        {!isMilestone && (
+          <div className="absolute left-0 top-0 bottom-0 w-1" style={{ backgroundColor: color }} />
+        )}
         {isMilestone ? (
           <span className="text-accent-yellow text-[11px] flex-shrink-0">◆</span>
         ) : (
           <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: color }} />
         )}
-        <span className={`flex-1 text-sm min-w-0 truncate ${isCompleted ? 'line-through text-text-sec' : onHold ? 'text-text-sec italic' : 'text-white'}`}>
+        <span className={`flex-1 text-sm min-w-0 truncate ${isCompleted ? 'line-through text-text-sec' : onHold ? 'text-text-sec italic' : 'text-white font-medium'}`}>
           {task.title}
         </span>
         {onHold && <Clock size={12} className="text-text-sec flex-shrink-0" />}
@@ -365,8 +377,13 @@ function ListView({ tasks, projects }: GanttChartProps) {
           <span className="text-text-sec text-[11px] flex-shrink-0">{fmtShort(parseDateLocal(task.due_date))}</span>
         )}
         {task.estimated_minutes != null && task.estimated_minutes > 0 && (
-          <span className="bg-bg-card border border-border-card text-text-sec text-[10px] px-1.5 py-0.5 rounded flex-shrink-0">
+          <span className="bg-bg-primary border border-border-card text-text-sec text-[10px] px-1.5 py-0.5 rounded flex-shrink-0">
             {fmtMins(task.estimated_minutes)}
+          </span>
+        )}
+        {!isMilestone && !isCompleted && (
+          <span className="text-[10px] font-bold text-black bg-accent-yellow px-1.5 py-0.5 rounded-full flex-shrink-0">
+            +{getJobXpPreview(proj?.difficulty || 'medium')} XP
           </span>
         )}
       </button>
@@ -375,18 +392,19 @@ function ListView({ tasks, projects }: GanttChartProps) {
 
   if (visible.length === 0) {
     return (
-      <div className="flex items-center justify-center py-16">
+      <div className="flex flex-col items-center justify-center py-16">
+        <div className="w-8 h-8 border border-accent-yellow rotate-45 mb-3" />
         <p className="text-text-sec text-sm">No jobs to display</p>
       </div>
     )
   }
 
   return (
-    <div className="overflow-y-auto" style={{ maxHeight: 'calc(100vh - 180px)' }}>
+    <div className="overflow-y-auto px-4 pt-3" style={{ maxHeight: 'calc(100vh - 180px)' }}>
       {Array.from(weekGroups.entries()).map(([key, wTasks]) => (
-        <div key={key}>
-          <div className="px-4 py-1.5 bg-bg-card border-y border-border-card sticky top-0 z-10">
-            <span className="text-text-sec text-[11px] font-semibold uppercase tracking-wider">
+        <div key={key} className="mb-1">
+          <div className="py-1.5 sticky top-0 z-10 bg-bg-primary">
+            <span className="text-text-sec text-[11px] font-bold uppercase tracking-wider">
               {weekRange(key)}
             </span>
           </div>
@@ -395,8 +413,8 @@ function ListView({ tasks, projects }: GanttChartProps) {
       ))}
       {noDue.length > 0 && (
         <div>
-          <div className="px-4 py-1.5 bg-bg-card border-y border-border-card sticky top-0 z-10">
-            <span className="text-text-sec text-[11px] font-semibold uppercase tracking-wider">
+          <div className="py-1.5 sticky top-0 z-10 bg-bg-primary">
+            <span className="text-text-sec text-[11px] font-bold uppercase tracking-wider">
               No due date
             </span>
           </div>
@@ -414,14 +432,14 @@ export function GanttChart({ tasks, projects }: GanttChartProps) {
   return (
     <div className="flex flex-col w-full">
       {/* View toggle bar */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-border-card bg-bg-primary sticky top-0 z-10">
-        <span className="text-text-sec text-[11px] uppercase tracking-wider font-semibold">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border-card bg-bg-primary sticky top-0 z-10">
+        <span className="text-white text-sm font-bold">
           {viewMode === 'timeline' ? 'Timeline' : 'List'}
         </span>
-        <div className="flex gap-1">
+        <div className="bg-bg-card rounded-2xl p-1 flex gap-1">
           <button
             onClick={() => setViewMode('timeline')}
-            className={`p-1.5 rounded transition-colors ${viewMode === 'timeline' ? 'text-accent-yellow' : 'text-text-sec hover:text-white'}`}
+            className={`p-1.5 rounded-xl transition-colors ${viewMode === 'timeline' ? 'bg-accent-yellow text-black' : 'text-text-sec hover:text-white'}`}
             title="Timeline view"
             aria-label="Switch to timeline view"
           >
@@ -429,7 +447,7 @@ export function GanttChart({ tasks, projects }: GanttChartProps) {
           </button>
           <button
             onClick={() => setViewMode('list')}
-            className={`p-1.5 rounded transition-colors ${viewMode === 'list' ? 'text-accent-yellow' : 'text-text-sec hover:text-white'}`}
+            className={`p-1.5 rounded-xl transition-colors ${viewMode === 'list' ? 'bg-accent-yellow text-black' : 'text-text-sec hover:text-white'}`}
             title="List view"
             aria-label="Switch to list view"
           >

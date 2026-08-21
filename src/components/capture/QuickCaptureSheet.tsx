@@ -25,8 +25,72 @@ export function QuickCaptureSheet({ onClose, onSuccess }: QuickCaptureSheetProps
   const chunksRef = useRef<Blob[]>([])
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
+  // Live amplitude visualization — a separate AnalyserNode tapped off the same
+  // getUserMedia stream that feeds the MediaRecorder. Ring styles are mutated
+  // directly via refs inside the rAF loop rather than through React state, so
+  // the ~60fps updates don't trigger a re-render on every frame.
+  const audioContextRef = useRef<AudioContext | null>(null)
+  const analyserRef = useRef<AnalyserNode | null>(null)
+  const rafRef = useRef<number | null>(null)
+  const ringRefs = useRef<(HTMLDivElement | null)[]>([])
+
+  const stopAmplitudeLoop = () => {
+    if (rafRef.current !== null) {
+      cancelAnimationFrame(rafRef.current)
+      rafRef.current = null
+    }
+    audioContextRef.current?.close().catch(() => {})
+    audioContextRef.current = null
+    analyserRef.current = null
+    ringRefs.current.forEach((el) => {
+      if (el) {
+        el.style.transform = 'scale(1)'
+        el.style.opacity = '0'
+      }
+    })
+  }
+
+  const startAmplitudeLoop = (stream: MediaStream) => {
+    try {
+      const audioContext = new AudioContext()
+      const source = audioContext.createMediaStreamSource(stream)
+      const analyser = audioContext.createAnalyser()
+      analyser.fftSize = 256
+      source.connect(analyser)
+      audioContextRef.current = audioContext
+      analyserRef.current = analyser
+
+      const data = new Uint8Array(analyser.frequencyBinCount)
+      const tick = () => {
+        analyser.getByteTimeDomainData(data)
+        let sumSquares = 0
+        for (let i = 0; i < data.length; i++) {
+          const centered = (data[i] - 128) / 128
+          sumSquares += centered * centered
+        }
+        const rms = Math.sqrt(sumSquares / data.length)
+        const level = Math.min(1, rms * 4)
+
+        ringRefs.current.forEach((el, i) => {
+          if (!el) return
+          const scale = 1 + level * (1 + i * 0.7)
+          const opacity = Math.max(0, 0.45 - i * 0.12) * Math.min(1, level * 3)
+          el.style.transform = `scale(${scale})`
+          el.style.opacity = String(opacity)
+        })
+
+        rafRef.current = requestAnimationFrame(tick)
+      }
+      rafRef.current = requestAnimationFrame(tick)
+    } catch {
+      // Fail soft — the recording itself (via MediaRecorder) keeps working
+      // even if the browser refuses to construct an AudioContext here.
+    }
+  }
+
   useEffect(() => {
     inputRef.current?.focus()
+    return () => stopAmplitudeLoop()
   }, [])
 
   const goTo = (path: string) => {
@@ -118,6 +182,7 @@ export function QuickCaptureSheet({ onClose, onSuccess }: QuickCaptureSheetProps
     if (isRecording) {
       mediaRecorderRef.current?.stop()
       setIsRecording(false)
+      stopAmplitudeLoop()
       return
     }
 
@@ -128,6 +193,7 @@ export function QuickCaptureSheet({ onClose, onSuccess }: QuickCaptureSheetProps
       recorder.ondataavailable = (e) => chunksRef.current.push(e.data)
       recorder.onstop = async () => {
         stream.getTracks().forEach((track) => track.stop())
+        stopAmplitudeLoop()
         const blob = new Blob(chunksRef.current, { type: 'audio/webm' })
         setIsTranscribing(true)
         setError(null)
@@ -147,6 +213,7 @@ export function QuickCaptureSheet({ onClose, onSuccess }: QuickCaptureSheetProps
       mediaRecorderRef.current = recorder
       recorder.start()
       setIsRecording(true)
+      startAmplitudeLoop(stream)
     } catch {
       setError('Microphone access is required for voice capture')
     }
@@ -177,15 +244,25 @@ export function QuickCaptureSheet({ onClose, onSuccess }: QuickCaptureSheetProps
         {error && <p className="text-accent-pink text-sm mb-3">{error}</p>}
 
         <div className="flex items-center gap-3 mb-4">
-          <button
-            onClick={handleMicToggle}
-            disabled={isTranscribing}
-            className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors flex-shrink-0 disabled:opacity-50 ${
-              isRecording ? 'bg-accent-pink animate-pulse' : 'bg-bg-card border border-border-card'
-            }`}
-          >
-            {isRecording ? <Square className="w-4 h-4 text-white" /> : <Mic className="w-5 h-5 text-white" />}
-          </button>
+          <div className="relative flex-shrink-0 w-11 h-11">
+            {isRecording && [0, 1, 2].map((i) => (
+              <div
+                key={i}
+                ref={(el) => { ringRefs.current[i] = el }}
+                className="absolute inset-0 rounded-full border-2 border-accent-pink pointer-events-none"
+                style={{ opacity: 0, transform: 'scale(1)' }}
+              />
+            ))}
+            <button
+              onClick={handleMicToggle}
+              disabled={isTranscribing}
+              className={`relative w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-50 ${
+                isRecording ? 'bg-accent-pink' : 'bg-bg-card border border-border-card'
+              }`}
+            >
+              {isRecording ? <Square className="w-4 h-4 text-white" /> : <Mic className="w-5 h-5 text-white" />}
+            </button>
+          </div>
           {isTranscribing && <span className="text-text-sec text-sm">Transcribing...</span>}
 
           <button
