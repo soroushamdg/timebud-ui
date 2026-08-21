@@ -25,15 +25,22 @@ import { useReplanOnUIChange } from '@/hooks/useReplanOnUIChange'
 import { isValidUuid } from '@/lib/utils'
 import { DbFocusSession, DbTask } from '@/types/database'
 import { useFocusSessionGuard } from '@/hooks/useSessionGuard'
-import { Plus, Sparkles } from 'lucide-react'
+import { Plus, Sparkles, Calendar as CalendarIcon } from 'lucide-react'
 import { HomeMenu } from '@/components/home/HomeMenu'
 import { AvatarImage } from '@/components/ui/AvatarImage'
 import { useCurrentUser } from '@/hooks/useAuth'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { addDays } from 'date-fns'
-import { TodayOverviewSection } from '@/components/planner/TodayOverviewSection'
-import { WeekDayChipData } from '@/components/planner/WeekAheadStrip'
+import { RightNowCard } from '@/components/planner/RightNowCard'
+import { ThisWeekStrip } from '@/components/planner/ThisWeekStrip'
+
+interface WeekDayChipData {
+  date: Date
+  taskCount: number
+  usedMinutes: number
+  budgetMinutes: number
+}
 import { useAISettings } from '@/hooks/useAISettings'
 import { useFocusSessions } from '@/hooks/useSessions'
 import { getLevelProgress, getJobXpPreview } from '@/lib/gamification/xp'
@@ -43,6 +50,7 @@ import { useLevelUpWatcher } from '@/hooks/useLevelUpWatcher'
 import { LevelUpModal } from '@/components/gamification/LevelUpModal'
 import { MissionDifficulty } from '@/types/database'
 import { useActiveCalendarBlock } from '@/hooks/useActiveCalendarBlock'
+import { useCalendarBlockMappings } from '@/hooks/useCalendarBlockMappings'
 
 interface PlannedTask {
   taskId: string;
@@ -229,6 +237,17 @@ export default function Home() {
   const blockRemainingMinutes = activeBlock
     ? Math.max(0, Math.round((new Date(activeBlock.endTime).getTime() - Date.now()) / 60000))
     : null
+
+  // Report-tile data: an unconfirmed block (surfaced as a one-line nudge) and the
+  // count of distinct missions with at least one confirmed calendar link (a "This
+  // Week" stat) — both derived from the same mappings fetch, no extra hook needed.
+  const { data: calendarMappings = [] } = useCalendarBlockMappings()
+  const unconfirmedBlock = calendarMappings.find((m) => !m.confirmed)
+  const calendarLinkedMissionCount = new Set(
+    calendarMappings.filter((m) => m.confirmed).flatMap((m) => m.project_ids || [])
+  ).size
+
+  const [showAllJobs, setShowAllJobs] = useState(false)
 
   const createFocusSession = useCreateFocusSession();
   const deleteFocusSession = useDeleteFocusSession();
@@ -743,6 +762,27 @@ export default function Home() {
     setToastType('warning');
   };
 
+  // Shared row renderer (touch/swipe handlers + TaskCard) used both for the Right Now
+  // card's single top-job preview and the full expanded list — one job's markup, not
+  // duplicated between the collapsed and expanded states.
+  const renderJobRow = (task: PlannedTask) => {
+    const taskProject = task.projectId ? projects?.find((p) => p.id === task.projectId) : undefined;
+    const xpReward = getJobXpPreview((taskProject?.difficulty as MissionDifficulty) || 'medium');
+    return (
+      <div
+        key={task.taskId}
+        onTouchStart={(e) => handleTouchStart(e, task)}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={() => handleTouchEnd(task)}
+        onMouseDown={(e) => handleMouseDown(e, task)}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseLeave}
+      >
+        <TaskCard task={task} xpReward={xpReward} onClick={() => handleTaskClick(task)} />
+      </div>
+    );
+  };
+
   if (unfinishedFocusSession) {
     return (
       <AppShell>
@@ -812,15 +852,25 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Missions */}
+          {/* Missions (slimmed — full detail lives on the Missions list, not duplicated here) */}
           <div className="mb-6 overflow-visible">
-            <h2 className="text-white text-xl font-bold mb-2 px-6">Your Missions</h2>
+            <div className="flex items-center justify-between mb-2 px-6">
+              <h2 className="text-white text-xl font-bold">Your Missions</h2>
+              {projects && projects.length > 0 && (
+                <button
+                  onClick={() => router.push('/projects/select')}
+                  className="text-text-sec text-xs hover:text-white transition-colors"
+                >
+                  {projects.length} mission{projects.length === 1 ? '' : 's'} &middot; view all
+                </button>
+              )}
+            </div>
             {!projects || projects.length === 0 ? (
               <div className="flex items-center justify-center h-20 px-6">
                 <p className="text-text-sec text-center">No missions yet</p>
               </div>
             ) : (
-              <div className="flex gap-4 overflow-x-auto pb-2 pt-6 scrollbar-hide px-6">
+              <div className="flex gap-3.5 overflow-x-auto pb-2 pt-4 scrollbar-hide px-6">
                 {sortedProjects.map((project) => (
                   <button
                     key={project.id}
@@ -833,11 +883,11 @@ export default function Home() {
                         fallbackType="project"
                         fallbackLabel={project.name}
                         fallbackColor={project.color || undefined}
-                        size={76}
+                        size={60}
                         className="border-2 border-white"
                       />
                     </div>
-                    <div className="w-[76px] h-1.5 rounded-full bg-[#333] overflow-hidden mt-1">
+                    <div className="w-[60px] h-1 rounded-full bg-[#333] overflow-hidden mt-1">
                       <div
                         className="h-full rounded-full"
                         style={{
@@ -846,101 +896,111 @@ export default function Home() {
                         }}
                       />
                     </div>
-                    <span className="text-[10px] font-bold text-text-sec">{project.completion.percentage}%</span>
                   </button>
                 ))}
               </div>
             )}
           </div>
 
-          {/* Today Overview: collapsed by default, expands into budget usage + week-ahead preview */}
+          {/* New-block nudge — only when a calendar block is waiting to be mapped to a mission */}
+          {unconfirmedBlock && (
+            <button
+              onClick={() => router.push('/profile/calendar')}
+              className="mx-6 mb-4 px-3.5 py-2.5 rounded-2xl bg-accent-yellow/[0.08] border border-accent-yellow/30 flex items-center gap-2.5 text-left"
+            >
+              <CalendarIcon className="w-4 h-4 text-accent-yellow flex-shrink-0" />
+              <span className="flex-1 text-white text-xs">
+                New block &ldquo;{unconfirmedBlock.event_title}&rdquo; detected &mdash; set up which mission it&apos;s for
+              </span>
+              <span className="text-accent-yellow text-xs font-bold flex-shrink-0">Set up &rarr;</span>
+            </button>
+          )}
+
+          {/* Right Now: status + top job preview, full list tucked behind "Show all" */}
           {weekAhead && (
-            <TodayOverviewSection
+            <RightNowCard
               usedMinutes={
                 activeBlock
                   ? plannedTasks.reduce((sum, t) => sum + (t.scheduledMinutes || 0), 0)
                   : weekAhead.todayUsedMinutes
               }
               budgetMinutes={activeBlock && blockRemainingMinutes !== null ? blockRemainingMinutes : preferredBudgetMinutes}
-              chips={weekAhead.chips}
-              unscheduledCount={weekAhead.unscheduledCount}
               activeBlock={activeBlock ? { missionLabel: activeBlock.missionLabel, endTime: activeBlock.endTime } : undefined}
+              topJobCard={plannedTasks.length > 0 ? renderJobRow(plannedTasks[0]) : null}
+              jobCount={plannedTasks.length}
+              isExpanded={showAllJobs}
+              onToggleExpanded={() => setShowAllJobs((v) => !v)}
             />
           )}
 
-          {/* Jobs Header with Time Button and Add Button */}
-          <div className="flex items-center justify-between px-6 mb-4">
-            <div className="flex items-center gap-3">
-              <h3 className="text-white text-lg font-semibold">
-                {isLoading ? "..." : plannedTasks.length} Jobs
-              </h3>
-              <button
-                onClick={() => setShowAddTaskDialog(true)}
-                className="w-8 h-8 bg-accent-yellow rounded-full flex items-center justify-center hover:bg-yellow-400 transition-colors"
-                title="Add job to planner"
-              >
-                <Plus className="w-5 h-5 text-black" />
-              </button>
-            </div>
-            <button
-              onClick={() => setShowTimeDialog(true)}
-              className="bg-[#2A2A2A] rounded-full px-4 py-2 flex items-center gap-2 hover:bg-[#2A2A2A]/80 transition-colors"
-            >
-              <svg
-                className="w-4 h-4 text-[#949494]"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-              <span className="text-white text-sm font-medium">
-                {preferredBudgetMinutes}min
-              </span>
-            </button>
-          </div>
-        </div>
+          {/* This Week report tile — hidden while the full job list is expanded, to keep focus on it */}
+          {weekAhead && !showAllJobs && (
+            <ThisWeekStrip
+              streakDays={currentStreak}
+              daysPlanned={weekAhead.chips.filter((c) => c.taskCount > 0).length}
+              daysTotal={weekAhead.chips.length}
+              calendarLinkedCount={calendarLinkedMissionCount}
+            />
+          )}
 
-        {/* Scrollable Task List - takes remaining space */}
-        <div className="flex-1 min-h-0 overflow-y-auto px-6">
-          {isLoading ? (
-            <div className="flex items-center justify-center h-32">
-              <p className="text-text-sec text-center">Loading jobs...</p>
-            </div>
-          ) : plannedTasks.length === 0 ? (
-            <div className="flex items-center justify-center h-32">
-              <p className="text-text-sec text-center">No jobs planned. Adjust your settings or add jobs to get started.</p>
-            </div>
-          ) : (
-            <div className="space-y-3 pb-4">
-              {plannedTasks.map((task) => {
-                const taskProject = task.projectId ? projects?.find((p) => p.id === task.projectId) : undefined
-                const xpReward = getJobXpPreview((taskProject?.difficulty as MissionDifficulty) || 'medium')
-                return (
-                <div
-                  key={task.taskId}
-                  onTouchStart={(e) => handleTouchStart(e, task)}
-                  onTouchMove={handleTouchMove}
-                  onTouchEnd={() => handleTouchEnd(task)}
-                  onMouseDown={(e) => handleMouseDown(e, task)}
-                  onMouseUp={handleMouseUp}
-                  onMouseLeave={handleMouseLeave}
+          {/* Jobs Header with Time Button and Add Button — only while expanded */}
+          {showAllJobs && (
+            <div className="flex items-center justify-between px-6 mb-4 mt-2">
+              <div className="flex items-center gap-3">
+                <h3 className="text-white text-lg font-semibold">
+                  {isLoading ? "..." : plannedTasks.length} Jobs
+                </h3>
+                <button
+                  onClick={() => setShowAddTaskDialog(true)}
+                  className="w-8 h-8 bg-accent-yellow rounded-full flex items-center justify-center hover:bg-yellow-400 transition-colors"
+                  title="Add job to planner"
                 >
-                  <TaskCard
-                    task={task}
-                    xpReward={xpReward}
-                    onClick={() => handleTaskClick(task)}
+                  <Plus className="w-5 h-5 text-black" />
+                </button>
+              </div>
+              <button
+                onClick={() => setShowTimeDialog(true)}
+                className="bg-[#2A2A2A] rounded-full px-4 py-2 flex items-center gap-2 hover:bg-[#2A2A2A]/80 transition-colors"
+              >
+                <svg
+                  className="w-4 h-4 text-[#949494]"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
                   />
-                </div>
-              )})}
+                </svg>
+                <span className="text-white text-sm font-medium">
+                  {preferredBudgetMinutes}min
+                </span>
+              </button>
             </div>
           )}
         </div>
+
+        {/* Scrollable Task List — only while expanded; takes remaining space */}
+        {showAllJobs && (
+          <div className="flex-1 min-h-0 overflow-y-auto px-6">
+            {isLoading ? (
+              <div className="flex items-center justify-center h-32">
+                <p className="text-text-sec text-center">Loading jobs...</p>
+              </div>
+            ) : plannedTasks.length === 0 ? (
+              <div className="flex items-center justify-center h-32">
+                <p className="text-text-sec text-center">No jobs planned. Adjust your settings or add jobs to get started.</p>
+              </div>
+            ) : (
+              <div className="space-y-3 pb-4">
+                {plannedTasks.map((task) => renderJobRow(task))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Fixed Bottom Section */}
         <div className="flex-shrink-0">
