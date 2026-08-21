@@ -106,6 +106,7 @@ export interface DbUserAISettings {
   streak_alerts_enabled?: boolean;
   last_streak_milestone?: number;
   xp_total?: number;
+  calendar_block_alerts_enabled?: boolean;
 }
 
 export interface DbPushSubscription {
@@ -134,4 +135,41 @@ export interface DbSessionTaskLog {
   scheduled_minutes: number;
   actual_minutes: number | null;
   created_at: string;
+}
+
+export interface DbGoogleCalendarConnection {
+  user_id: string;
+  access_token: string;
+  refresh_token: string;
+  token_expiry: string;
+  google_calendar_id: string;
+  google_account_email: string | null;
+  last_synced_at: string | null;
+  created_at: string;
+}
+
+export interface DbCalendarBlockMapping {
+  id: string;
+  user_id: string;
+  event_title: string;
+  confirmed: boolean;
+  created_at: string;
+  // Fetched via join (not a column)
+  project_ids?: string[];
+}
+
+export interface DbCalendarBlockMissionLink {
+  mapping_id: string;
+  project_id: string;
+}
+
+export interface DbCalendarEventCache {
+  id: string;
+  user_id: string;
+  google_event_id: string;
+  title: string;
+  start_time: string;
+  end_time: string;
+  notified_at: string | null;
+  synced_at: string;
 }

@@ -25,11 +25,11 @@ import { useReplanOnUIChange } from '@/hooks/useReplanOnUIChange'
 import { isValidUuid } from '@/lib/utils'
 import { DbFocusSession, DbTask } from '@/types/database'
 import { useFocusSessionGuard } from '@/hooks/useSessionGuard'
-import { ArrowsRightLeftIcon } from '@heroicons/react/24/outline'
 import { Plus, Sparkles } from 'lucide-react'
+import { HomeMenu } from '@/components/home/HomeMenu'
 import { AvatarImage } from '@/components/ui/AvatarImage'
 import { useCurrentUser } from '@/hooks/useAuth'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { addDays } from 'date-fns'
 import { TodayOverviewSection } from '@/components/planner/TodayOverviewSection'
@@ -42,6 +42,7 @@ import { buildActivityDates } from '@/lib/gamification/activity'
 import { useLevelUpWatcher } from '@/hooks/useLevelUpWatcher'
 import { LevelUpModal } from '@/components/gamification/LevelUpModal'
 import { MissionDifficulty } from '@/types/database'
+import { useActiveCalendarBlock } from '@/hooks/useActiveCalendarBlock'
 
 interface PlannedTask {
   taskId: string;
@@ -102,6 +103,18 @@ export default function Home() {
       router.replace('/');
     }
   }, [searchParams, router]);
+
+  // Deep-linked from the "your block just started" push notification (/?block=<id>) —
+  // force an immediate refetch instead of waiting for useActiveCalendarBlock's normal
+  // poll interval, so the block shows up on Home right away rather than up to a minute
+  // late.
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    if (searchParams.get('block')) {
+      queryClient.invalidateQueries({ queryKey: ['active-calendar-block'] });
+      router.replace('/');
+    }
+  }, [searchParams, router, queryClient]);
 
   // Toast states
   const [showToast, setShowToast] = useState(false);
@@ -208,6 +221,14 @@ export default function Home() {
   }, [tasks, focusSessions, aiSettings?.timezone])
 
   const { newLevel, dismiss: dismissLevelUp } = useLevelUpWatcher()
+
+  // A calendar time block, if one is active right now — scopes the plan below to its
+  // budget/mission(s) instead of the day's full preferred budget. See
+  // src/hooks/useActiveCalendarBlock.ts.
+  const { data: activeBlock } = useActiveCalendarBlock()
+  const blockRemainingMinutes = activeBlock
+    ? Math.max(0, Math.round((new Date(activeBlock.endTime).getTime() - Date.now()) / 60000))
+    : null
 
   const createFocusSession = useCreateFocusSession();
   const deleteFocusSession = useDeleteFocusSession();
@@ -320,7 +341,7 @@ export default function Home() {
       setIsLoading(false);
       setLoadingComplete();
     }
-  }, [latestUnfinished, projects, tasks, projectsLoading, tasksLoading, setLoadingProgress, setLoadingComplete]);
+  }, [latestUnfinished, projects, tasks, projectsLoading, tasksLoading, setLoadingProgress, setLoadingComplete, activeBlock]);
 
   // Register the re-planning function with the context
   useEffect(() => {
@@ -354,7 +375,11 @@ export default function Home() {
     // Calculate time used by pinned and manual tasks
     const pinnedTime = pinnedTasks.reduce((sum, t) => sum + (t.estimated_minutes || 0), 0);
     const manualTime = manualTasks.reduce((sum, t) => sum + (t.estimated_minutes || 0), 0);
-    const remainingBudget = preferredBudgetMinutes - pinnedTime - manualTime;
+    // An active calendar block overrides the day's preferred budget with its own
+    // remaining minutes — pinned/manual tasks (an explicit user override) still count
+    // against it the same way they would against the normal daily budget.
+    const effectiveBudgetMinutes = blockRemainingMinutes ?? preferredBudgetMinutes;
+    const remainingBudget = effectiveBudgetMinutes - pinnedTime - manualTime;
 
     // Check if there are any pending tasks
     const pendingTasks = tasks.filter((task) => task.status === "pending");
@@ -370,16 +395,26 @@ export default function Home() {
 
       // Only run algorithm if there's remaining budget
       if (remainingBudget > 0) {
+        // An active block scopes the algorithm to just its linked mission(s) — pinned/
+        // manual picks above stay untouched regardless, but the suggested queue itself
+        // shouldn't pull in unrelated missions while a block is running.
+        const scopedProjects = activeBlock
+          ? projects.filter((p) => activeBlock.projectIds.includes(p.id))
+          : projects;
+        const scopedTasks = activeBlock
+          ? tasks.filter((t) => t.project_id && activeBlock.projectIds.includes(t.project_id))
+          : tasks;
+
         // Transform DbTask[] to PlannerTask[] for the planner
         // Include all tasks (even completed ones) so dependency checks can find them
-        const plannerTasks: PlannerTask[] = tasks.map(task => ({
+        const plannerTasks: PlannerTask[] = scopedTasks.map(task => ({
           ...task,
           estimated_minutes: task.estimated_minutes || 0,
           status: task.status || 'pending',
         }));
 
         const plan = planSession({
-          projects,
+          projects: scopedProjects,
           milestones: [],
           tasks: plannerTasks,
           budgetMinutes: remainingBudget,
@@ -773,27 +808,13 @@ export default function Home() {
               >
                 <Sparkles className="w-5 h-5 text-accent-yellow" />
               </button>
-              <button
-                onClick={() => router.push("/tasks/all")}
-                className="bg-[#2A2A2A] text-white rounded-full px-4 py-2 text-sm font-medium hover:text-[#d7d7d7] transition-colors"
-              >
-                All jobs
-              </button>
+              <HomeMenu />
             </div>
           </div>
 
           {/* Missions */}
           <div className="mb-6 overflow-visible">
-            <div className="flex items-center justify-between mb-2 px-6">
-              <h2 className="text-white text-xl font-bold">Your Missions</h2>
-              <button
-                onClick={() => router.push("/projects/select")}
-                className="bg-[#FFD233] text-black rounded-full px-5 py-1.5 text-sm font-semibold hover:bg-[#FFD233]/90 transition-colors flex items-center gap-2"
-              >
-                <ArrowsRightLeftIcon className="w-4 h-4" />
-                Swap
-              </button>
-            </div>
+            <h2 className="text-white text-xl font-bold mb-2 px-6">Your Missions</h2>
             {!projects || projects.length === 0 ? (
               <div className="flex items-center justify-center h-20 px-6">
                 <p className="text-text-sec text-center">No missions yet</p>
@@ -826,16 +847,6 @@ export default function Home() {
                       />
                     </div>
                     <span className="text-[10px] font-bold text-text-sec">{project.completion.percentage}%</span>
-                    {project.completion.isCompleted && (
-                      <div className="absolute -top-0.5 -right-0.5 w-6 h-6 rounded-full bg-accent-green border-2 border-black flex items-center justify-center z-10">
-                        <span className="text-black text-xs font-black leading-none">&#10003;</span>
-                      </div>
-                    )}
-                    {project.completion.onHoldCount > 0 && (
-                      <span className="text-[9px] text-text-sec leading-none">
-                        {project.completion.onHoldCount} on hold
-                      </span>
-                    )}
                   </button>
                 ))}
               </div>
@@ -845,10 +856,15 @@ export default function Home() {
           {/* Today Overview: collapsed by default, expands into budget usage + week-ahead preview */}
           {weekAhead && (
             <TodayOverviewSection
-              usedMinutes={weekAhead.todayUsedMinutes}
-              budgetMinutes={preferredBudgetMinutes}
+              usedMinutes={
+                activeBlock
+                  ? plannedTasks.reduce((sum, t) => sum + (t.scheduledMinutes || 0), 0)
+                  : weekAhead.todayUsedMinutes
+              }
+              budgetMinutes={activeBlock && blockRemainingMinutes !== null ? blockRemainingMinutes : preferredBudgetMinutes}
               chips={weekAhead.chips}
               unscheduledCount={weekAhead.unscheduledCount}
+              activeBlock={activeBlock ? { missionLabel: activeBlock.missionLabel, endTime: activeBlock.endTime } : undefined}
             />
           )}
 

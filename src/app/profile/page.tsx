@@ -22,6 +22,7 @@ import { AIProvider } from '@/types/database'
 import { useTotalCredits } from '@/hooks/useCredits'
 import { useUIStore } from '@/stores/uiStore'
 import { TimezoneSettingsRow } from '@/components/settings/TimezoneSettingsRow'
+import { CalendarSettingsRow } from '@/components/settings/CalendarSettingsRow'
 import { useTasks } from '@/hooks/useTasks'
 import { useProjects } from '@/hooks/useProjects'
 import { getLevelProgress } from '@/lib/gamification/xp'
@@ -348,6 +349,8 @@ export default function ProfilePage() {
                 <span className="text-white">Notifications</span>
                 <ChevronRight className="w-5 h-5 text-text-sec" />
               </button>
+
+              <CalendarSettingsRow />
 
               <TimezoneSettingsRow />
 

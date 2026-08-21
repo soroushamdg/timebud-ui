@@ -21,17 +21,6 @@ export function FocusTaskCard({
   isLoading,
   xpReward,
 }: FocusTaskCardProps) {
-  // Debug: Log chain metadata for tasks
-  if (task.isPartOfChain || task.isLocked) {
-    console.log('[FocusTaskCard] Chain task:', {
-      title: task.title,
-      isPartOfChain: task.isPartOfChain,
-      chainPosition: task.chainPosition,
-      isLocked: task.isLocked,
-      dependsOnTaskId: task.dependsOnTaskId
-    });
-  }
-
   const [holdTimeout, setHoldTimeout] = useState<NodeJS.Timeout | null>(null);
   const [showPartialOption, setShowPartialOption] = useState(false);
 
@@ -157,14 +146,14 @@ export function FocusTaskCard({
           paddingLeft: task.isPartOfChain && task.chainPosition && task.chainPosition > 0 ? '28px' : '16px',
           opacity: isLocked ? 0.6 : 1,
         }}
-        className={`flex-1 min-w-0 bg-bg-card rounded-none py-3 pr-4 flex items-center gap-3 border border-[#ffffff] cursor-pointer transition-all hover:bg-bg-card-hover relative overflow-hidden ${
+        className={`flex-1 min-w-0 bg-bg-card rounded-2xl py-3 pr-4 flex items-center gap-3 border border-[#ffffff] cursor-pointer transition-all hover:bg-bg-card-hover relative overflow-hidden shadow-[0_4px_16px_rgba(0,0,0,0.35)] ${
           task.done ? "bg-bg-card-done border-accent-green/30" : ""
         }`}
       >
         {/* Mission color accent */}
         {task.projectId && !task.done && (
           <div
-            className="absolute left-0 top-0 bottom-0 w-1"
+            className="absolute left-0 top-0 bottom-0 w-1.5"
             style={{ backgroundColor: task.projectColor || '#f5c518' }}
           />
         )}
@@ -256,7 +245,7 @@ export function FocusTaskCard({
             </div>
           )}
           {xpReward !== undefined && !task.done && (
-            <span className="text-[10px] font-bold text-accent-yellow bg-accent-yellow/10 px-1.5 py-0.5 rounded">
+            <span className="text-[10px] font-bold text-black bg-accent-yellow px-2 py-0.5 rounded-full shadow-[0_0_8px_rgba(245,197,24,0.45)]">
               +{xpReward} XP
             </span>
           )}
@@ -264,7 +253,7 @@ export function FocusTaskCard({
 
         {/* Partial completion option overlay */}
         {showPartialOption && !task.partial && !task.done && (
-          <div className="absolute inset-0 bg-black/80 flex items-center justify-center rounded-none">
+          <div className="absolute inset-0 bg-black/80 flex items-center justify-center rounded-2xl">
             <button
               onClick={handlePartialOptionClick}
               className="px-4 py-2 bg-accent-pink text-white font-bold rounded-lg hover:bg-accent-pink/90 transition-colors"

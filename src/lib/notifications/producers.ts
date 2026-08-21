@@ -19,6 +19,18 @@ export interface ProducerResult {
   // applies it in the same update call that persists newStreakMilestone, so the streak
   // bonus can't be double-awarded or missed independent of that existing dedupe.
   xpBonus?: number
+  // `google_calendar_events_cache` row id to stamp `notified_at` on — the calendar-sync
+  // cron's dedupe, parallel to markSessionId above.
+  markEventId?: string
+}
+
+// A calendar time-block that's active right now, already resolved (by the calendar-sync
+// cron, not by this producer) to the mission(s) it's confirmed-mapped to.
+export interface CalendarBlockContext {
+  id: string // google_calendar_events_cache row id
+  title: string
+  endTime: string
+  missionNames: string[]
 }
 
 export interface SessionContext {
@@ -39,6 +51,9 @@ export interface NotificationContext {
   // task-created or session-started activity — used both for "touched today" and for
   // the streak walk-back.
   activityDates: Set<string>
+  // Populated only by the calendar-sync cron (never by daily-reminder) — at most the
+  // single active, confirmed-mapped, not-yet-notified block for this tick.
+  calendarEvents?: CalendarBlockContext[]
 }
 
 const STREAK_MILESTONES = [3, 7, 14, 30, 60, 100]
@@ -216,5 +231,32 @@ export function buildStreakPayload(ctx: NotificationContext): ProducerResult | n
     },
     newStreakMilestone: nextMilestone,
     xpBonus: STREAK_MILESTONE_BONUS_XP,
+  }
+}
+
+// #7: a Google Calendar time block just started. `ctx.calendarEvents` is pre-filtered by
+// the calendar-sync cron down to at most one active, confirmed-mapped, not-yet-notified
+// block — this producer only decides the copy and the dedupe key. If two blocks somehow
+// start within the same ~15min cron tick, only the first notifies that tick; the second
+// still surfaces in-app (Home reads the cache table directly), it just won't push.
+export function buildTimeBlockStartingPayload(ctx: NotificationContext): ProducerResult | null {
+  if (ctx.settings.calendar_block_alerts_enabled === false) return null
+
+  const event = ctx.calendarEvents?.[0]
+  if (!event || event.missionNames.length === 0) return null
+
+  const missionLabel =
+    event.missionNames.length > 1
+      ? `${event.missionNames.slice(0, -1).join(', ')} & ${event.missionNames[event.missionNames.length - 1]}`
+      : event.missionNames[0]
+  const endLabel = new Date(event.endTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+
+  return {
+    payload: {
+      title: `🎯 ${missionLabel} — block just started`,
+      body: `"${event.title}" runs until ${endLabel}. Here's what to work on.`,
+      url: `/?block=${event.id}`,
+    },
+    markEventId: event.id,
   }
 }

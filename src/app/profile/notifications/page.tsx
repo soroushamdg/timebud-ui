@@ -146,6 +146,13 @@ export default function NotificationSettingsPage() {
               checked={aiSettings?.streak_alerts_enabled === true}
               onChange={(v) => update({ streak_alerts_enabled: v })}
             />
+
+            <ToggleRow
+              label="Calendar blocks"
+              description="A nudge when a mapped time block on your calendar starts"
+              checked={aiSettings?.calendar_block_alerts_enabled !== false}
+              onChange={(v) => update({ calendar_block_alerts_enabled: v })}
+            />
           </>
         )}
       </div>

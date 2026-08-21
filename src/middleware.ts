@@ -3,12 +3,13 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 export async function middleware(request: NextRequest) {
-  // Skip auth check for Stripe webhook and the Vercel Cron reminder job —
-  // neither carries a logged-in user's session cookie, and the cron route
-  // authenticates itself separately via a CRON_SECRET bearer token.
+  // Skip auth check for Stripe webhook and the pg_cron-triggered jobs — none of these
+  // carry a logged-in user's session cookie, and each authenticates itself separately
+  // via a CRON_SECRET bearer token.
   if (
     request.nextUrl.pathname === "/api/stripe/webhook" ||
-    request.nextUrl.pathname === "/api/cron/daily-reminder"
+    request.nextUrl.pathname === "/api/cron/daily-reminder" ||
+    request.nextUrl.pathname === "/api/cron/calendar-sync"
   ) {
     return NextResponse.next();
   }
