@@ -359,7 +359,7 @@ export default function SelectProjectsPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-black text-white">
+      <div className="max-w-md mx-auto min-h-screen bg-black text-white relative overflow-visible">
         {/* Header */}
         <div className="flex justify-between items-center p-4">
           <button className="text-accent-yellow font-bold">Cancel</button>
@@ -382,7 +382,7 @@ export default function SelectProjectsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="max-w-md mx-auto min-h-screen bg-black text-white relative overflow-visible">
       {/* Header */}
       <div className="flex justify-between items-center p-4">
         <button 

@@ -7,7 +7,9 @@ const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token'
 const GOOGLE_REVOKE_URL = 'https://oauth2.googleapis.com/revoke'
 const CALENDAR_API_BASE = 'https://www.googleapis.com/calendar/v3'
 
-const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar'
+// Includes userinfo.email alongside calendar access so the callback can record which
+// Google account was actually authorized — this can differ from the TimeBud login email.
+const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/userinfo.email'
 const DEDICATED_CALENDAR_NAME = 'TimeBud'
 
 function getRedirectUri(): string {
@@ -81,6 +83,16 @@ export async function refreshAccessToken(refreshToken: string): Promise<GoogleTo
 
 export async function revokeToken(token: string): Promise<void> {
   await fetch(`${GOOGLE_REVOKE_URL}?token=${encodeURIComponent(token)}`, { method: 'POST' })
+}
+
+// The Google account actually authorized during OAuth — not necessarily the same email
+// the user is logged into TimeBud with.
+export async function getUserInfo(accessToken: string): Promise<{ email: string }> {
+  const res = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  })
+  if (!res.ok) throw new Error(`Failed to fetch Google user info: ${await res.text()}`)
+  return res.json()
 }
 
 export async function listCalendars(accessToken: string): Promise<GoogleCalendarListEntry[]> {

@@ -7,10 +7,6 @@ import { buildTimeBlockStartingPayload, CalendarBlockContext, NotificationContex
 import { DbUserAISettings } from '@/types/database'
 
 const SYNC_WINDOW_HOURS = 48
-// Only re-pull from Google every couple hours per user — the active-event check below
-// still runs every tick against the local cache, so a block start is still caught
-// promptly without hitting Google's API on every 15-minute cron tick.
-const STALE_SYNC_MS = 2 * 60 * 60 * 1000
 
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get('authorization')
@@ -55,58 +51,56 @@ export async function GET(request: NextRequest) {
     const userId = connection.user_id
 
     try {
-      const staleSync =
-        !connection.last_synced_at ||
-        now.getTime() - new Date(connection.last_synced_at).getTime() > STALE_SYNC_MS
+      // Always pull fresh from Google — a single-calendar events.list call every 15
+      // minutes is nowhere near any real quota concern, and a staleness gate here would
+      // directly work against the point of the feature (a block the user just created
+      // needs to be picked up on the very next tick, not up to N hours later).
+      const tokenInfo = await getValidAccessToken(userId, supabase)
+      if (tokenInfo) {
+        const timeMin = now.toISOString()
+        const timeMax = new Date(now.getTime() + SYNC_WINDOW_HOURS * 60 * 60 * 1000).toISOString()
+        const events = await listEvents(tokenInfo.accessToken, tokenInfo.calendarId, timeMin, timeMax)
 
-      if (staleSync) {
-        const tokenInfo = await getValidAccessToken(userId, supabase)
-        if (tokenInfo) {
-          const timeMin = now.toISOString()
-          const timeMax = new Date(now.getTime() + SYNC_WINDOW_HOURS * 60 * 60 * 1000).toISOString()
-          const events = await listEvents(tokenInfo.accessToken, tokenInfo.calendarId, timeMin, timeMax)
+        for (const event of events) {
+          const startTime = event.start.dateTime || event.start.date
+          const endTime = event.end.dateTime || event.end.date
+          if (!startTime || !endTime || !event.summary) continue
 
-          for (const event of events) {
-            const startTime = event.start.dateTime || event.start.date
-            const endTime = event.end.dateTime || event.end.date
-            if (!startTime || !endTime || !event.summary) continue
+          await supabase.from('google_calendar_events_cache').upsert(
+            {
+              user_id: userId,
+              google_event_id: event.id,
+              title: event.summary,
+              start_time: new Date(startTime).toISOString(),
+              end_time: new Date(endTime).toISOString(),
+              synced_at: now.toISOString(),
+            },
+            { onConflict: 'user_id,google_event_id' }
+          )
+          eventsSynced++
 
-            await supabase.from('google_calendar_events_cache').upsert(
-              {
-                user_id: userId,
-                google_event_id: event.id,
-                title: event.summary,
-                start_time: new Date(startTime).toISOString(),
-                end_time: new Date(endTime).toISOString(),
-                synced_at: now.toISOString(),
-              },
-              { onConflict: 'user_id,google_event_id' }
-            )
-            eventsSynced++
-
-            // First time this exact block title has been seen for this user — surface it
-            // in Settings for a one-time "which mission(s)?" confirmation rather than
-            // guessing silently.
-            const { data: existingMapping } = await supabase
-              .from('calendar_block_mappings')
-              .select('id')
-              .eq('user_id', userId)
-              .eq('event_title', event.summary)
-              .maybeSingle()
-
-            if (!existingMapping) {
-              await supabase
-                .from('calendar_block_mappings')
-                .insert({ user_id: userId, event_title: event.summary, confirmed: false })
-              mappingsCreated++
-            }
-          }
-
-          await supabase
-            .from('google_calendar_connections')
-            .update({ last_synced_at: now.toISOString() })
+          // First time this exact block title has been seen for this user — surface it
+          // in Settings for a one-time "which mission(s)?" confirmation rather than
+          // guessing silently.
+          const { data: existingMapping } = await supabase
+            .from('calendar_block_mappings')
+            .select('id')
             .eq('user_id', userId)
+            .eq('event_title', event.summary)
+            .maybeSingle()
+
+          if (!existingMapping) {
+            await supabase
+              .from('calendar_block_mappings')
+              .insert({ user_id: userId, event_title: event.summary, confirmed: false })
+            mappingsCreated++
+          }
         }
+
+        await supabase
+          .from('google_calendar_connections')
+          .update({ last_synced_at: now.toISOString() })
+          .eq('user_id', userId)
       }
 
       const { data: activeEvents } = await supabase

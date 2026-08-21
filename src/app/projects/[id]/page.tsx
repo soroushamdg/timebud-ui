@@ -36,6 +36,7 @@ import { formatDistanceToNow } from "date-fns";
 import { GanttChart } from "@/components/gantt/GanttChart";
 import { getJobXpPreview, MISSION_COMPLETE_BONUS_XP } from "@/lib/gamification/xp";
 import { useLevelUpWatcher } from "@/hooks/useLevelUpWatcher";
+import { useProjectCalendarLink } from "@/hooks/useProjectCalendarLink";
 import { LevelUpModal } from "@/components/gamification/LevelUpModal";
 import { MissionCompleteModal } from "@/components/gamification/MissionCompleteModal";
 
@@ -306,6 +307,7 @@ export default function ProjectOverviewPage({
   const { data: project, isLoading: projectLoading } = useProject(projectId);
   const { data: tasks = [], isLoading: tasksLoading } = useTasks({ projectId });
   const { data: memories = [] } = useMemories(projectId);
+  const { data: isCalendarLinked } = useProjectCalendarLink(projectId);
   const deleteMemory = useDeleteMemory();
   const deleteProject = useDeleteProject();
   const [deletingMemoryId, setDeletingMemoryId] = useState<string | null>(null);
@@ -1564,7 +1566,7 @@ export default function ProjectOverviewPage({
 
   if (projectLoading || tasksLoading || !project) {
     return (
-      <div className="min-h-screen bg-bg-primary">
+      <div className="max-w-md mx-auto min-h-screen bg-bg-primary relative overflow-visible">
         {/* Hero skeleton */}
         <div className="relative h-48 bg-gray-800 animate-pulse" />
 
@@ -1579,7 +1581,7 @@ export default function ProjectOverviewPage({
   }
 
   return (
-    <div className="min-h-screen bg-bg-primary">
+    <div className="max-w-md mx-auto min-h-screen bg-bg-primary relative overflow-visible">
       {/* Edit Toast */}
       {showEditToast && (
         <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 px-4 py-2 bg-bg-card border border-border-card rounded-lg shadow-lg transition-all duration-300">
@@ -1670,6 +1672,14 @@ export default function ProjectOverviewPage({
               }`}>
                 {project.difficulty}
               </span>
+              {isCalendarLinked && (
+                <div
+                  className="w-5 h-5 rounded-full bg-accent-yellow/90 flex items-center justify-center flex-shrink-0 shadow-[0_0_8px_rgba(245,197,24,0.5)]"
+                  title="Linked to a calendar time block"
+                >
+                  <CalendarIcon className="w-3 h-3 text-black" />
+                </div>
+              )}
             </div>
             <div className="flex justify-between items-end">
               <div className="flex items-center gap-3">
@@ -2054,14 +2064,20 @@ export default function ProjectOverviewPage({
         )}
       </div>
 
-      {/* Floating Action Button - only show when there are items and not in gantt view */}
+      {/* Floating Action Button - only show when there are items and not in gantt view.
+          Outer wrapper spans the viewport and centers a max-w-md column (same trick
+          TabBar uses) so the button stays aligned with the content column instead of
+          the raw browser edge on wider screens; the button itself carries the z-index
+          so it stays above the z-10 job rows while scrolling. */}
       {sortedItems.length > 0 && !showGantt && (
-        <button
-          onClick={handleAddTask}
-          className="fixed bottom-24 right-4 bg-accent-yellow text-black rounded-full w-12 h-12 text-2xl font-bold flex items-center justify-center shadow-lg"
-        >
-          <Plus size={24} />
-        </button>
+        <div className="fixed bottom-24 left-0 right-0 max-w-md mx-auto pointer-events-none z-30">
+          <button
+            onClick={handleAddTask}
+            className="absolute right-4 bottom-0 pointer-events-auto bg-accent-yellow text-black rounded-full w-12 h-12 text-2xl font-bold flex items-center justify-center shadow-lg"
+          >
+            <Plus size={24} />
+          </button>
+        </div>
       )}
 
 

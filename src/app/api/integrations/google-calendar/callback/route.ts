@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
-import { exchangeCodeForTokens, findOrCreateDedicatedCalendar } from '@/lib/google-calendar/client'
+import { exchangeCodeForTokens, findOrCreateDedicatedCalendar, getUserInfo } from '@/lib/google-calendar/client'
 
 const STATE_COOKIE = 'gcal_oauth_state'
 
@@ -40,7 +40,10 @@ export async function GET(request: NextRequest) {
       return redirectTo('?error=no_refresh_token')
     }
 
-    const calendarId = await findOrCreateDedicatedCalendar(tokens.access_token)
+    const [calendarId, googleUserInfo] = await Promise.all([
+      findOrCreateDedicatedCalendar(tokens.access_token),
+      getUserInfo(tokens.access_token),
+    ])
     const tokenExpiry = new Date(Date.now() + tokens.expires_in * 1000).toISOString()
 
     const { error } = await supabase.from('google_calendar_connections').upsert({
@@ -49,7 +52,8 @@ export async function GET(request: NextRequest) {
       refresh_token: tokens.refresh_token,
       token_expiry: tokenExpiry,
       google_calendar_id: calendarId,
-      google_account_email: user.email,
+      // The Google account actually authorized — can differ from the TimeBud login email.
+      google_account_email: googleUserInfo.email,
       last_synced_at: null,
     })
 
