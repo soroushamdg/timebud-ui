@@ -107,14 +107,14 @@ export function AllTasksTaskCard({
       <div
         onClick={handleCardClick}
         onDoubleClick={handleDoubleClick}
-        className={`flex-1 min-w-0 bg-bg-card rounded-2xl px-4 py-3 flex items-center gap-3 border border-[#ffffff] cursor-pointer transition-all hover:bg-bg-card-hover min-h-[72px] relative overflow-hidden shadow-[0_4px_16px_rgba(0,0,0,0.35)] ${
+        className={`flex-1 min-w-0 bg-bg-card rounded-2xl px-4 py-3 flex items-center gap-3 border border-[#ffffff] cursor-pointer transition-all hover:bg-bg-card-hover min-h-[72px] relative shadow-[0_4px_16px_rgba(0,0,0,0.35)] ${
           completed ? 'bg-bg-card-done border-accent-green/30' : ''
         }`}
       >
         {/* Mission color accent */}
         {task.project_id && !completed && (
           <div
-            className="absolute left-0 top-0 bottom-0 w-1.5"
+            className="absolute left-0 top-0 bottom-0 w-1.5 rounded-l-2xl"
             style={{ backgroundColor: projectColor || '#f5c518' }}
           />
         )}
