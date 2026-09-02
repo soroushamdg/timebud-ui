@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { QuickCaptureSheet } from "@/components/capture/QuickCaptureSheet";
-import { AppShell } from "@/components/layout/AppShell";
 import { TaskCard } from "@/components/tasks/TaskCard";
 import { TaskCardSkeleton } from "@/components/tasks/TaskCardSkeleton";
 import { UnfinishedSessionModal } from "@/components/sessions/UnfinishedSessionModal";
@@ -321,23 +320,19 @@ export default function Home() {
   // Show loading state while user is loading
   if (userLoading) {
     return (
-      <AppShell>
-        <div className="flex flex-col h-[calc(100vh-5rem)] items-center justify-center">
-          <p className="text-text-sec">Loading...</p>
-        </div>
-      </AppShell>
+      <div className="flex flex-col h-[calc(100vh-5rem)] items-center justify-center">
+        <p className="text-text-sec">Loading...</p>
+      </div>
     )
   }
-  
+
   // Redirect to login if user is not authenticated
   if (!user) {
     router.push('/auth/login')
     return (
-      <AppShell>
-        <div className="flex flex-col h-[calc(100vh-5rem)] items-center justify-center">
-          <p className="text-text-sec">Redirecting to login...</p>
-        </div>
-      </AppShell>
+      <div className="flex flex-col h-[calc(100vh-5rem)] items-center justify-center">
+        <p className="text-text-sec">Redirecting to login...</p>
+      </div>
     )
   }
 
@@ -846,18 +841,16 @@ export default function Home() {
 
   if (unfinishedFocusSession) {
     return (
-      <AppShell>
-        <UnfinishedSessionModal
-          session={unfinishedFocusSession}
-          onContinue={handleContinueSession}
-          onStartFresh={handleStartFresh}
-        />
-      </AppShell>
+      <UnfinishedSessionModal
+        session={unfinishedFocusSession}
+        onContinue={handleContinueSession}
+        onStartFresh={handleStartFresh}
+      />
     );
   }
 
   return (
-    <AppShell>
+    <>
       <div className="flex flex-col h-[calc(100vh-5rem)] pb-5 overflow-visible">
         {/* Fixed Header Section */}
         <div className="flex-shrink-0">
@@ -1151,6 +1144,6 @@ export default function Home() {
       />
 
       {newLevel && <LevelUpModal levelProgress={newLevel} onDismiss={dismissLevelUp} />}
-    </AppShell>
+    </>
   );
 }
