@@ -1,8 +1,10 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Paperclip, Send, X } from 'lucide-react'
+import { AnimatePresence, motion } from 'motion/react'
+import { Paperclip, Send, X, Mic, Square } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { useVoiceRecorder } from '@/hooks/useVoiceRecorder'
 
 interface FilePreview {
   id: string
@@ -24,6 +26,19 @@ export function ChatInput({ onSend, disabled, placeholder = 'Ask me anything...'
   const [files, setFiles] = useState<FilePreview[]>([])
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const {
+    isRecording,
+    isTranscribing,
+    elapsedSeconds,
+    ringRefs,
+    isSupported: isVoiceSupported,
+    toggle: toggleRecording,
+    error: voiceError,
+  } = useVoiceRecorder({
+    onTranscribed: (transcribed) =>
+      setMessage((prev) => (prev ? `${prev} ${transcribed}` : transcribed)),
+  })
 
   // Auto-resize textarea
   useEffect(() => {
@@ -153,13 +168,14 @@ export function ChatInput({ onSend, disabled, placeholder = 'Ask me anything...'
       {/* Input area */}
       <div className="flex items-end gap-2">
         {/* File attachment button */}
-        <button
+        <motion.button
+          whileTap={{ scale: 0.9 }}
           onClick={() => fileInputRef.current?.click()}
           disabled={disabled}
           className="w-10 h-10 rounded-full bg-bg-card border border-border-card flex items-center justify-center text-text-sec hover:text-white hover:bg-bg-card-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
         >
           <Paperclip className="w-5 h-5" />
-        </button>
+        </motion.button>
         <input
           ref={fileInputRef}
           type="file"
@@ -169,28 +185,121 @@ export function ChatInput({ onSend, disabled, placeholder = 'Ask me anything...'
           className="hidden"
         />
 
-        {/* Textarea */}
-        <textarea
-          ref={textareaRef}
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder={placeholder}
-          disabled={disabled}
-          rows={1}
-          className="flex-1 bg-bg-card border border-border-card rounded-2xl px-4 py-3 text-white placeholder-text-sec resize-none focus:outline-none focus:ring-2 focus:ring-accent-yellow disabled:opacity-50 disabled:cursor-not-allowed"
-          style={{ maxHeight: '96px' }}
-        />
+        {/* Textarea (swapped for a recording indicator while capturing audio) */}
+        <AnimatePresence mode="wait" initial={false}>
+          {isRecording || isTranscribing ? (
+            <motion.div
+              key="recording"
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.96 }}
+              transition={{ duration: 0.15 }}
+              className="flex-1 bg-bg-card border border-border-card rounded-2xl px-4 py-3 flex items-center gap-3"
+            >
+              <div className="relative w-6 h-6 flex items-center justify-center flex-shrink-0">
+                {isRecording &&
+                  [0, 1, 2].map((i) => (
+                    <div
+                      key={i}
+                      ref={(el) => {
+                        ringRefs.current[i] = el
+                      }}
+                      className="absolute inset-0 rounded-full border-2 border-accent-pink pointer-events-none"
+                      style={{ opacity: 0, transform: 'scale(1)' }}
+                    />
+                  ))}
+                <span
+                  className={`w-2.5 h-2.5 rounded-full ${isRecording ? 'bg-accent-pink animate-pulse' : 'bg-text-sec'}`}
+                />
+              </div>
+              <span className="text-sm text-white">
+                {isTranscribing ? 'Transcribing...' : `Recording... ${formatElapsed(elapsedSeconds)}`}
+              </span>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="textarea"
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.96 }}
+              transition={{ duration: 0.15 }}
+              className="flex-1"
+            >
+              <textarea
+                ref={textareaRef}
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder={placeholder}
+                disabled={disabled}
+                rows={1}
+                className="w-full bg-bg-card border border-border-card rounded-2xl px-4 py-3 text-white placeholder-text-sec resize-none focus:outline-none focus:ring-2 focus:ring-accent-yellow disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ maxHeight: '96px' }}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Mic button */}
+        {isVoiceSupported && (
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            onClick={toggleRecording}
+            disabled={disabled || isTranscribing}
+            animate={isRecording ? { scale: [1, 1.08, 1] } : { scale: 1 }}
+            transition={{ duration: 0.3 }}
+            className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0 ${
+              isRecording
+                ? 'bg-accent-pink text-white'
+                : 'bg-bg-card border border-border-card text-text-sec hover:text-white hover:bg-bg-card-hover'
+            }`}
+          >
+            <AnimatePresence mode="wait" initial={false}>
+              {isRecording ? (
+                <motion.span
+                  key="stop"
+                  initial={{ scale: 0.5, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.5, opacity: 0 }}
+                  transition={{ duration: 0.15 }}
+                  className="flex items-center justify-center"
+                >
+                  <Square className="w-4 h-4" />
+                </motion.span>
+              ) : (
+                <motion.span
+                  key="mic"
+                  initial={{ scale: 0.5, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.5, opacity: 0 }}
+                  transition={{ duration: 0.15 }}
+                  className="flex items-center justify-center"
+                >
+                  <Mic className="w-5 h-5" />
+                </motion.span>
+              )}
+            </AnimatePresence>
+          </motion.button>
+        )}
 
         {/* Send button */}
-        <button
+        <motion.button
+          whileTap={{ scale: 0.9 }}
           onClick={handleSend}
-          disabled={disabled || (!message.trim() && files.length === 0)}
+          disabled={disabled || isRecording || (!message.trim() && files.length === 0)}
           className="w-10 h-10 rounded-full bg-accent-yellow flex items-center justify-center text-black hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
         >
           <Send className="w-5 h-5" />
-        </button>
+        </motion.button>
       </div>
+
+      {voiceError && <p className="text-accent-pink text-xs mt-2">{voiceError}</p>}
     </div>
   )
+}
+
+function formatElapsed(totalSeconds: number): string {
+  const minutes = Math.floor(totalSeconds / 60)
+  const seconds = totalSeconds % 60
+  return `${minutes}:${String(seconds).padStart(2, '0')}`
 }

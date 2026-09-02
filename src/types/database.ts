@@ -173,3 +173,23 @@ export interface DbCalendarEventCache {
   notified_at: string | null;
   synced_at: string;
 }
+
+export interface DbChatConversation {
+  id: string;
+  user_id: string;
+  summary: string | null;
+  summary_token_count: number;
+  summarized_message_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DbChatMessage {
+  id: string;
+  conversation_id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  tool_calls: unknown | null;
+  tool_results: unknown | null;
+  created_at: string;
+}

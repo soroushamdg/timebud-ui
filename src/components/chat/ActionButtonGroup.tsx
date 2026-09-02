@@ -9,6 +9,7 @@ interface ActionButtonGroupProps {
   messageId: string
   onButtonExecuted: (buttonId: string) => void
   onError: (message: string) => void
+  onSendPrompt?: (prompt: string) => void
 }
 
 export function ActionButtonGroup({
@@ -16,6 +17,7 @@ export function ActionButtonGroup({
   messageId,
   onButtonExecuted,
   onError,
+  onSendPrompt,
 }: ActionButtonGroupProps) {
   const [loadingButtonId, setLoadingButtonId] = useState<string | null>(null)
   const [successButtonId, setSuccessButtonId] = useState<string | null>(null)
@@ -62,8 +64,7 @@ export function ActionButtonGroup({
       if (data.action === 'navigate' && data.url) {
         window.location.href = data.url
       } else if (data.action === 'send_prompt' && data.prompt) {
-        // This will be handled by the parent component
-        onError(data.prompt) // Using onError as a generic callback
+        onSendPrompt?.(data.prompt)
       }
     } catch (error: any) {
       console.error('Button action error:', error)

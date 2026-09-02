@@ -167,18 +167,3 @@ export const ROUTING_RULES = {
   },
 }
 
-export const TOOL_DESCRIPTIONS = {
-  load_project_context: 'Load full job list and memories for a mission',
-  create_task: 'Create a single job or objective',
-  edit_task: 'Update any fields of an existing job',
-  delete_task: 'Delete a job (requires confirmation)',
-  bulk_create_tasks: 'Create multiple jobs at once',
-  create_milestone: 'Create an objective',
-  edit_milestone: 'Edit an objective',
-  delete_milestone: 'Delete an objective (requires confirmation)',
-  create_project: 'Create a new mission (requires confirmation)',
-  add_memory: 'Save important context to mission memories',
-  remove_memory: 'Delete a memory (requires confirmation)',
-  mark_task_complete: 'Mark a job as completed',
-  set_task_dependency: 'Set or clear job dependency',
-}

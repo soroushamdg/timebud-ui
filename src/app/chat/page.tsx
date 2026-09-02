@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { AnimatePresence } from "motion/react";
 import { RotateCcw, Coins, X, AlertCircle } from "lucide-react";
 import { useChatStore } from "@/stores/chatStore";
 import { MessageBubble } from "@/components/chat/MessageBubble";
@@ -376,6 +377,11 @@ export default function ChatPage() {
       setError(null);
       setUndoAction(null);
       setQuickActionMessageId(null);
+      // Local view is cleared above; also reset the server-persisted conversation
+      // (summary + history) so Bud doesn't quietly remember what was just cleared.
+      fetch("/api/chat/reset", { method: "POST" }).catch((err) =>
+        console.error("Failed to reset server chat history:", err),
+      );
     }
   };
 
@@ -508,19 +514,26 @@ export default function ChatPage() {
                 </div>
               )}
 
-              {regularMessages.map((message) => (
-                <MessageBubble
-                  key={message.id}
-                  message={message}
-                  onSuggestionClick={handleSuggestionClick}
-                  onConfirm={handleConfirm}
-                  onCancel={handleCancel}
-                  onLongPress={handleLongPress}
-                  onButtonExecuted={handleButtonExecuted}
-                  onDismissLearning={handleDismissLearning}
-                  onStartSession={handleStartSession}
-                />
-              ))}
+              {/* initial={false}: only NEW messages arriving this session animate in —
+                  the persisted history you loaded the page with just appears, rather
+                  than every past message replaying its entrance animation at once. */}
+              <AnimatePresence initial={false}>
+                {regularMessages.map((message) => (
+                  <MessageBubble
+                    key={message.id}
+                    message={message}
+                    onSuggestionClick={handleSuggestionClick}
+                    onConfirm={handleConfirm}
+                    onCancel={handleCancel}
+                    onLongPress={handleLongPress}
+                    onButtonExecuted={handleButtonExecuted}
+                    onDismissLearning={handleDismissLearning}
+                    onStartSession={handleStartSession}
+                  />
+                ))}
+
+                {isLoading && <TypingIndicator key="typing-indicator" message={loadingMessage} />}
+              </AnimatePresence>
 
               {error && (
                 <ProviderErrorBanner
@@ -537,8 +550,6 @@ export default function ChatPage() {
                   }}
                 />
               )}
-
-              {isLoading && <TypingIndicator message={loadingMessage} />}
 
               <div ref={messagesEndRef} />
             </>

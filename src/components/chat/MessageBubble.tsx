@@ -3,6 +3,7 @@
 import { ChatMessage } from '@/types/ai'
 import { Check, Loader2, Pin } from 'lucide-react'
 import { useState } from 'react'
+import { AnimatePresence, motion } from 'motion/react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { WarningBanner } from './WarningBanner'
@@ -10,6 +11,19 @@ import { SessionPlanPreview } from './SessionPlanPreview'
 import { LearningOpportunity } from './LearningOpportunity'
 import { ActionButtonGroup } from './ActionButtonGroup'
 import { SuggestedActions } from './SuggestedActions'
+
+// Shared iMessage-style entrance for every bubble type: a slight pop (scale up from
+// 0.8) and upward drift, with a spring instead of a linear ease so it has some
+// bounce/weight to it rather than a flat fade. `layout` lets Framer Motion animate
+// this bubble's position smoothly whenever something ABOVE or BELOW it in the list
+// changes size (e.g. a confirmation card collapsing) instead of everything jumping.
+const bubbleMotionProps = {
+  layout: true as const,
+  initial: { opacity: 0, scale: 0.8, y: 12 },
+  animate: { opacity: 1, scale: 1, y: 0 },
+  exit: { opacity: 0, scale: 0.85, transition: { duration: 0.15 } },
+  transition: { type: 'spring' as const, stiffness: 500, damping: 35, mass: 0.8 },
+}
 
 interface MessageBubbleProps {
   message: ChatMessage
@@ -56,7 +70,7 @@ export function MessageBubble({
   // System/status messages (context loading, tool results)
   if (message.role === 'system') {
     return (
-      <div className="flex justify-center my-2">
+      <motion.div className="flex justify-center my-2" {...bubbleMotionProps}>
         <div className="bg-bg-card border border-border-card rounded-full px-4 py-2 flex items-center gap-2 text-sm text-text-sec">
           {message.content.includes('Loading') ? (
             <Loader2 className="w-3 h-3 animate-spin" />
@@ -65,14 +79,14 @@ export function MessageBubble({
           )}
           <span>{message.content}</span>
         </div>
-      </div>
+      </motion.div>
     )
   }
 
   // User messages
   if (message.role === 'user') {
     return (
-      <div className="flex justify-end mb-4">
+      <motion.div className="flex justify-end mb-4" {...bubbleMotionProps}>
         <div className="max-w-[85%]">
           {message.isPinned && (
             <div className="flex items-center gap-1 text-xs text-text-sec mb-1 justify-end">
@@ -93,13 +107,13 @@ export function MessageBubble({
             <p className="whitespace-pre-wrap break-words">{message.content}</p>
           </div>
         </div>
-      </div>
+      </motion.div>
     )
   }
 
   // Assistant messages
   return (
-    <div className="flex justify-start items-start gap-2 mb-4">
+    <motion.div className="flex justify-start items-start gap-2 mb-4" {...bubbleMotionProps}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src="/bud/bud-avatar.png"
@@ -113,7 +127,8 @@ export function MessageBubble({
             <span>Pinned</span>
           </div>
         )}
-        <div
+        <motion.div
+          layout
           className="bg-bg-card text-white px-4 py-3 rounded-2xl rounded-bl-md"
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
@@ -141,9 +156,20 @@ export function MessageBubble({
             />
           )}
 
-          {/* Confirmation payload */}
+          {/* Confirmation payload — animated separately so confirming/cancelling
+              collapses just this card (with the bubble reflowing via `layout`
+              above) instead of the whole message popping or jumping. */}
+          <AnimatePresence>
           {message.confirmationPayload && (
-            <div className="mt-4 border border-border-card rounded-lg p-3 bg-bg-primary">
+            <motion.div
+              key="confirmation"
+              initial={{ opacity: 0, height: 0, marginTop: 0 }}
+              animate={{ opacity: 1, height: 'auto', marginTop: 16 }}
+              exit={{ opacity: 0, height: 0, marginTop: 0 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 40 }}
+              className="overflow-hidden"
+            >
+            <div className="border border-border-card rounded-lg p-3 bg-bg-primary">
               {message.confirmationPayload.type === 'delete' && (
                 <div className="border-l-2 border-accent-pink pl-3">
                   <p className="text-sm text-text-sec mb-3">
@@ -232,8 +258,10 @@ export function MessageBubble({
                 </div>
               )}
             </div>
+            </motion.div>
           )}
-        </div>
+          </AnimatePresence>
+        </motion.div>
 
         {/* Learning Opportunity */}
         {message.learningOpportunity && (
@@ -251,6 +279,7 @@ export function MessageBubble({
             messageId={message.id}
             onButtonExecuted={(buttonId) => onButtonExecuted?.(message.id, buttonId)}
             onError={(msg) => console.error('Button error:', msg)}
+            onSendPrompt={onSuggestionClick}
           />
         )}
 
@@ -286,6 +315,6 @@ export function MessageBubble({
           </div>
         )}
       </div>
-    </div>
+    </motion.div>
   )
 }

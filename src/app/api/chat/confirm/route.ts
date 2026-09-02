@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { executeTool } from '@/lib/ai/execute'
+import { getOrCreateConversation, appendTurn } from '@/lib/ai/chat-history'
 import { ToolCall } from '@/types/ai'
 
 interface ConfirmRequest {
@@ -66,6 +67,20 @@ export async function POST(request: NextRequest) {
         success: result.success,
         summary: result.summary,
       })
+    }
+
+    // Persisted history needs to know this happened too — otherwise a confirmed
+    // action is just as invisible to future turns as the bug this rewrite fixes.
+    try {
+      const conversation = await getOrCreateConversation(serviceSupabase, user.id)
+      const summary = toolsExecuted.map((t) => (t.success ? `✓ ${t.summary}` : `✗ ${t.summary}`)).join('\n')
+      await appendTurn(serviceSupabase, conversation.id, {
+        role: 'assistant',
+        content: summary || 'Confirmed action cancelled.',
+        toolCalls: toolsExecuted,
+      })
+    } catch (err) {
+      console.error('Failed to persist confirmed action to chat history:', err)
     }
 
     return NextResponse.json({

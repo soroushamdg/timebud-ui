@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Mic, Square, X } from 'lucide-react'
 import { useChatStore } from '@/stores/chatStore'
+import { useVoiceRecorder } from '@/hooks/useVoiceRecorder'
 import { ChatAPIRequest, ChatAPIResponse } from '@/types/ai'
 
 interface QuickCaptureSheetProps {
@@ -17,81 +18,27 @@ export function QuickCaptureSheet({ onClose, onSuccess }: QuickCaptureSheetProps
 
   const [text, setText] = useState('')
   const [isSending, setIsSending] = useState(false)
-  const [isRecording, setIsRecording] = useState(false)
-  const [isTranscribing, setIsTranscribing] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
-  const chunksRef = useRef<Blob[]>([])
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
-  // Live amplitude visualization — a separate AnalyserNode tapped off the same
-  // getUserMedia stream that feeds the MediaRecorder. Ring styles are mutated
-  // directly via refs inside the rAF loop rather than through React state, so
-  // the ~60fps updates don't trigger a re-render on every frame.
-  const audioContextRef = useRef<AudioContext | null>(null)
-  const analyserRef = useRef<AnalyserNode | null>(null)
-  const rafRef = useRef<number | null>(null)
-  const ringRefs = useRef<(HTMLDivElement | null)[]>([])
-
-  const stopAmplitudeLoop = () => {
-    if (rafRef.current !== null) {
-      cancelAnimationFrame(rafRef.current)
-      rafRef.current = null
-    }
-    audioContextRef.current?.close().catch(() => {})
-    audioContextRef.current = null
-    analyserRef.current = null
-    ringRefs.current.forEach((el) => {
-      if (el) {
-        el.style.transform = 'scale(1)'
-        el.style.opacity = '0'
-      }
-    })
-  }
-
-  const startAmplitudeLoop = (stream: MediaStream) => {
-    try {
-      const audioContext = new AudioContext()
-      const source = audioContext.createMediaStreamSource(stream)
-      const analyser = audioContext.createAnalyser()
-      analyser.fftSize = 256
-      source.connect(analyser)
-      audioContextRef.current = audioContext
-      analyserRef.current = analyser
-
-      const data = new Uint8Array(analyser.frequencyBinCount)
-      const tick = () => {
-        analyser.getByteTimeDomainData(data)
-        let sumSquares = 0
-        for (let i = 0; i < data.length; i++) {
-          const centered = (data[i] - 128) / 128
-          sumSquares += centered * centered
-        }
-        const rms = Math.sqrt(sumSquares / data.length)
-        const level = Math.min(1, rms * 4)
-
-        ringRefs.current.forEach((el, i) => {
-          if (!el) return
-          const scale = 1 + level * (1 + i * 0.7)
-          const opacity = Math.max(0, 0.45 - i * 0.12) * Math.min(1, level * 3)
-          el.style.transform = `scale(${scale})`
-          el.style.opacity = String(opacity)
-        })
-
-        rafRef.current = requestAnimationFrame(tick)
-      }
-      rafRef.current = requestAnimationFrame(tick)
-    } catch {
-      // Fail soft — the recording itself (via MediaRecorder) keeps working
-      // even if the browser refuses to construct an AudioContext here.
-    }
-  }
+  const {
+    isRecording,
+    isTranscribing,
+    ringRefs,
+    toggle: toggleRecording,
+    error: recorderError,
+  } = useVoiceRecorder({
+    onTranscribed: (transcribed) => setText((prev) => (prev ? `${prev} ${transcribed}` : transcribed)),
+  })
 
   useEffect(() => {
     inputRef.current?.focus()
-    return () => stopAmplitudeLoop()
   }, [])
+
+  useEffect(() => {
+    if (recorderError) setError(recorderError)
+  }, [recorderError])
 
   const goTo = (path: string) => {
     onClose()
@@ -178,47 +125,6 @@ export function QuickCaptureSheet({ onClose, onSuccess }: QuickCaptureSheetProps
     }
   }
 
-  const handleMicToggle = async () => {
-    if (isRecording) {
-      mediaRecorderRef.current?.stop()
-      setIsRecording(false)
-      stopAmplitudeLoop()
-      return
-    }
-
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      chunksRef.current = []
-      const recorder = new MediaRecorder(stream)
-      recorder.ondataavailable = (e) => chunksRef.current.push(e.data)
-      recorder.onstop = async () => {
-        stream.getTracks().forEach((track) => track.stop())
-        stopAmplitudeLoop()
-        const blob = new Blob(chunksRef.current, { type: 'audio/webm' })
-        setIsTranscribing(true)
-        setError(null)
-        try {
-          const formData = new FormData()
-          formData.append('audio', blob, 'capture.webm')
-          const res = await fetch('/api/voice/transcribe', { method: 'POST', body: formData })
-          const json = await res.json()
-          if (!json.success) throw new Error(json.error?.message || 'Failed to transcribe')
-          setText((prev) => (prev ? `${prev} ${json.text}` : json.text))
-        } catch (err) {
-          setError(err instanceof Error ? err.message : 'Failed to transcribe audio')
-        } finally {
-          setIsTranscribing(false)
-        }
-      }
-      mediaRecorderRef.current = recorder
-      recorder.start()
-      setIsRecording(true)
-      startAmplitudeLoop(stream)
-    } catch {
-      setError('Microphone access is required for voice capture')
-    }
-  }
-
   return (
     <div className="fixed inset-0 bg-black/70 z-[100] flex items-end" onClick={onClose}>
       <div
@@ -254,7 +160,7 @@ export function QuickCaptureSheet({ onClose, onSuccess }: QuickCaptureSheetProps
               />
             ))}
             <button
-              onClick={handleMicToggle}
+              onClick={toggleRecording}
               disabled={isTranscribing}
               className={`relative w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-50 ${
                 isRecording ? 'bg-accent-pink' : 'bg-bg-card border border-border-card'
