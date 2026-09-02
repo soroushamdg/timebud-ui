@@ -65,6 +65,8 @@ export interface DbMilestone {
   priority: boolean;
   created_at: string;
 }
+export type FocusSessionStatus = "running" | "paused" | "completed" | "abandoned";
+
 export interface DbFocusSession {
   id: string;
   user_id: string;
@@ -73,6 +75,12 @@ export interface DbFocusSession {
   end_time: string | null;
   tasks_list: string[];
   unfinished_reminder_sent_at?: string | null;
+  status: FocusSessionStatus;
+  paused_at: string | null;
+  total_paused_seconds: number;
+  // Structurally the same as `PlannedTask` (src/stores/sessionStore.ts) — kept as a
+  // loose JSON shape here since this column is opaque jsonb to the DB layer.
+  planned_tasks: Record<string, unknown>[];
 }
 
 export type AIProvider = "anthropic" | "openai" | "google";

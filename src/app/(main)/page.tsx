@@ -12,12 +12,12 @@ import { TaskActionMenu } from "@/components/tasks/TaskActionMenu";
 import { DeferTaskDialog } from "@/components/dialogs/DeferTaskDialog";
 import { AddTaskToPlannerDialog } from "@/components/dialogs/AddTaskToPlannerDialog";
 import { SimpleToast } from "@/components/ui/SimpleToast";
-import { useLatestUnfinishedFocusSession } from '@/hooks/useSessions'
+import { useLatestUnfinishedFocusSession, useActiveFocusSession } from '@/hooks/useSessions'
 import { useProjects } from '@/hooks/useProjects'
 import { useTasks } from '@/hooks/useTasks'
 import { useCreateFocusSession, useDeleteFocusSession } from '@/hooks/useSessions'
 import { planSession, planWeek, PlannerTask } from '@/lib/planner'
-import { useFocusSessionStore } from '@/stores/sessionStore'
+import { useFocusSessionStore, PlannedTask as StoreSessionTask } from '@/stores/sessionStore'
 import { useUIStore } from '@/stores/uiStore'
 import { useLoading } from '@/contexts/LoadingContext'
 import { useReplan } from '@/contexts/ReplanContext'
@@ -160,6 +160,9 @@ export default function Home() {
   useReplanOnUIChange();
 
   const { data: latestUnfinished } = useLatestUnfinishedFocusSession();
+  // A session already running/paused, whether started here or on another device —
+  // checked before creating a new one so "Start Run" resumes it instead of duplicating.
+  const { data: activeFocusSession } = useActiveFocusSession();
   const { data: projects, isLoading: projectsLoading, error: projectsError } = useProjects();
 
   // Fetch all tasks so planner can check dependencies against completed tasks
@@ -670,15 +673,52 @@ export default function Home() {
     }
   };
 
-  const handleStartWork = () => {
-    // Clear any existing session before starting new one
-    const { clearFocusSession } = useFocusSessionStore.getState();
+  const handleStartWork = async () => {
+    const { clearFocusSession, applyServerSnapshot } = useFocusSessionStore.getState();
+
+    // A run is already active — started here earlier, or on another device — so join
+    // that one instead of creating a duplicate.
+    if (activeFocusSession) {
+      applyServerSnapshot({
+        id: activeFocusSession.id,
+        status: activeFocusSession.status,
+        start_time: activeFocusSession.start_time,
+        paused_at: activeFocusSession.paused_at,
+        total_paused_seconds: activeFocusSession.total_paused_seconds,
+        budget_minutes: activeFocusSession.budget_minutes,
+        planned_tasks: activeFocusSession.planned_tasks as unknown as StoreSessionTask[],
+      });
+      router.push("/session/focus");
+      return;
+    }
+
     clearFocusSession();
-    
-    // Start timer when user clicks "Start work"
-    const { startTimer } = useFocusSessionStore.getState();
-    startTimer();
-    router.push("/session/focus");
+
+    try {
+      const created = await createFocusSession.mutateAsync({
+        budget_minutes: preferredBudgetMinutes,
+        end_time: null,
+        tasks_list: plannedTasks.map((t) => t.taskId),
+        status: 'running',
+        paused_at: null,
+        total_paused_seconds: 0,
+        planned_tasks: plannedTasks as unknown as Record<string, unknown>[],
+      });
+      // Seed the store from the row we just created (not a fresh `new Date()`) so the
+      // elapsed timer starts from the exact timestamp every other device will also see.
+      applyServerSnapshot({
+        id: created.id,
+        status: created.status,
+        start_time: created.start_time,
+        paused_at: created.paused_at,
+        total_paused_seconds: created.total_paused_seconds,
+        budget_minutes: created.budget_minutes,
+        planned_tasks: created.planned_tasks as unknown as StoreSessionTask[],
+      });
+      router.push("/session/focus");
+    } catch (error) {
+      console.error("Failed to start run:", error);
+    }
   };
 
   const handleTaskClick = (task: PlannedTask) => {

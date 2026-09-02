@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import { FocusSessionStatus } from '@/types/database';
 
 export interface PlannedTask {
   position: number;
@@ -30,6 +31,18 @@ export interface PlannedTask {
   recurrenceInterval?: number | null;
 }
 
+// The subset of a `sessions` row (src/types/database.ts) needed to mirror server state
+// into this store — arrives from either a fetch or a realtime postgres_changes event.
+export interface FocusSessionServerSnapshot {
+  id: string;
+  status: FocusSessionStatus;
+  start_time: string | null;
+  paused_at: string | null;
+  total_paused_seconds: number;
+  budget_minutes: number;
+  planned_tasks: PlannedTask[];
+}
+
 interface FocusSessionStore {
   focusSessionId: string | null;
   budgetMinutes: number;
@@ -37,16 +50,20 @@ interface FocusSessionStore {
   timerRunning: boolean;
   timerSeconds: number;
   sessionStartTime: Date | null;
+  status: FocusSessionStatus;
+  pausedAt: Date | null;
+  totalPausedSeconds: number;
   setFocusSession: (id: string, tasks: PlannedTask[], budget: number) => void;
   startTimer: () => void;
   stopTimer: () => void;
-  tickTimer: () => void;
+  pauseTimer: () => void;
   markTaskDone: (taskId: string) => void;
   markTaskUndone: (taskId: string) => void;
   unlockDependentTasks: (completedTaskId: string) => void;
   clearFocusSession: () => void;
   getElapsedTime: () => number;
   resumeTimer: () => void;
+  applyServerSnapshot: (row: FocusSessionServerSnapshot) => void;
 }
 
 const initialState = {
@@ -56,13 +73,23 @@ const initialState = {
   timerRunning: false,
   timerSeconds: 0,
   sessionStartTime: null,
+  // 'completed' doubles as "no active session" for the initial/cleared state — it never
+  // satisfies the `status === 'running' || status === 'paused'` active-session check.
+  status: 'completed' as FocusSessionStatus,
+  pausedAt: null,
+  totalPausedSeconds: 0,
+};
+
+const asDate = (value: Date | string | null): Date | null => {
+  if (!value) return null;
+  return typeof value === 'string' ? new Date(value) : value;
 };
 
 export const useFocusSessionStore = create<FocusSessionStore>()(
   persist(
     (set, get) => ({
       ...initialState,
-      
+
       setFocusSession: (id: string, tasks: PlannedTask[], budget: number) => {
         // Clear any existing session before setting new one
         const currentState = get();
@@ -70,7 +97,7 @@ export const useFocusSessionStore = create<FocusSessionStore>()(
           console.warn('Attempting to set new session while one is already running');
           return;
         }
-        
+
         set({
           focusSessionId: id,
           plannedTasks: tasks,
@@ -81,21 +108,40 @@ export const useFocusSessionStore = create<FocusSessionStore>()(
       startTimer: () =>
         set({
           timerRunning: true,
+          status: 'running',
           sessionStartTime: new Date(),
+          pausedAt: null,
+          totalPausedSeconds: 0,
         }),
 
       stopTimer: () =>
         set({
           timerRunning: false,
+          status: 'completed',
         }),
 
-      tickTimer: () => {
-        const { timerRunning } = get();
-        if (timerRunning) {
-          set((state) => ({
-            timerSeconds: state.timerSeconds + 1,
-          }));
-        }
+      pauseTimer: () => {
+        if (get().status !== 'running') return;
+        set({
+          status: 'paused',
+          timerRunning: false,
+          pausedAt: new Date(),
+        });
+      },
+
+      resumeTimer: () => {
+        const { status, pausedAt, totalPausedSeconds } = get();
+        if (status !== 'paused') return;
+        const resumedAt = asDate(pausedAt);
+        const additionalPause = resumedAt
+          ? Math.floor((new Date().getTime() - resumedAt.getTime()) / 1000)
+          : 0;
+        set({
+          status: 'running',
+          timerRunning: true,
+          pausedAt: null,
+          totalPausedSeconds: totalPausedSeconds + additionalPause,
+        });
       },
 
       markTaskDone: (taskId: string) =>
@@ -127,33 +173,31 @@ export const useFocusSessionStore = create<FocusSessionStore>()(
         }),
 
       getElapsedTime: () => {
-        const { timerSeconds, sessionStartTime } = get();
-        if (sessionStartTime) {
-          const startTime = typeof sessionStartTime === 'string' 
-            ? new Date(sessionStartTime) 
-            : sessionStartTime;
-          return Math.floor((new Date().getTime() - startTime.getTime()) / 1000);
-        }
-        return timerSeconds;
+        const { sessionStartTime, status, pausedAt, totalPausedSeconds } = get();
+        const startTime = asDate(sessionStartTime);
+        if (!startTime) return 0;
+
+        const referenceTime = status === 'paused' ? asDate(pausedAt) ?? new Date() : new Date();
+        const rawElapsed = Math.floor((referenceTime.getTime() - startTime.getTime()) / 1000);
+        return Math.max(0, rawElapsed - totalPausedSeconds);
       },
 
-      resumeTimer: () => {
-        const { sessionStartTime } = get();
-        if (sessionStartTime) {
-          set({
-            timerRunning: true,
-          });
-        }
-      },
+      applyServerSnapshot: (row: FocusSessionServerSnapshot) => {
+        // Ignore snapshots for a different session than the one we're tracking locally
+        // (e.g. a stale event arriving after this device already started a new run).
+        const { focusSessionId } = get();
+        if (focusSessionId && focusSessionId !== row.id) return;
 
-      // Helper to ensure sessionStartTime is always a Date object
-      _ensureDateObject: () => {
-        const { sessionStartTime } = get();
-        if (sessionStartTime && typeof sessionStartTime === 'string') {
-          set({
-            sessionStartTime: new Date(sessionStartTime),
-          });
-        }
+        set({
+          focusSessionId: row.id,
+          status: row.status,
+          sessionStartTime: asDate(row.start_time),
+          pausedAt: asDate(row.paused_at),
+          totalPausedSeconds: row.total_paused_seconds,
+          budgetMinutes: row.budget_minutes,
+          plannedTasks: row.planned_tasks,
+          timerRunning: row.status === 'running',
+        });
       },
     }),
     {
@@ -165,11 +209,17 @@ export const useFocusSessionStore = create<FocusSessionStore>()(
         budgetMinutes: state.budgetMinutes,
         timerRunning: state.timerRunning,
         sessionStartTime: state.sessionStartTime,
+        status: state.status,
+        pausedAt: state.pausedAt,
+        totalPausedSeconds: state.totalPausedSeconds,
       }),
       onRehydrateStorage: () => (state) => {
-        // Convert sessionStartTime back to Date object after rehydration
+        // Convert timestamps back to Date objects after rehydration
         if (state?.sessionStartTime && typeof state.sessionStartTime === 'string') {
           state.sessionStartTime = new Date(state.sessionStartTime);
+        }
+        if (state?.pausedAt && typeof state.pausedAt === 'string') {
+          state.pausedAt = new Date(state.pausedAt);
         }
       },
     }

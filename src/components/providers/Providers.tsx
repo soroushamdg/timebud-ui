@@ -2,18 +2,50 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { LoadingProvider } from "@/contexts/LoadingContext";
 import { ReplanProvider } from "@/contexts/ReplanContext";
-import { AuthProvider } from "@/components/providers/AuthProvider";
+import { AuthProvider, useAuth } from "@/components/providers/AuthProvider";
 import { OnboardingProvider } from "@/components/providers/OnboardingProvider";
 import { useSyncDailyBudget } from "@/hooks/useAISettings";
 import { useTimezoneSync } from "@/hooks/useTimezoneSync";
+import { useActiveFocusSession, useFocusSessionRealtime } from "@/hooks/useSessions";
+import { useFocusSessionStore, PlannedTask } from "@/stores/sessionStore";
 import { SimpleToast } from "@/components/ui/SimpleToast";
 import { Session } from "@supabase/supabase-js";
 
 function BudgetSync() {
   useSyncDailyBudget();
+  return null;
+}
+
+// Mounted once near the app root (not just on the focus-run screen) so a session
+// started/paused/stopped on another device is reflected here even while sitting on
+// Home. Two propagation paths feed the same store:
+//  - useFocusSessionRealtime: live postgres_changes events for anything that changes
+//    *after* this device is connected (near-instant).
+//  - the effect below: seeds the store from useActiveFocusSession's own fetch/poll, so
+//    a cold app open also picks up a session that was already running before this
+//    device connected (realtime only streams events, it doesn't backfill).
+function FocusSessionSync() {
+  const { session } = useAuth();
+  const userId = session?.user?.id;
+  useFocusSessionRealtime(userId);
+
+  const { data: activeFocusSession } = useActiveFocusSession();
+  useEffect(() => {
+    if (!activeFocusSession) return;
+    useFocusSessionStore.getState().applyServerSnapshot({
+      id: activeFocusSession.id,
+      status: activeFocusSession.status,
+      start_time: activeFocusSession.start_time,
+      paused_at: activeFocusSession.paused_at,
+      total_paused_seconds: activeFocusSession.total_paused_seconds,
+      budget_minutes: activeFocusSession.budget_minutes,
+      planned_tasks: activeFocusSession.planned_tasks as unknown as PlannedTask[],
+    });
+  }, [activeFocusSession]);
+
   return null;
 }
 
@@ -54,6 +86,7 @@ export function Providers({ children, initialSession }: ProvidersProps) {
           <AuthProvider initialSession={initialSession}>
             <BudgetSync />
             <TimezoneSync />
+            <FocusSessionSync />
             <OnboardingProvider>
               {children}
               {process.env.NODE_ENV === 'development' && <ReactQueryDevtools />}

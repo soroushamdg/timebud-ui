@@ -1,11 +1,11 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { X, Square } from 'lucide-react'
+import { X, Square, Pause, Play } from 'lucide-react'
 import { useFocusSessionStore } from '@/stores/sessionStore'
 import { useUpdateTask } from '@/hooks/useTasks'
-import { useUpdateFocusSession, useCreateFocusSession, useCreateCompletedFocusSession, insertSessionTaskLogs } from '@/hooks/useSessions'
+import { useUpdateFocusSession, insertSessionTaskLogs } from '@/hooks/useSessions'
 import { toUtcString } from '@/lib/dates'
 import { createClient } from '@/lib/supabase/client'
 import { PlannedTask } from '@/stores/sessionStore'
@@ -23,10 +23,22 @@ export default function FocusSession() {
   const focusSessionStore = useFocusSessionStore()
   const updateTask = useUpdateTask()
   const updateFocusSession = useUpdateFocusSession()
-  const createFocusSession = useCreateFocusSession()
-  const createCompletedFocusSession = useCreateCompletedFocusSession()
   const { triggerReplan } = useReplan()
   const { data: projects } = useProjects()
+
+  // Pushes the current in-run task list (done/partial flags) to the session row so any
+  // other device looking at the same run sees the same checklist live. Reads fresh
+  // from the store rather than a closed-over `focusSessionStore` snapshot, since it's
+  // always called right after a synchronous store mutation (markTaskDone, etc.) that
+  // this render hasn't picked up yet.
+  const syncTaskProgress = () => {
+    const { focusSessionId, plannedTasks } = useFocusSessionStore.getState()
+    if (!focusSessionId) return
+    updateFocusSession.mutate({
+      id: focusSessionId,
+      planned_tasks: plannedTasks as unknown as Record<string, unknown>[],
+    })
+  }
 
   const xpForTask = (task: PlannedTask) => {
     const difficulty = (task.projectId ? projects?.find(p => p.id === task.projectId)?.difficulty : undefined) as MissionDifficulty | undefined
@@ -56,47 +68,69 @@ export default function FocusSession() {
   const [showPartialCompletionDialog, setShowPartialCompletionDialog] = useState(false)
   const [showTaskOverview, setShowTaskOverview] = useState(false)
   const [selectedTask, setSelectedTask] = useState<PlannedTask | null>(null)
-  const [elapsedSeconds, setElapsedSeconds] = useState(0)
   const [loadingTaskIds, setLoadingTaskIds] = useState<Set<string>>(new Set())
-  
-  const timerStartRef = useRef(new Date())
-  const intervalRef = useRef<NodeJS.Timeout | null>(null)
+  const [isTogglingPause, setIsTogglingPause] = useState(false)
 
-  const startTimer = () => {
-    // Don't set new start time if session was already running (resuming)
-    if (!focusSessionStore.sessionStartTime) {
-      timerStartRef.current = new Date()
-      focusSessionStore.startTimer()
-    } else {
-      // Use existing start time for resumed sessions (handle both Date and string)
-      const startTime = typeof focusSessionStore.sessionStartTime === 'string' 
-        ? new Date(focusSessionStore.sessionStartTime) 
-        : focusSessionStore.sessionStartTime;
-      timerStartRef.current = startTime;
-    }
-    intervalRef.current = setInterval(() => {
-      tickTimer()
-    }, 1000)
-  }
+  // Elapsed time is always derived from the session's start/pause timestamps (see
+  // sessionStore.getElapsedTime), never accumulated locally — that's what lets it stay
+  // correct across a reload, a pause originating on another device, or a tab that was
+  // backgrounded for a while. This interval just forces a re-render once a second while
+  // running so the on-screen number keeps advancing; while paused it stays frozen with
+  // no interval needed at all.
+  const [, forceTick] = useState(0)
+  useEffect(() => {
+    if (focusSessionStore.status !== 'running') return
+    const interval = setInterval(() => forceTick((t) => t + 1), 1000)
+    return () => clearInterval(interval)
+  }, [focusSessionStore.status])
 
-  const tickTimer = () => {
-    const now = new Date()
-    const elapsed = Math.floor((now.getTime() - timerStartRef.current.getTime()) / 1000)
-    setElapsedSeconds(elapsed)
-  }
-
-  const clearTimer = () => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current)
-      intervalRef.current = null
-    }
-  }
+  const elapsedSeconds = focusSessionStore.getElapsedTime()
+  const isPaused = focusSessionStore.status === 'paused'
 
   const formatTime = (seconds: number) => {
     const h = Math.floor(seconds / 3600)
     const m = Math.floor((seconds % 3600) / 60)
     const sec = seconds % 60
     return `${h}:${m.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`
+  }
+
+  const handleTogglePause = async () => {
+    if (!focusSessionStore.focusSessionId || isTogglingPause) return
+    setIsTogglingPause(true)
+    try {
+      const updated = isPaused
+        ? await updateFocusSession.mutateAsync({
+            id: focusSessionStore.focusSessionId,
+            status: 'running',
+            paused_at: null,
+            total_paused_seconds:
+              focusSessionStore.totalPausedSeconds +
+              (focusSessionStore.pausedAt
+                ? Math.floor((Date.now() - new Date(focusSessionStore.pausedAt).getTime()) / 1000)
+                : 0),
+          })
+        : await updateFocusSession.mutateAsync({
+            id: focusSessionStore.focusSessionId,
+            status: 'paused',
+            paused_at: toUtcString(new Date()),
+          })
+
+      // Apply the row Supabase actually wrote (not a locally-recomputed guess) so this
+      // device's clock matches exactly what every other device will read.
+      focusSessionStore.applyServerSnapshot({
+        id: updated.id,
+        status: updated.status,
+        start_time: updated.start_time,
+        paused_at: updated.paused_at,
+        total_paused_seconds: updated.total_paused_seconds,
+        budget_minutes: updated.budget_minutes,
+        planned_tasks: updated.planned_tasks as unknown as PlannedTask[],
+      })
+    } catch (error) {
+      console.error('Failed to toggle pause:', error)
+    } finally {
+      setIsTogglingPause(false)
+    }
   }
 
   const handleTaskCheckmark = async (taskId: string) => {
@@ -111,6 +145,7 @@ export default function FocusSession() {
       try {
         await updateTask.mutateAsync({ id: taskId, status: 'pending' })
         focusSessionStore.markTaskUndone(taskId)
+        syncTaskProgress()
       } catch (error) {
         console.error('Failed to undo task:', error)
       } finally {
@@ -138,6 +173,7 @@ export default function FocusSession() {
       focusSessionStore.markTaskDone(taskId)
       // Unlock any tasks that depend on this one
       focusSessionStore.unlockDependentTasks(taskId)
+      syncTaskProgress()
     } catch (error) {
       console.error('Failed to update task:', error)
     } finally {
@@ -175,38 +211,24 @@ export default function FocusSession() {
   }
 
   const handleStop = async () => {
-    clearTimer()
     const endTime = new Date()
 
     // Snapshot planned tasks before clearing session store
     const plannedTasksSnapshot = [...focusSessionStore.plannedTasks]
-    let savedSessionId: string | null = null
-    
-    // Only save to database if session was actually started (has a real session ID)
-    if (focusSessionStore.focusSessionId && !focusSessionStore.focusSessionId.startsWith('local-')) {
+    const savedSessionId = focusSessionStore.focusSessionId
+
+    // The row already exists from the moment the run started (see handleStartWork in
+    // the Home page) — finishing is just marking it completed, not creating it.
+    if (savedSessionId) {
       try {
         await updateFocusSession.mutateAsync({
-          id: focusSessionStore.focusSessionId,
-          start_time: toUtcString(timerStartRef.current),
-          end_time: toUtcString(endTime)
+          id: savedSessionId,
+          status: 'completed',
+          end_time: toUtcString(endTime),
+          planned_tasks: plannedTasksSnapshot as unknown as Record<string, unknown>[],
         })
-        savedSessionId = focusSessionStore.focusSessionId
       } catch (error) {
         console.error('Failed to update session:', error)
-      }
-    } else if (focusSessionStore.focusSessionId && focusSessionStore.focusSessionId.startsWith('local-')) {
-      // Create and save session to database only now that it's completed
-      try {
-        const completedSession = await createCompletedFocusSession.mutateAsync({
-          budget_minutes: focusSessionStore.budgetMinutes,
-          tasks_list: plannedTasksSnapshot.map(t => t.taskId),
-          start_time: toUtcString(timerStartRef.current),
-          end_time: toUtcString(endTime)
-        })
-        savedSessionId = completedSession.id
-        console.log('Session saved to database:', completedSession)
-      } catch (error) {
-        console.error('Failed to create completed session:', error)
       }
     }
 
@@ -257,14 +279,27 @@ export default function FocusSession() {
     router.push('/')
   }
 
-  const handleEndWithoutSaving = () => {
-    clearTimer()
+  const handleEndWithoutSaving = async () => {
+    const sessionId = focusSessionStore.focusSessionId
+
     focusSessionStore.clearFocusSession()
-    
-    // Trigger planner re-run after session ends without saving
     triggerReplan()
-    
     router.push('/')
+
+    // Mark it abandoned server-side (fire-and-forget, after navigating away) so any
+    // other device sees the run actually ended instead of being stuck showing it —
+    // previously this was a purely local wipe with no trace left in the database.
+    if (sessionId) {
+      try {
+        await updateFocusSession.mutateAsync({
+          id: sessionId,
+          status: 'abandoned',
+          end_time: toUtcString(new Date()),
+        })
+      } catch (error) {
+        console.error('Failed to mark session abandoned:', error)
+      }
+    }
   }
 
   const handleUpdateEstimatedTime = async (remainingMinutes: number) => {
@@ -281,6 +316,7 @@ export default function FocusSession() {
       focusSessionStore.markTaskDone(selectedTask.taskId)
       // Unlock any tasks that depend on this one
       focusSessionStore.unlockDependentTasks(selectedTask.taskId)
+      syncTaskProgress()
     } catch (error) {
       console.error('Failed to update task estimated time:', error)
     }
@@ -296,6 +332,7 @@ export default function FocusSession() {
       focusSessionStore.markTaskDone(selectedTask.taskId)
       // Unlock any tasks that depend on this one
       focusSessionStore.unlockDependentTasks(selectedTask.taskId)
+      syncTaskProgress()
     } catch (error) {
       console.error('Failed to update task:', error)
     } finally {
@@ -309,40 +346,23 @@ export default function FocusSession() {
 
   const handlePartialCompletionForNonPartialTask = async (remainingMinutes: number) => {
     if (!selectedTask) return
-    
+
     const newEstimatedMinutes = remainingMinutes
-    
+
     try {
       // Update the task's estimated time
-      await updateTask.mutateAsync({ 
-        id: selectedTask.taskId, 
-        estimated_minutes: newEstimatedMinutes 
+      await updateTask.mutateAsync({
+        id: selectedTask.taskId,
+        estimated_minutes: newEstimatedMinutes
       })
-      
+
       // Mark the task as done in the current session (but not completed in the database)
       focusSessionStore.markTaskDone(selectedTask.taskId)
+      syncTaskProgress()
     } catch (error) {
       console.error('Failed to update task estimated time:', error)
     }
   }
-
-  useEffect(() => {
-    // Resume timer if session was running
-    if (focusSessionStore.timerRunning && focusSessionStore.sessionStartTime) {
-      // Ensure sessionStartTime is a Date object
-      const startTime = typeof focusSessionStore.sessionStartTime === 'string' 
-        ? new Date(focusSessionStore.sessionStartTime) 
-        : focusSessionStore.sessionStartTime;
-      
-      // Calculate elapsed time since session started
-      const elapsed = Math.floor((new Date().getTime() - startTime.getTime()) / 1000);
-      setElapsedSeconds(elapsed);
-      startTimer();
-    }
-    return () => {
-      clearTimer();
-    };
-  }, [focusSessionStore.timerRunning, focusSessionStore.sessionStartTime]);
 
   return (
     <div className="min-h-screen bg-black relative">
@@ -354,13 +374,22 @@ export default function FocusSession() {
         <X size={20} />
       </button>
 
+      {/* Pause/Resume button - Top right corner */}
+      <button
+        onClick={handleTogglePause}
+        disabled={isTogglingPause}
+        className="fixed top-4 right-4 w-12 h-12 bg-black/50 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-black/70 hover:opacity-80 transition-all z-50 border border-white/20 disabled:opacity-40"
+      >
+        {isPaused ? <Play size={18} fill="currentColor" /> : <Pause size={18} fill="currentColor" />}
+      </button>
+
       {/* Timer display */}
       <div className="flex flex-col items-center justify-center mt-32">
         <div className="text-[11px] font-extrabold tracking-[0.14em] text-text-sec uppercase mb-2">
-          Run in progress
+          {isPaused ? 'Paused' : 'Run in progress'}
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-2.5 h-2.5 bg-accent-pink rounded-full"></div>
+          <div className={`w-2.5 h-2.5 rounded-full ${isPaused ? 'bg-text-sec' : 'bg-accent-pink animate-pulse'}`}></div>
           <div className="text-white text-5xl font-bold">
             {formatTime(elapsedSeconds)}
           </div>

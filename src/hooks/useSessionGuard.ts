@@ -7,13 +7,18 @@ import { useFocusSessionStore } from '@/stores/sessionStore'
  */
 export const useFocusSessionGuard = (allowSessionPage = false) => {
   const router = useRouter()
-  const { focusSessionId, timerRunning, plannedTasks } = useFocusSessionStore()
+  const { focusSessionId, status, timerRunning, plannedTasks } = useFocusSessionStore()
+
+  // A run counts as active while paused too — only the local `timerRunning` flag
+  // (whether the on-screen clock is currently ticking) turns off during a pause, but
+  // the run itself (and the guard that keeps you on/off its screen) shouldn't.
+  const hasActiveFocusSession = Boolean(
+    focusSessionId && (status === 'running' || status === 'paused') && plannedTasks.length > 0
+  )
 
   useEffect(() => {
-    // Check if there's an active running focus session
-    const hasActiveFocusSession = focusSessionId && timerRunning && plannedTasks.length > 0
-    
-    // If we're not on the session page and there's a running focus session, redirect
+    // If we're not on the session page and there's an active focus session, redirect —
+    // this also fires when a session started on another device gets synced in here.
     if (hasActiveFocusSession && !allowSessionPage) {
       router.push('/session/focus')
       return
@@ -24,10 +29,10 @@ export const useFocusSessionGuard = (allowSessionPage = false) => {
       router.push('/')
       return
     }
-  }, [focusSessionId, timerRunning, plannedTasks.length, allowSessionPage, router])
+  }, [hasActiveFocusSession, allowSessionPage, router])
 
   return {
-    hasActiveFocusSession: focusSessionId && timerRunning && plannedTasks.length > 0,
+    hasActiveFocusSession,
     focusSessionId,
     timerRunning,
     plannedTasksCount: plannedTasks.length
