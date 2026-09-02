@@ -1591,7 +1591,8 @@ export default function ProjectOverviewPage({
     const completed = task.status === "completed";
     
     return (
-      <div className="fixed inset-0 bg-black/50 z-[100] flex items-end" onClick={handleCancelLongPress}>
+      <div className="fixed inset-x-0 bg-black/50 z-[100] flex items-end"
+        style={{ top: scrollY, height: '100vh' }} onClick={handleCancelLongPress}>
         <div className="bg-bg-card w-full rounded-t-3xl p-6" onClick={(e) => e.stopPropagation()}>
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-white text-lg font-semibold">{task.title}</h3>
@@ -1809,7 +1810,8 @@ export default function ProjectOverviewPage({
 
       {/* Sort Dialog */}
       {showSortOptions && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4">
+        <div className="fixed inset-x-0 bg-black/50 flex items-center justify-center z-[100] p-4"
+          style={{ top: scrollY, height: '100vh' }}>
           <div className="bg-bg-primary rounded-2xl w-full max-w-sm">
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
@@ -2124,7 +2126,8 @@ export default function ProjectOverviewPage({
 
       {/* Edit Item Modal */}
       {editingItem && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4">
+        <div className="fixed inset-x-0 bg-black/50 flex items-center justify-center z-[100] p-4"
+          style={{ top: scrollY, height: '100vh' }}>
           <div className="bg-bg-primary rounded-2xl border border-border-card w-full max-w-md max-h-[85vh] overflow-y-auto shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
@@ -2477,7 +2480,8 @@ export default function ProjectOverviewPage({
 
       {/* Edit Project Modal */}
       {editingProject && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4">
+        <div className="fixed inset-x-0 bg-black/50 flex items-center justify-center z-[100] p-4"
+          style={{ top: scrollY, height: '100vh' }}>
           <div className="bg-bg-primary rounded-2xl border border-border-card w-full max-w-md max-h-[85vh] overflow-y-auto shadow-[0_8px_32px_rgba(0,0,0,0.5)] p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold text-white">Edit Mission</h2>
@@ -2673,7 +2677,10 @@ export default function ProjectOverviewPage({
 
       {/* Delete Confirmation Dialog */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/70 z-[100] flex items-center justify-center p-4">
+        <div
+          className="fixed inset-x-0 bg-black/70 z-[100] flex items-center justify-center p-4"
+          style={{ top: scrollY, height: '100vh' }}
+        >
           <div className="bg-bg-card rounded-2xl border border-border-card p-6 max-w-sm w-full shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
             <h3 className="text-white font-bold text-lg mb-4">
               Delete Mission
@@ -2732,7 +2739,8 @@ export default function ProjectOverviewPage({
         };
 
         return (
-          <div className="fixed inset-0 bg-black/50 z-[100] flex items-end" onClick={() => { setRecurrenceSheetTask(null); setShowStopRecurringConfirm(false); }}>
+          <div className="fixed inset-x-0 bg-black/50 z-[100] flex items-end"
+        style={{ top: scrollY, height: '100vh' }} onClick={() => { setRecurrenceSheetTask(null); setShowStopRecurringConfirm(false); }}>
             <div className="bg-bg-card w-full rounded-t-3xl p-6" onClick={e => e.stopPropagation()}>
               <div className="flex items-center justify-between mb-5">
                 <div className="flex items-center gap-2">

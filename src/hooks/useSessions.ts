@@ -67,12 +67,20 @@ export const useLatestUnfinishedFocusSession = () => {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return null
-      
+
+      // Before sessions gained live status (see useActiveFocusSession), end_time being
+      // null only ever meant "abandoned mid-run" — rows were written retroactively at
+      // stop time. Now a row is created at start and stays end_time=null for the whole
+      // run, so a currently running/paused session matches too unless excluded here;
+      // that case is handled separately by useActiveFocusSession's auto-resume, not by
+      // this "you left something unfinished" prompt.
       const { data, error } = await supabase
         .from('sessions')
         .select('*')
         .eq('user_id', user.id)
         .is('end_time', null)
+        .neq('status', 'running')
+        .neq('status', 'paused')
         .order('start_time', { ascending: false })
         .limit(1)
         .maybeSingle()

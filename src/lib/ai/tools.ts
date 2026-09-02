@@ -20,6 +20,42 @@ export interface ToolSchema {
   inputSchema: Record<string, any>
 }
 
+// Shared across create_task, edit_task, and bulk_create_tasks so the recurrence
+// parameters can't drift out of sync between them. Mirrors the six recurrence_*
+// columns on `tasks` (see src/types/database.ts DbTask and
+// src/components/tasks/RecurrenceEditor.tsx, the regular UI's equivalent).
+const RECURRENCE_SCHEMA_PROPERTIES = {
+  recurrenceType: {
+    type: 'string',
+    enum: ['daily', 'specific_days', 'interval'],
+    description:
+      'Set this to make the job a real recurring job (see RECURRENCE rules) — the same row rolls its dueDate forward on completion instead of a new job being created each time. Omit entirely for a one-off job; on edit_task, set to null to stop it recurring.',
+  },
+  recurrenceDays: {
+    type: 'array',
+    items: { type: 'number' },
+    description: 'Days of week, 0=Sun..6=Sat. Required (and only used) when recurrenceType is "specific_days".',
+  },
+  recurrenceInterval: {
+    type: 'number',
+    description: 'Repeat every N days. Required (and only used) when recurrenceType is "interval".',
+  },
+  recurrenceEndDate: {
+    type: 'string',
+    description: 'Stop recurring after this date, plain calendar-date format (YYYY-MM-DD). Omit for no end date.',
+  },
+  recurrenceEndAfter: {
+    type: 'number',
+    description: 'Stop recurring after this many completed occurrences. Omit for no limit.',
+  },
+  recurrenceMissedBehavior: {
+    type: 'string',
+    enum: ['overdue', 'skip'],
+    description:
+      'How a missed occurrence is handled: "overdue" (default) keeps it visible as overdue, "skip" auto-advances past it.',
+  },
+} as const
+
 export const TOOL_SCHEMAS: Record<string, ToolSchema> = {
   // ---- Meta tools ---------------------------------------------------------
 
@@ -180,6 +216,7 @@ export const TOOL_SCHEMAS: Record<string, ToolSchema> = {
           type: 'string',
           description: 'ID of job this depends on',
         },
+        ...RECURRENCE_SCHEMA_PROPERTIES,
       },
       required: ['projectId', 'title'],
     },
@@ -208,6 +245,7 @@ export const TOOL_SCHEMAS: Record<string, ToolSchema> = {
             },
             priority: { type: 'boolean' },
             dependsOnTask: { type: 'string' },
+            ...RECURRENCE_SCHEMA_PROPERTIES,
           },
         },
       },
@@ -273,6 +311,7 @@ export const TOOL_SCHEMAS: Record<string, ToolSchema> = {
                 items: { type: 'string' },
                 description: 'UUIDs of multiple existing jobs that this job depends on',
               },
+              ...RECURRENCE_SCHEMA_PROPERTIES,
             },
             required: ['title'],
           },

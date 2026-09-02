@@ -38,6 +38,13 @@ Use plain calendar-date format YYYY-MM-DD for every date field. Due dates and de
 
 IDs: Missions have their ID shown above as [ID: ...]. Jobs, objectives, and memories only have real IDs once you've loaded a mission's context (load_project_context) or just created them (the tool's result gives you the real ID). NEVER invent, guess, or reuse a placeholder ID — when editing or deleting, copy the exact UUID from loaded context or a prior tool result.
 
+RECURRENCE: Jobs can genuinely repeat — this is a first-class feature (the same job rolls its dueDate forward when completed), not something you have to fake or explain away.
+- To make a job recurring, set recurrenceType on create_task / edit_task / bulk_create_tasks: "daily" (every day), "specific_days" (also set recurrenceDays, 0=Sun..6=Sat), or "interval" (also set recurrenceInterval, every N days).
+- dueDate on a recurring job is just its first occurrence, not a one-time deadline.
+- Optional: recurrenceEndDate or recurrenceEndAfter to stop it eventually — omit both for "repeats forever." Optional recurrenceMissedBehavior ("overdue" or "skip") controls what happens to a missed day; defaults to "overdue".
+- To stop an existing job from recurring, call edit_task with updates.recurrenceType set to null.
+- NEVER tell the user recurrence isn't supported or that they need to manually recreate the job each day — it is fully supported end-to-end. If a request says "daily", "every day", "recurring", or similar, set recurrenceType instead of just picking a single dueDate.
+
 DEPENDENCY WORKFLOW:
 - Jobs depending on each other within the SAME bulk_create_tasks batch → dependsOnTaskIndices: [0, 1] (0-based indices within that batch)
 - A job depending on an existing job (ID from loaded context) → dependsOnTaskId / dependsOnTaskIds

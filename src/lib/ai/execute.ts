@@ -1,5 +1,6 @@
 import { SupabaseClient } from '@supabase/supabase-js'
 import { ToolExecutionResult } from '@/types/ai'
+import { calculateNextDueDate } from '@/lib/dates'
 
 // Defense in depth: due_date/deadline are calendar days, not moments in time. The
 // system prompt instructs the AI to emit plain YYYY-MM-DD, but this normalizes
@@ -11,6 +12,34 @@ function normalizeDateOnly(value: string | null | undefined): string | null | un
   if (value === undefined) return undefined
   if (value === null) return null
   return value.split('T')[0]
+}
+
+// Mirrors recurrenceValueToFields() in RecurrenceEditor.tsx — the regular UI's
+// equivalent — but reads the AI tools' flat camelCase input fields instead of the
+// editor's isRecurring-flagged UI state. `touched` distinguishes edit_task's two
+// cases: the key absent from `updates` (leave recurrence alone, return {}) vs present
+// but null/undefined (explicitly clear it) vs a real type (set it).
+function recurrenceFieldsFromInput(input: Record<string, any>, touched: boolean) {
+  if (!touched) return {}
+  const { recurrenceType, recurrenceDays, recurrenceInterval, recurrenceEndDate, recurrenceEndAfter, recurrenceMissedBehavior } = input
+  if (!recurrenceType) {
+    return {
+      recurrence_type: null,
+      recurrence_days: null,
+      recurrence_interval: null,
+      recurrence_end_date: null,
+      recurrence_end_after: null,
+      recurrence_missed_behavior: null,
+    }
+  }
+  return {
+    recurrence_type: recurrenceType,
+    recurrence_days: recurrenceType === 'specific_days' ? (recurrenceDays ?? null) : null,
+    recurrence_interval: recurrenceType === 'interval' ? (recurrenceInterval ?? null) : null,
+    recurrence_end_date: normalizeDateOnly(recurrenceEndDate) ?? null,
+    recurrence_end_after: recurrenceEndAfter ?? null,
+    recurrence_missed_behavior: recurrenceMissedBehavior || 'overdue',
+  }
 }
 
 export async function executeTool(
@@ -107,6 +136,7 @@ async function createTask(
       due_date: normalizeDateOnly(dueDate) ?? null,
       order: nextOrder,
       priority: priority || false,
+      ...recurrenceFieldsFromInput(input, input.recurrenceType !== undefined),
     })
     .select()
     .single()
@@ -121,13 +151,13 @@ async function createTask(
         task_id: taskId,
         depends_on_id: dependsOnTask,
       })
-    
+
     if (depError) throw depError
   }
 
   return {
     success: true,
-    summary: `Created job: ${title}`,
+    summary: input.recurrenceType ? `Created recurring job: ${title}` : `Created job: ${title}`,
     data,
   }
 }
@@ -139,16 +169,20 @@ async function editTask(
 ): Promise<ToolExecutionResult> {
   const { taskId, updates } = input
 
+  // Built explicitly from recognized columns only — spreading raw `updates` would leak
+  // its camelCase keys (estimatedMinutes, recurrenceType, ...) straight into the payload
+  // alongside the mapped snake_case ones below, and PostgREST rejects unknown columns.
+  const updateData: Record<string, any> = {}
+  if (updates.title !== undefined) updateData.title = updates.title
+  if (updates.description !== undefined) updateData.description = updates.description
+  if (updates.estimatedMinutes !== undefined) updateData.estimated_minutes = updates.estimatedMinutes
+  if (updates.dueDate !== undefined) updateData.due_date = normalizeDateOnly(updates.dueDate)
+  if (updates.priority !== undefined) updateData.priority = updates.priority
+  Object.assign(updateData, recurrenceFieldsFromInput(updates, 'recurrenceType' in updates))
+
   const { data, error } = await supabase
     .from('tasks')
-    .update({
-      ...updates,
-      title: updates.title,
-      description: updates.description,
-      estimated_minutes: updates.estimatedMinutes,
-      due_date: normalizeDateOnly(updates.dueDate),
-      priority: updates.priority,
-    })
+    .update(updateData)
     .eq('id', taskId)
     .eq('user_id', userId)
     .select()
@@ -280,6 +314,7 @@ async function bulkCreateTasks(
       due_date: normalizeDateOnly(task.dueDate) ?? null,
       order: nextOrder++,
       priority,
+      ...recurrenceFieldsFromInput(task, task.recurrenceType !== undefined),
     }
   })
 
@@ -572,6 +607,42 @@ async function markTaskComplete(
   userId: string
 ): Promise<ToolExecutionResult> {
   const { taskId } = input
+
+  // Match the regular UI's completion path (useUpdateTask in useTasks.ts): a recurring
+  // job rolls its due_date forward and reopens instead of terminating on first completion.
+  const { data: currentTask, error: fetchError } = await supabase
+    .from('tasks')
+    .select('*')
+    .eq('id', taskId)
+    .eq('user_id', userId)
+    .single()
+
+  if (fetchError) throw fetchError
+
+  if (currentTask.recurrence_type && currentTask.item_type === 'task') {
+    const nextDueDate = calculateNextDueDate(currentTask.due_date, currentTask)
+    const { data, error } = await supabase
+      .from('tasks')
+      .update({
+        status: nextDueDate ? 'pending' : 'completed',
+        due_date: nextDueDate,
+        recurrence_completed_count: (currentTask.recurrence_completed_count ?? 0) + 1,
+      })
+      .eq('id', taskId)
+      .eq('user_id', userId)
+      .select()
+      .single()
+
+    if (error) throw error
+
+    return {
+      success: true,
+      summary: nextDueDate
+        ? `Marked complete: ${data.title} — recurring, next occurrence ${nextDueDate}`
+        : `Marked complete: ${data.title} (recurrence ended)`,
+      data,
+    }
+  }
 
   const { data, error } = await supabase
     .from('tasks')

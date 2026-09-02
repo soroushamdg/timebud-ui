@@ -619,11 +619,20 @@ export default function Home() {
         };
       });
 
-      setFocusSession(
-        unfinishedFocusSession.id,
-        sessionStoreTasks,
-        unfinishedFocusSession.budget_minutes,
-      );
+      // applyServerSnapshot, not setFocusSession — this is resuming a real server-tracked
+      // run (has its own status/pause bookkeeping), not seeding the local-only planning
+      // draft setFocusSession is for. setFocusSession leaves status/timerRunning
+      // untouched, which left hasActiveFocusSession false right after "Continue" and
+      // bounced the user straight back out of /session/focus.
+      useFocusSessionStore.getState().applyServerSnapshot({
+        id: unfinishedFocusSession.id,
+        status: unfinishedFocusSession.status,
+        start_time: unfinishedFocusSession.start_time,
+        paused_at: unfinishedFocusSession.paused_at,
+        total_paused_seconds: unfinishedFocusSession.total_paused_seconds,
+        budget_minutes: unfinishedFocusSession.budget_minutes,
+        planned_tasks: sessionStoreTasks,
+      });
       const plannedSessionTasks = sessionTasks.map((task) => {
         const project = task.project_id ? projects?.find((p) => p.id === task.project_id) : undefined;
         return {
@@ -674,6 +683,11 @@ export default function Home() {
     // A run is already active — started here earlier, or on another device — so join
     // that one instead of creating a duplicate.
     if (activeFocusSession) {
+      // Clear first: applyServerSnapshot silently no-ops when the store already holds a
+      // *different* focusSessionId (stale local state — e.g. a run that never cleanly
+      // stopped, still sitting in persisted localStorage), which left the store pointing
+      // at the wrong session and bounced the guard right back out of /session/focus.
+      clearFocusSession();
       applyServerSnapshot({
         id: activeFocusSession.id,
         status: activeFocusSession.status,
