@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { X, Square, Pause, Play } from 'lucide-react'
+import { Reorder } from 'motion/react'
 import { AppShell } from '@/components/layout/AppShell'
 import { useFocusSessionStore } from '@/stores/sessionStore'
 import { useUpdateTask } from '@/hooks/useTasks'
@@ -405,7 +406,13 @@ export default function FocusSession() {
 
       {/* Task list */}
       <div className="flex-1 min-h-0 overflow-y-auto px-4 mt-12">
-        <div className="space-y-3 max-w-full">
+        <Reorder.Group
+          as="div"
+          axis="y"
+          values={focusSessionStore.plannedTasks}
+          onReorder={focusSessionStore.setPlannedTasksOrder}
+          className="space-y-3 max-w-full"
+        >
           {focusSessionStore.plannedTasks.map((task, index) => {
             // Compute chain metadata on-the-fly if missing (for backward compatibility)
             const enhancedTask = {
@@ -414,20 +421,27 @@ export default function FocusSession() {
               chainPosition: task.chainPosition ?? (task.dependsOnTaskId != null ? index : 0),
               isLocked: task.isLocked ?? (task.dependsOnTaskId != null && focusSessionStore.plannedTasks.find(t => t.taskId === task.dependsOnTaskId)?.done !== true),
             };
-            
+
+            // Live adjacency, not the planner's static chainPosition — so the connector
+            // line honestly reflects reality (and just disappears) if a drag ever
+            // separates a chained task from the task right above it.
+            const prevTask = index > 0 ? focusSessionStore.plannedTasks[index - 1] : undefined;
+            const showChainConnector = !!task.dependsOnTaskId && prevTask?.taskId === task.dependsOnTaskId;
+
             return (
               <FocusTaskCard
                 key={task.taskId}
                 task={enhancedTask}
                 onCheckmark={() => handleTaskCheckmark(task.taskId)}
                 onClick={() => handleTaskClick(task)}
-                onHold={() => handleTaskHold(task.taskId)}
+                onDragEnd={() => syncTaskProgress()}
                 isLoading={loadingTaskIds.has(task.taskId)}
                 xpReward={xpForTask(task)}
+                showChainConnector={showChainConnector}
               />
             );
           })}
-        </div>
+        </Reorder.Group>
       </div>
 
       {/* Stop button */}

@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { Reorder, useDragControls } from "motion/react";
 import { AvatarImage } from "@/components/ui/AvatarImage";
 import { PlannedTask } from "@/stores/sessionStore";
 import { CalendarIcon, LockClosedIcon } from "@heroicons/react/24/outline";
@@ -9,28 +10,36 @@ interface FocusTaskCardProps {
   task: PlannedTask;
   onCheckmark?: () => void;
   onClick?: () => void;
-  onHold?: () => void;
+  onDragEnd?: () => void;
   isLoading?: boolean;
   xpReward?: number;
+  /** Purely cosmetic — the connector line above a chained task, true only when the
+   * previous row in the *current* (possibly reordered) list is its actual dependency. */
+  showChainConnector?: boolean;
 }
 
 export function FocusTaskCard({
   task,
   onCheckmark,
   onClick,
-  onHold,
+  onDragEnd,
   isLoading,
   xpReward,
+  showChainConnector,
 }: FocusTaskCardProps) {
-  // A hold fires onHold directly from the timer callback — no nested confirm button
-  // inside the card's own onClick subtree (that used to bubble a click back up into
-  // handleCardClick, opening the overview dialog on top of the partial-completion one).
-  // longPressFiredRef swallows the native synthetic click that both touch and mouse
-  // dispatch right after a press-and-release, which would otherwise reach
-  // handleCardClick a second way even without any nested button involved.
+  const dragControls = useDragControls();
+
+  // Holding the card arms a drag instead of firing an action directly. dragListener is
+  // false on the Reorder.Item below, so Framer never starts a drag on its own — only our
+  // own dragControls.start() call (after the hold completes) does. That's what lets
+  // normal vertical list scrolling keep working: a drag only ever begins after a
+  // deliberate hold, never on an immediate scroll-swipe (framer-motion also leaves
+  // touch-action alone whenever dragListener is false, so native scroll isn't blocked
+  // while a hold hasn't fired yet either).
   const holdTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const longPressFiredRef = useRef(false);
   const startPosRef = useRef<{ x: number; y: number } | null>(null);
+  const pointerEventRef = useRef<PointerEvent | null>(null);
   const [isPressing, setIsPressing] = useState(false);
 
   const HOLD_MS = 500;
@@ -44,21 +53,36 @@ export function FocusTaskCard({
     setIsPressing(false);
   };
 
-  const startHoldTimer = (x: number, y: number) => {
-    // Only offer "mark partial" for non-partial tasks that aren't done
-    if (task.partial || task.done || !onHold) return;
-    startPosRef.current = { x, y };
+  const handlePointerDown = (e: React.PointerEvent) => {
+    startPosRef.current = { x: e.clientX, y: e.clientY };
+    pointerEventRef.current = e.nativeEvent;
     setIsPressing(true);
     holdTimeoutRef.current = setTimeout(() => {
+      holdTimeoutRef.current = null;
       longPressFiredRef.current = true;
       setIsPressing(false);
-      onHold?.();
+      if (pointerEventRef.current) {
+        dragControls.start(pointerEventRef.current);
+      }
     }, HOLD_MS);
+  };
+
+  const handlePointerUp = clearHoldTimer;
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!startPosRef.current || !holdTimeoutRef.current) return;
+    const dx = Math.abs(e.clientX - startPosRef.current.x);
+    const dy = Math.abs(e.clientY - startPosRef.current.y);
+    if (dx > MOVE_CANCEL_PX || dy > MOVE_CANCEL_PX) {
+      clearHoldTimer();
+    }
   };
 
   const handleCardClick = () => {
     if (longPressFiredRef.current) {
-      // Swallow the click that follows a completed long-press.
+      // Swallow the click that follows a completed hold (whether it turned into a drag
+      // or was just released in place) — a tap should still open the overview, but a
+      // hold shouldn't also do that.
       longPressFiredRef.current = false;
       return;
     }
@@ -68,26 +92,6 @@ export function FocusTaskCard({
   const handleCheckmarkClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     onCheckmark?.();
-  };
-
-  const handleMouseDown = (e: React.MouseEvent) => startHoldTimer(e.clientX, e.clientY);
-  const handleMouseUp = clearHoldTimer;
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    const touch = e.touches[0];
-    if (touch) startHoldTimer(touch.clientX, touch.clientY);
-  };
-  const handleTouchEnd = clearHoldTimer;
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (!startPosRef.current || !holdTimeoutRef.current) return;
-    const touch = e.touches[0];
-    if (!touch) return;
-    const dx = Math.abs(touch.clientX - startPosRef.current.x);
-    const dy = Math.abs(touch.clientY - startPosRef.current.y);
-    if (dx > MOVE_CANCEL_PX || dy > MOVE_CANCEL_PX) {
-      clearHoldTimer();
-    }
   };
 
   const isOverdue = (deadline: string | undefined): boolean => {
@@ -112,12 +116,19 @@ export function FocusTaskCard({
   const isLocked = task.isLocked && !task.done;
 
   return (
-    <div className="flex items-center gap-3 min-w-0 max-w-full relative">
+    <Reorder.Item
+      as="div"
+      value={task}
+      dragListener={false}
+      dragControls={dragControls}
+      onDragEnd={() => onDragEnd?.()}
+      className="flex items-center gap-3 min-w-0 max-w-full relative"
+    >
       {/* Connection line for chain tasks */}
-      {task.isPartOfChain && task.chainPosition && task.chainPosition > 0 && (
+      {showChainConnector && (
         <div className="absolute left-3 -top-3 w-px h-6 bg-gray-600" />
       )}
-      
+
       {/* Checkmark - Outside the card on the leading side */}
       <button
         onClick={handleCheckmarkClick}
@@ -145,8 +156,8 @@ export function FocusTaskCard({
           </div>
         ) : (
           <div className={`w-6 h-6 rounded-none border-2 transition-colors ${
-            isLocked 
-              ? "border-gray-600 cursor-not-allowed" 
+            isLocked
+              ? "border-gray-600 cursor-not-allowed"
               : "border-border-card hover:border-accent-yellow cursor-pointer"
           }`} />
         )}
@@ -155,15 +166,15 @@ export function FocusTaskCard({
       {/* Task Card */}
       <div
         onClick={handleCardClick}
-        onMouseDown={handleMouseDown}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
-        onTouchStart={handleTouchStart}
-        onTouchEnd={handleTouchEnd}
-        onTouchMove={handleTouchMove}
+        onPointerDown={handlePointerDown}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+        onPointerLeave={handlePointerUp}
+        onPointerMove={handlePointerMove}
         style={{
-          paddingLeft: task.isPartOfChain && task.chainPosition && task.chainPosition > 0 ? '28px' : '16px',
+          paddingLeft: showChainConnector ? '28px' : '16px',
           opacity: isLocked ? 0.6 : 1,
+          touchAction: 'pan-y',
         }}
         className={`flex-1 min-w-0 bg-bg-card rounded-2xl py-3 pr-4 flex items-center gap-3 border border-[#ffffff] cursor-pointer transition-all hover:bg-bg-card-hover relative overflow-hidden shadow-[0_4px_16px_rgba(0,0,0,0.35)] ${
           task.done ? "bg-bg-card-done border-accent-green/30" : ""
@@ -282,6 +293,6 @@ export function FocusTaskCard({
           )}
         </div>
       </div>
-    </div>
+    </Reorder.Item>
   );
 }

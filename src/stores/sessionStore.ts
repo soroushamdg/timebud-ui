@@ -60,6 +60,7 @@ interface FocusSessionStore {
   markTaskDone: (taskId: string) => void;
   markTaskUndone: (taskId: string) => void;
   unlockDependentTasks: (completedTaskId: string) => void;
+  setPlannedTasksOrder: (tasks: PlannedTask[]) => void;
   clearFocusSession: () => void;
   getElapsedTime: () => number;
   resumeTimer: () => void;
@@ -166,6 +167,9 @@ export const useFocusSessionStore = create<FocusSessionStore>()(
               : task
           ),
         })),
+
+      setPlannedTasksOrder: (tasks: PlannedTask[]) =>
+        set({ plannedTasks: tasks }),
 
       clearFocusSession: () =>
         set({
