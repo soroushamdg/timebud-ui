@@ -2,9 +2,27 @@ import { useRef, useState } from "react";
 import { Reorder, useDragControls } from "motion/react";
 import { AvatarImage } from "@/components/ui/AvatarImage";
 import { PlannedTask } from "@/stores/sessionStore";
-import { CalendarIcon, LockClosedIcon } from "@heroicons/react/24/outline";
+import { CalendarIcon, LockClosedIcon, PlayIcon } from "@heroicons/react/24/outline";
 import { formatLocalSmart, parseDateLocal } from "@/lib/dates";
 import { RecurringBadge } from "@/components/tasks/RecurringBadge";
+
+const formatShortDuration = (seconds: number): string => {
+  const totalMinutes = Math.max(0, Math.round(seconds / 60));
+  if (totalMinutes < 60) return `${totalMinutes}m`;
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  return m > 0 ? `${h}h ${m}m` : `${h}h`;
+};
+
+const formatLapClock = (seconds: number): string => {
+  const s = Math.max(0, Math.floor(seconds));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  return h > 0
+    ? `${h}:${m.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`
+    : `${m}:${sec.toString().padStart(2, '0')}`;
+};
 
 interface FocusTaskCardProps {
   task: PlannedTask;
@@ -16,6 +34,12 @@ interface FocusTaskCardProps {
   /** Purely cosmetic — the connector line above a chained task, true only when the
    * previous row in the *current* (possibly reordered) list is its actual dependency. */
   showChainConnector?: boolean;
+  /** True for the one task currently being timed in this run. */
+  isActive?: boolean;
+  /** Live seconds while active, frozen banked seconds once done — omitted otherwise. */
+  elapsedSeconds?: number;
+  /** Switches the run's lap timer onto this task. Omitted when done/locked/already active. */
+  onActivate?: () => void;
 }
 
 export function FocusTaskCard({
@@ -26,6 +50,9 @@ export function FocusTaskCard({
   isLoading,
   xpReward,
   showChainConnector,
+  isActive,
+  elapsedSeconds,
+  onActivate,
 }: FocusTaskCardProps) {
   const dragControls = useDragControls();
 
@@ -178,7 +205,7 @@ export function FocusTaskCard({
         }}
         className={`flex-1 min-w-0 bg-bg-card rounded-2xl py-3 pr-4 flex items-center gap-3 border border-[#ffffff] cursor-pointer transition-all hover:bg-bg-card-hover relative overflow-hidden shadow-[0_4px_16px_rgba(0,0,0,0.35)] ${
           task.done ? "bg-bg-card-done border-accent-green/30" : ""
-        } ${isPressing ? "scale-[0.98] brightness-90" : ""}`}
+        } ${isActive && !task.done ? "border-accent-yellow shadow-[0_0_16px_rgba(245,197,24,0.25)]" : ""} ${isPressing ? "scale-[0.98] brightness-90" : ""}`}
       >
         {/* Mission color accent */}
         {task.projectId && !task.done && (
@@ -277,13 +304,54 @@ export function FocusTaskCard({
           </div>
         </div>
 
-        {/* Estimated Time + XP reward */}
+        {/* Time tracking + XP reward */}
         <div className="flex-shrink-0 flex flex-col items-end gap-1 px-2">
-          {task.estimatedMinutes && (
-            <div className="text-text-sec text-sm font-medium">
-              {task.partial && task.scheduledMinutes
-                ? `${task.scheduledMinutes}min/${task.estimatedMinutes}min`
-                : `${task.estimatedMinutes}min`}
+          {task.done ? (
+            <>
+              {elapsedSeconds !== undefined && elapsedSeconds > 0 && (
+                <div className="text-accent-green text-sm font-bold">
+                  {formatShortDuration(elapsedSeconds)}
+                </div>
+              )}
+              {task.estimatedMinutes && (
+                <div className="text-text-sec text-[11px]">
+                  est {task.estimatedMinutes}min
+                </div>
+              )}
+            </>
+          ) : isActive ? (
+            <>
+              <div className="flex items-center gap-1.5 text-accent-yellow text-sm font-bold font-mono tabular-nums">
+                <span className="w-1.5 h-1.5 rounded-full bg-accent-yellow animate-pulse" />
+                {formatLapClock(elapsedSeconds ?? 0)}
+              </div>
+              {task.estimatedMinutes && (
+                <div className="text-text-sec text-[11px]">
+                  est {task.estimatedMinutes}min
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="flex items-center gap-2">
+              {task.estimatedMinutes && (
+                <div className="text-text-sec text-sm font-medium">
+                  {task.partial && task.scheduledMinutes
+                    ? `${task.scheduledMinutes}min/${task.estimatedMinutes}min`
+                    : `${task.estimatedMinutes}min`}
+                </div>
+              )}
+              {onActivate && !isLocked && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onActivate();
+                  }}
+                  title="Switch the timer to this job"
+                  className="w-6 h-6 rounded-full flex items-center justify-center text-text-sec border border-border-card hover:text-accent-yellow hover:border-accent-yellow transition-colors flex-shrink-0"
+                >
+                  <PlayIcon className="w-3 h-3" />
+                </button>
+              )}
             </div>
           )}
           {xpReward !== undefined && !task.done && (

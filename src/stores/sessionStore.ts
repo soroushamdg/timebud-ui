@@ -29,6 +29,13 @@ export interface PlannedTask {
   recurrenceType?: 'daily' | 'specific_days' | 'interval' | null;
   recurrenceDays?: number[] | null;
   recurrenceInterval?: number | null;
+  /** Set only on the one task currently being timed — cleared when its lap is frozen. */
+  activeStartedAt?: string | null;
+  /** totalPausedSeconds snapshotted when this lap began, so paused time during the lap
+   * can be subtracted back out without affecting other tasks' laps. */
+  pausedSecondsAtStart?: number;
+  /** Seconds banked from this task's previous (already-frozen) laps this session. */
+  bankedSeconds?: number;
 }
 
 // The subset of a `sessions` row (src/types/database.ts) needed to mirror server state
@@ -65,6 +72,10 @@ interface FocusSessionStore {
   getElapsedTime: () => number;
   resumeTimer: () => void;
   applyServerSnapshot: (row: FocusSessionServerSnapshot, opts?: { force?: boolean }) => void;
+  getTaskElapsedSeconds: (taskId: string) => number;
+  setActiveTask: (taskId: string) => void;
+  finalizeTaskTime: (taskId: string) => number;
+  autoAdvanceActiveTask: () => boolean;
 }
 
 const initialState = {
@@ -84,6 +95,35 @@ const initialState = {
 const asDate = (value: Date | string | null): Date | null => {
   if (!value) return null;
   return typeof value === 'string' ? new Date(value) : value;
+};
+
+// Mirrors the on-the-fly lock resolution in the focus screen's render (a task with no
+// explicit isLocked flag is derived from whether its dependency is done yet), so
+// auto-advance picks the same "next" task the UI itself treats as available.
+const isEffectivelyLocked = (task: PlannedTask, all: PlannedTask[]): boolean => {
+  if (task.isLocked !== undefined) return task.isLocked;
+  if (!task.dependsOnTaskId) return false;
+  const dep = all.find((t) => t.taskId === task.dependsOnTaskId);
+  return dep ? !dep.done : false;
+};
+
+// Same derivation as getElapsedTime, offset per task: banked time from previous laps
+// plus whatever the current lap has accrued, minus any paused time since that lap began.
+const computeTaskElapsed = (
+  task: PlannedTask,
+  session: { status: FocusSessionStatus; pausedAt: Date | null; totalPausedSeconds: number }
+): number => {
+  const banked = task.bankedSeconds ?? 0;
+  if (!task.activeStartedAt) return banked;
+
+  const startTime = asDate(task.activeStartedAt);
+  if (!startTime) return banked;
+
+  const referenceTime =
+    session.status === 'paused' ? asDate(session.pausedAt) ?? new Date() : new Date();
+  const pausedSinceStart = session.totalPausedSeconds - (task.pausedSecondsAtStart ?? 0);
+  const rawElapsed = Math.floor((referenceTime.getTime() - startTime.getTime()) / 1000);
+  return banked + Math.max(0, rawElapsed - pausedSinceStart);
 };
 
 export const useFocusSessionStore = create<FocusSessionStore>()(
@@ -208,6 +248,62 @@ export const useFocusSessionStore = create<FocusSessionStore>()(
           plannedTasks: row.planned_tasks,
           timerRunning: row.status === 'running',
         });
+      },
+
+      getTaskElapsedSeconds: (taskId: string) => {
+        const state = get();
+        const task = state.plannedTasks.find((t) => t.taskId === taskId);
+        if (!task) return 0;
+        return computeTaskElapsed(task, state);
+      },
+
+      setActiveTask: (taskId: string) => {
+        const state = get();
+        const target = state.plannedTasks.find((t) => t.taskId === taskId);
+        if (!target || target.done || isEffectivelyLocked(target, state.plannedTasks)) return;
+        if (target.activeStartedAt) return;
+
+        const nowIso = new Date().toISOString();
+        set({
+          plannedTasks: state.plannedTasks.map((t) => {
+            if (t.taskId === taskId) {
+              return { ...t, activeStartedAt: nowIso, pausedSecondsAtStart: state.totalPausedSeconds };
+            }
+            if (t.activeStartedAt) {
+              return { ...t, bankedSeconds: computeTaskElapsed(t, state), activeStartedAt: null };
+            }
+            return t;
+          }),
+        });
+      },
+
+      finalizeTaskTime: (taskId: string) => {
+        const state = get();
+        const task = state.plannedTasks.find((t) => t.taskId === taskId);
+        if (!task) return 0;
+
+        const finalSeconds = computeTaskElapsed(task, state);
+        if (task.activeStartedAt) {
+          set({
+            plannedTasks: state.plannedTasks.map((t) =>
+              t.taskId === taskId ? { ...t, bankedSeconds: finalSeconds, activeStartedAt: null } : t
+            ),
+          });
+        }
+        return finalSeconds;
+      },
+
+      autoAdvanceActiveTask: () => {
+        const state = get();
+        if (state.plannedTasks.some((t) => t.activeStartedAt)) return false;
+
+        const next = state.plannedTasks.find(
+          (t) => !t.done && !isEffectivelyLocked(t, state.plannedTasks)
+        );
+        if (!next) return false;
+
+        get().setActiveTask(next.taskId);
+        return true;
       },
     }),
     {

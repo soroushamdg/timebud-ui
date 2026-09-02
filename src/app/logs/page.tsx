@@ -58,6 +58,21 @@ const formatStatTime = (minutes: number): string => {
   return `${minutes}m`
 }
 
+function TimeDelta({ actual, scheduled }: { actual: number; scheduled: number }) {
+  const delta = actual - scheduled
+  if (!scheduled || delta === 0) return null
+  return (
+    <span
+      className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+        delta < 0 ? 'bg-accent-green/15 text-accent-green' : 'bg-red-500/15 text-red-400'
+      }`}
+    >
+      {delta > 0 ? '+' : ''}
+      {delta}m
+    </span>
+  )
+}
+
 interface SessionCardProps {
   session: DbFocusSession
   taskLogs: DbSessionTaskLog[]
@@ -141,26 +156,32 @@ function SessionCard({ session, taskLogs, getDifficulty }: SessionCardProps) {
                     </span>
                   </div>
                   <div className="space-y-1.5">
-                    {completed.map(log => (
-                      <div
-                        key={log.id}
-                        className="flex items-center justify-between"
-                      >
-                        <div className="flex flex-col min-w-0 flex-1 mr-3">
-                          <span className="text-white text-sm truncate">
-                            {log.task_title}
-                          </span>
-                          {log.project_name && (
-                            <span className="text-[#666666] text-xs truncate">
-                              {log.project_name}
+                    {completed.map(log => {
+                      const actual = log.actual_minutes ?? log.scheduled_minutes
+                      return (
+                        <div
+                          key={log.id}
+                          className="flex items-center justify-between"
+                        >
+                          <div className="flex flex-col min-w-0 flex-1 mr-3">
+                            <span className="text-white text-sm truncate">
+                              {log.task_title}
                             </span>
-                          )}
+                            {log.project_name && (
+                              <span className="text-[#666666] text-xs truncate">
+                                {log.project_name}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1.5 flex-shrink-0">
+                            <span className="text-[#888888] text-xs whitespace-nowrap">
+                              {actual} min
+                            </span>
+                            <TimeDelta actual={actual} scheduled={log.scheduled_minutes} />
+                          </div>
                         </div>
-                        <span className="text-[#888888] text-xs whitespace-nowrap">
-                          {log.scheduled_minutes} min
-                        </span>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 </div>
               )}
@@ -174,27 +195,32 @@ function SessionCard({ session, taskLogs, getDifficulty }: SessionCardProps) {
                     </span>
                   </div>
                   <div className="space-y-1.5">
-                    {partial.map(log => (
-                      <div
-                        key={log.id}
-                        className="flex items-center justify-between"
-                      >
-                        <div className="flex flex-col min-w-0 flex-1 mr-3">
-                          <span className="text-white text-sm truncate">
-                            {log.task_title}
-                          </span>
-                          {log.project_name && (
-                            <span className="text-[#666666] text-xs truncate">
-                              {log.project_name}
+                    {partial.map(log => {
+                      const actual = log.actual_minutes ?? log.scheduled_minutes
+                      return (
+                        <div
+                          key={log.id}
+                          className="flex items-center justify-between"
+                        >
+                          <div className="flex flex-col min-w-0 flex-1 mr-3">
+                            <span className="text-white text-sm truncate">
+                              {log.task_title}
                             </span>
-                          )}
+                            {log.project_name && (
+                              <span className="text-[#666666] text-xs truncate">
+                                {log.project_name}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1.5 flex-shrink-0">
+                            <span className="text-[#888888] text-xs whitespace-nowrap">
+                              {actual} / {log.scheduled_minutes} min
+                            </span>
+                            <TimeDelta actual={actual} scheduled={log.scheduled_minutes} />
+                          </div>
                         </div>
-                        <span className="text-[#888888] text-xs whitespace-nowrap">
-                          {log.actual_minutes ?? log.scheduled_minutes} /{' '}
-                          {log.scheduled_minutes} min
-                        </span>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 </div>
               )}

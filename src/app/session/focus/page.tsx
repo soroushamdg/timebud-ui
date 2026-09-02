@@ -14,6 +14,8 @@ import { PlannedTask } from '@/stores/sessionStore'
 import { FocusTaskCard } from '@/components/tasks/FocusTaskCard'
 import { PartialTaskCompletionDialog } from '@/components/dialogs/PartialTaskCompletionDialog'
 import { TaskOverviewDialog } from '@/components/dialogs/TaskOverviewDialog'
+import { SimpleToast } from '@/components/ui/SimpleToast'
+import { Timer } from 'lucide-react'
 import { useFocusSessionGuard } from '@/hooks/useSessionGuard'
 import { useReplan } from '@/contexts/ReplanContext'
 import { useProjects } from '@/hooks/useProjects'
@@ -72,6 +74,43 @@ export default function FocusSession() {
   const [selectedTask, setSelectedTask] = useState<PlannedTask | null>(null)
   const [loadingTaskIds, setLoadingTaskIds] = useState<Set<string>>(new Set())
   const [isTogglingPause, setIsTogglingPause] = useState(false)
+  const [breakToast, setBreakToast] = useState<string | null>(null)
+
+  const formatShort = (seconds: number): string => {
+    const totalMinutes = Math.max(0, Math.round(seconds / 60))
+    if (totalMinutes < 60) return `${totalMinutes}m`
+    const h = Math.floor(totalMinutes / 60)
+    const m = totalMinutes % 60
+    return m > 0 ? `${h}h ${m}m` : `${h}h`
+  }
+
+  const formatLap = (seconds: number): string => {
+    const s = Math.max(0, Math.floor(seconds))
+    const h = Math.floor(s / 3600)
+    const m = Math.floor((s % 3600) / 60)
+    const sec = s % 60
+    return h > 0
+      ? `${h}:${m.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`
+      : `${m}:${sec.toString().padStart(2, '0')}`
+  }
+
+  const promptBreak = (title: string, seconds: number) => {
+    setBreakToast(`Nice, "${title}" logged ${formatShort(seconds)}. Want a quick break before the next one?`)
+  }
+
+  // The run's timer follows whichever task is "active" — auto-starts on the first
+  // eligible task the moment this screen mounts (fresh session, a reload, or joining a
+  // run already in progress on another device), and is a no-op once someone already is.
+  useEffect(() => {
+    const started = useFocusSessionStore.getState().autoAdvanceActiveTask()
+    if (started) syncTaskProgress()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const handleActivateTask = (taskId: string) => {
+    focusSessionStore.setActiveTask(taskId)
+    syncTaskProgress()
+  }
 
   // Elapsed time is always derived from the session's start/pause timestamps (see
   // sessionStore.getElapsedTime), never accumulated locally — that's what lets it stay
@@ -88,6 +127,8 @@ export default function FocusSession() {
 
   const elapsedSeconds = focusSessionStore.getElapsedTime()
   const isPaused = focusSessionStore.status === 'paused'
+  const activeTask = focusSessionStore.plannedTasks.find(t => t.activeStartedAt)
+  const activeTaskSeconds = activeTask ? focusSessionStore.getTaskElapsedSeconds(activeTask.taskId) : 0
 
   const formatTime = (seconds: number) => {
     const h = Math.floor(seconds / 3600)
@@ -169,13 +210,16 @@ export default function FocusSession() {
     
     // Mark task as done
     setLoadingTaskIds(prev => new Set(prev).add(taskId))
-    
+
     try {
+      const finalSeconds = focusSessionStore.finalizeTaskTime(taskId)
       await updateTask.mutateAsync({ id: taskId, status: 'completed' })
       focusSessionStore.markTaskDone(taskId)
       // Unlock any tasks that depend on this one
       focusSessionStore.unlockDependentTasks(taskId)
+      focusSessionStore.autoAdvanceActiveTask()
       syncTaskProgress()
+      promptBreak(task.title, finalSeconds)
     } catch (error) {
       console.error('Failed to update task:', error)
     } finally {
@@ -215,8 +259,16 @@ export default function FocusSession() {
   const handleStop = async () => {
     const endTime = new Date()
 
+    // Freeze whatever task is still actively being timed so its partial progress up to
+    // this moment is captured, then re-read state fresh (the destructured store value
+    // above this render hasn't picked up that mutation yet).
+    const stillActive = focusSessionStore.plannedTasks.find(t => t.activeStartedAt)
+    if (stillActive) {
+      focusSessionStore.finalizeTaskTime(stillActive.taskId)
+    }
+
     // Snapshot planned tasks before clearing session store
-    const plannedTasksSnapshot = [...focusSessionStore.plannedTasks]
+    const plannedTasksSnapshot = [...useFocusSessionStore.getState().plannedTasks]
     const savedSessionId = focusSessionStore.focusSessionId
 
     // The row already exists from the moment the run started (see handleStartWork in
@@ -263,7 +315,7 @@ export default function FocusSession() {
             project_name: task.projectName ?? null,
             outcome,
             scheduled_minutes: task.scheduledMinutes,
-            actual_minutes: outcome !== 'skipped' ? task.scheduledMinutes : null,
+            actual_minutes: outcome !== 'skipped' ? Math.round((task.bankedSeconds ?? 0) / 60) : null,
           }
         })
 
@@ -306,19 +358,22 @@ export default function FocusSession() {
 
   const handleUpdateEstimatedTime = async (remainingMinutes: number) => {
     if (!selectedTask) return
-    
+
     const newEstimatedMinutes = remainingMinutes
-    
+
     try {
-      await updateTask.mutateAsync({ 
-        id: selectedTask.taskId, 
-        estimated_minutes: newEstimatedMinutes 
+      const finalSeconds = focusSessionStore.finalizeTaskTime(selectedTask.taskId)
+      await updateTask.mutateAsync({
+        id: selectedTask.taskId,
+        estimated_minutes: newEstimatedMinutes
       })
-      
+
       focusSessionStore.markTaskDone(selectedTask.taskId)
       // Unlock any tasks that depend on this one
       focusSessionStore.unlockDependentTasks(selectedTask.taskId)
+      focusSessionStore.autoAdvanceActiveTask()
       syncTaskProgress()
+      promptBreak(selectedTask.title, finalSeconds)
     } catch (error) {
       console.error('Failed to update task estimated time:', error)
     }
@@ -326,15 +381,18 @@ export default function FocusSession() {
 
   const handleMarkTaskComplete = async () => {
     if (!selectedTask) return
-    
+
     setLoadingTaskIds(prev => new Set(prev).add(selectedTask.taskId))
-    
+
     try {
+      const finalSeconds = focusSessionStore.finalizeTaskTime(selectedTask.taskId)
       await updateTask.mutateAsync({ id: selectedTask.taskId, status: 'completed' })
       focusSessionStore.markTaskDone(selectedTask.taskId)
       // Unlock any tasks that depend on this one
       focusSessionStore.unlockDependentTasks(selectedTask.taskId)
+      focusSessionStore.autoAdvanceActiveTask()
       syncTaskProgress()
+      promptBreak(selectedTask.title, finalSeconds)
     } catch (error) {
       console.error('Failed to update task:', error)
     } finally {
@@ -352,6 +410,7 @@ export default function FocusSession() {
     const newEstimatedMinutes = remainingMinutes
 
     try {
+      const finalSeconds = focusSessionStore.finalizeTaskTime(selectedTask.taskId)
       // Update the task's estimated time
       await updateTask.mutateAsync({
         id: selectedTask.taskId,
@@ -360,7 +419,9 @@ export default function FocusSession() {
 
       // Mark the task as done in the current session (but not completed in the database)
       focusSessionStore.markTaskDone(selectedTask.taskId)
+      focusSessionStore.autoAdvanceActiveTask()
       syncTaskProgress()
+      promptBreak(selectedTask.title, finalSeconds)
     } catch (error) {
       console.error('Failed to update task estimated time:', error)
     }
@@ -402,6 +463,17 @@ export default function FocusSession() {
             &#9889; +{xpSoFar} XP so far this run
           </div>
         )}
+        {activeTask && (
+          <div className="mt-3 flex items-center gap-2 bg-bg-card border border-border-card rounded-xl px-3 py-2 max-w-[280px]">
+            <Timer size={14} className="text-accent-yellow flex-shrink-0" />
+            <span className="text-text-sec text-xs truncate min-w-0 flex-1">
+              Now timing &middot; {activeTask.title}
+            </span>
+            <span className="text-accent-yellow text-sm font-bold font-mono tabular-nums flex-shrink-0">
+              {formatLap(activeTaskSeconds)}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Task list */}
@@ -428,6 +500,11 @@ export default function FocusSession() {
             const prevTask = index > 0 ? focusSessionStore.plannedTasks[index - 1] : undefined;
             const showChainConnector = !!task.dependsOnTaskId && prevTask?.taskId === task.dependsOnTaskId;
 
+            const isActive = !!task.activeStartedAt;
+            const elapsedSeconds = task.done || isActive
+              ? focusSessionStore.getTaskElapsedSeconds(task.taskId)
+              : undefined;
+
             return (
               <FocusTaskCard
                 key={task.taskId}
@@ -438,6 +515,13 @@ export default function FocusSession() {
                 isLoading={loadingTaskIds.has(task.taskId)}
                 xpReward={xpForTask(task)}
                 showChainConnector={showChainConnector}
+                isActive={isActive}
+                elapsedSeconds={elapsedSeconds}
+                onActivate={
+                  !task.done && !isActive && !enhancedTask.isLocked
+                    ? () => handleActivateTask(task.taskId)
+                    : undefined
+                }
               />
             );
           })}
@@ -531,6 +615,23 @@ export default function FocusSession() {
           }
         />
       )}
+
+      {/* Break suggestion toast — appearing never pauses anything on its own; only the
+       * action button does, by reusing the same pause control as the top-right button. */}
+      <SimpleToast
+        isVisible={!!breakToast}
+        message={breakToast ?? ''}
+        type="info"
+        duration={15000}
+        onDismiss={() => setBreakToast(null)}
+        action={{
+          label: 'Pause',
+          onClick: () => {
+            setBreakToast(null)
+            handleTogglePause()
+          },
+        }}
+      />
     </div>
     </AppShell>
   )

@@ -60,6 +60,38 @@ export const useSessionsWithLogs = () => {
   })
 }
 
+// Real time spent on a project, summed across every run it's ever appeared in —
+// including runs from finished projects — since session_task_logs.actual_minutes is
+// now a genuine per-task measurement rather than a copy of the plan (see the focus
+// screen's per-task lap timer). Also breaks the total down per task so the project
+// page can show "X spent" next to each job without a second round trip.
+export const useProjectTimeStats = (projectId: string | undefined) => {
+  return useQuery({
+    queryKey: ['sessions', 'project-time-stats', projectId],
+    queryFn: async (): Promise<{ actualMinutes: number; perTask: Map<string, number> }> => {
+      if (!projectId) return { actualMinutes: 0, perTask: new Map() }
+
+      const supabase = createClient()
+      const { data, error } = await supabase
+        .from('session_task_logs')
+        .select('task_id, actual_minutes')
+        .eq('project_id', projectId)
+        .neq('outcome', 'skipped')
+      if (error) throw error
+
+      const perTask = new Map<string, number>()
+      let actualMinutes = 0
+      for (const row of data ?? []) {
+        const minutes = row.actual_minutes ?? 0
+        actualMinutes += minutes
+        perTask.set(row.task_id, (perTask.get(row.task_id) ?? 0) + minutes)
+      }
+      return { actualMinutes, perTask }
+    },
+    enabled: !!projectId,
+  })
+}
+
 export const useLatestUnfinishedFocusSession = () => {
   return useQuery({
     queryKey: ['sessions', 'unfinished'],

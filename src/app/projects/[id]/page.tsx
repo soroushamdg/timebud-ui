@@ -35,6 +35,7 @@ import { TaskCardSkeleton } from "@/components/ui/Skeleton";
 import { createClient } from "@/lib/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { useMemories, useDeleteMemory } from "@/hooks/useMemories";
+import { useProjectTimeStats } from "@/hooks/useSessions";
 import { formatDistanceToNow } from "date-fns";
 import { GanttChart } from "@/components/gantt/GanttChart";
 import { getJobXpPreview, MISSION_COMPLETE_BONUS_XP } from "@/lib/gamification/xp";
@@ -317,6 +318,7 @@ export default function ProjectOverviewPage({
   const { id: projectId } = use(params);
   const { data: project, isLoading: projectLoading } = useProject(projectId);
   const { data: tasks = [], isLoading: tasksLoading } = useTasks({ projectId });
+  const { data: timeStats } = useProjectTimeStats(projectId);
   const { data: memories = [] } = useMemories(projectId);
   const { data: isCalendarLinked } = useProjectCalendarLink(projectId);
   const deleteMemory = useDeleteMemory();
@@ -504,6 +506,23 @@ export default function ProjectOverviewPage({
     ? completedTaskCount * getJobXpPreview(project.difficulty) +
       (project.mission_bonus_awarded ? MISSION_COMPLETE_BONUS_XP : 0)
     : 0;
+
+  // Time invested: real minutes logged from every run this project has appeared in
+  // (see useProjectTimeStats) against the plan currently on the board — works the same
+  // whether the project is still active or already marked finished.
+  const spentMinutes = timeStats?.actualMinutes ?? 0;
+  const plannedTotalMinutes = activeTasks.reduce(
+    (sum, t) => sum + (t.estimated_minutes ?? 0),
+    0,
+  );
+  const formatTimeStat = (minutes: number): string => {
+    if (minutes >= 60) {
+      const h = Math.floor(minutes / 60);
+      const m = minutes % 60;
+      return m > 0 ? `${h}h ${m}m` : `${h}h`;
+    }
+    return `${minutes}m`;
+  };
 
   // Mission-complete celebration: fires once when progress crosses into 100% during
   // this session (not on initial load, and not while `tasks` is still loading — priming
@@ -1512,11 +1531,24 @@ export default function ProjectOverviewPage({
                   Blocked by: {blockedByNames.join(', ')}
                 </p>
               )}
-              {item.estimated_minutes && (
-                <p className="text-text-sec text-sm mt-1">
-                  Estimated: {item.estimated_minutes} min
-                </p>
-              )}
+              {(() => {
+                const spent = timeStats?.perTask.get(item.id);
+                return (
+                  (spent || item.estimated_minutes) && (
+                    <p className="text-sm mt-1">
+                      {spent && (
+                        <span className="text-accent-green font-medium">{spent}m spent</span>
+                      )}
+                      {spent && item.estimated_minutes && (
+                        <span className="text-text-sec"> &middot; </span>
+                      )}
+                      {item.estimated_minutes && (
+                        <span className="text-text-sec">Estimated: {item.estimated_minutes} min</span>
+                      )}
+                    </p>
+                  )
+                );
+              })()}
             </div>
 
             {/* Deadline in trailing position */}
@@ -1807,6 +1839,41 @@ export default function ProjectOverviewPage({
           </div>
         </div>
       </div>
+
+      {/* Time invested — real minutes logged across every run this project has
+       * appeared in, against what's currently planned. Works the same for a
+       * finished project since it's a plain sum over past logs. */}
+      {(spentMinutes > 0 || plannedTotalMinutes > 0) && (
+        <div className="px-4 pt-4">
+          <div className="bg-bg-card rounded-2xl border border-border-card p-4">
+            <div className="text-text-sec text-[11px] font-bold uppercase tracking-wider mb-3">
+              Time Invested
+            </div>
+            <div className="flex items-center gap-6 mb-3">
+              <div>
+                <div className="text-accent-green text-xl font-bold font-mono tabular-nums">
+                  {formatTimeStat(spentMinutes)}
+                </div>
+                <div className="text-text-sec text-[11px] mt-0.5">spent so far</div>
+              </div>
+              <div>
+                <div className="text-white text-xl font-bold font-mono tabular-nums">
+                  {formatTimeStat(plannedTotalMinutes)}
+                </div>
+                <div className="text-text-sec text-[11px] mt-0.5">planned total</div>
+              </div>
+            </div>
+            {plannedTotalMinutes > 0 && (
+              <div className="h-2 rounded-full bg-black/40 border border-border-card overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-accent-green to-accent-yellow"
+                  style={{ width: `${Math.min(100, Math.round((spentMinutes / plannedTotalMinutes) * 100))}%` }}
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Sort Dialog */}
       {showSortOptions && (
