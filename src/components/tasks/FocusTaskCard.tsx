@@ -3,6 +3,7 @@ import { AvatarImage } from "@/components/ui/AvatarImage";
 import { PlannedTask } from "@/stores/sessionStore";
 import { CalendarIcon, LockClosedIcon } from "@heroicons/react/24/outline";
 import { formatLocalSmart, parseDateLocal } from "@/lib/dates";
+import { RecurringBadge } from "@/components/tasks/RecurringBadge";
 
 interface FocusTaskCardProps {
   task: PlannedTask;
@@ -182,11 +183,23 @@ export function FocusTaskCard({
 
         {/* Center content */}
         <div className="flex-1 min-w-0">
-          <h4 className={`text-base font-semibold truncate ${
-            isLocked ? "text-gray-400" : "text-white"
-          }`}>
-            {task.title}
-          </h4>
+          <div className="flex items-center gap-2 min-w-0">
+            <h4 className={`text-base font-semibold truncate min-w-0 ${
+              isLocked ? "text-gray-400" : "text-white"
+            }`}>
+              {task.title}
+            </h4>
+            {task.recurrenceType && (
+              <RecurringBadge
+                task={{
+                  recurrence_type: task.recurrenceType,
+                  recurrence_days: task.recurrenceDays ?? null,
+                  recurrence_interval: task.recurrenceInterval ?? null,
+                }}
+                iconOnly
+              />
+            )}
+          </div>
           <div className="flex items-center gap-2 mt-1">
             {task.deadline ? (
               <>

@@ -2,6 +2,7 @@ import { AvatarImage } from '@/components/ui/AvatarImage'
 import { ChevronDoubleUpIcon, CalendarIcon, LockClosedIcon } from '@heroicons/react/24/outline'
 import { Pin } from 'lucide-react'
 import { formatLocalSmart, parseDateLocal } from '@/lib/dates'
+import { RecurringBadge } from '@/components/tasks/RecurringBadge'
 
 interface PlannedTask {
   taskId: string
@@ -23,6 +24,9 @@ interface PlannedTask {
   chainPosition?: number
   dependsOnTaskId?: string | null
   isLocked?: boolean
+  recurrenceType?: 'daily' | 'specific_days' | 'interval' | null
+  recurrenceDays?: number[] | null
+  recurrenceInterval?: number | null
 }
 
 interface TaskCardProps {
@@ -114,6 +118,16 @@ export function TaskCard({ task, onClick, xpReward }: TaskCardProps) {
             }`}>
               {task.title}
             </h4>
+            {task.recurrenceType && (
+              <RecurringBadge
+                task={{
+                  recurrence_type: task.recurrenceType,
+                  recurrence_days: task.recurrenceDays ?? null,
+                  recurrence_interval: task.recurrenceInterval ?? null,
+                }}
+                iconOnly
+              />
+            )}
           </div>
           <div className="flex items-center gap-2 mt-1">
             {task.deadline && (

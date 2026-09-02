@@ -45,6 +45,7 @@ export interface DbTask {
   recurrence_end_date: string | null;
   recurrence_end_after: number | null; // end after N occurrences
   recurrence_missed_behavior: "skip" | "overdue" | null;
+  recurrence_completed_count: number; // occurrences completed so far, for recurrence_end_after
   // On hold fields
   on_hold: boolean;
   on_hold_reason: string | null;

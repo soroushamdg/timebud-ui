@@ -9,7 +9,8 @@ export async function middleware(request: NextRequest) {
   if (
     request.nextUrl.pathname === "/api/stripe/webhook" ||
     request.nextUrl.pathname === "/api/cron/daily-reminder" ||
-    request.nextUrl.pathname === "/api/cron/calendar-sync"
+    request.nextUrl.pathname === "/api/cron/calendar-sync" ||
+    request.nextUrl.pathname === "/api/cron/recurring-rollover"
   ) {
     return NextResponse.next();
   }

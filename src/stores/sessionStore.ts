@@ -25,6 +25,9 @@ export interface PlannedTask {
   chainPosition?: number;
   dependsOnTaskId?: string | null;
   isLocked?: boolean;
+  recurrenceType?: 'daily' | 'specific_days' | 'interval' | null;
+  recurrenceDays?: number[] | null;
+  recurrenceInterval?: number | null;
 }
 
 interface FocusSessionStore {

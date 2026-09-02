@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { X, Calendar, Clock, Folder } from "lucide-react";
 import { DbTask } from "@/types/database";
 import { formatLocal } from "@/lib/dates";
+import { RecurrenceEditor, RecurrenceValue, defaultRecurrenceValue, recurrenceValueFromTask, recurrenceValueToFields } from "@/components/tasks/RecurrenceEditor";
+import { RecurringBadge } from "@/components/tasks/RecurringBadge";
 
 interface EditTaskDialogProps {
   isOpen: boolean;
@@ -29,6 +31,7 @@ export function EditTaskDialog({
     project_id: '' as string | null,
   });
 
+  const [recurrence, setRecurrence] = useState<RecurrenceValue>(defaultRecurrenceValue());
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -48,6 +51,7 @@ export function EditTaskDialog({
         priority: task.priority,
         project_id: task.project_id,
       });
+      setRecurrence(recurrenceValueFromTask(task));
       setError(null);
     }
   }, [task]);
@@ -61,13 +65,23 @@ export function EditTaskDialog({
     setIsSubmitting(true);
     setError(null);
     try {
+      const trimmedDueDate = formData.due_date.trim();
+      // A recurring task needs a due date to anchor its next occurrence from — default
+      // to today if the user turned recurrence on without picking one.
+      const dueDate = trimmedDueDate
+        ? trimmedDueDate
+        : recurrence.isRecurring
+        ? new Date().toISOString().split('T')[0]
+        : null;
+
       await onUpdateTask(task.id, {
         title: formData.title.trim(),
         description: formData.description.trim() || null,
         estimated_minutes: formData.estimated_minutes ? parseInt(formData.estimated_minutes) : null,
-        due_date: formData.due_date.trim() ? formData.due_date.trim() : null,
+        due_date: dueDate,
         priority: formData.priority,
         project_id: formData.project_id,
+        ...recurrenceValueToFields(recurrence),
       });
       onClose();
     } catch (err) {
@@ -110,9 +124,21 @@ export function EditTaskDialog({
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Project info */}
-            <p className="text-text-sec text-sm">
-              Current mission: {projectName}
-            </p>
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="text-text-sec text-sm">
+                Current mission: {projectName}
+              </p>
+              {recurrence.isRecurring && (
+                <RecurringBadge
+                  task={{
+                    recurrence_type: recurrence.recurrenceType,
+                    recurrence_days: recurrence.recurrenceType === 'specific_days' ? recurrence.recurrenceDays : null,
+                    recurrence_interval: recurrence.recurrenceType === 'interval' ? recurrence.recurrenceInterval : null,
+                  }}
+                  className="bg-accent-yellow/10 border border-accent-yellow/30 rounded-full px-2 py-0.5 text-xs"
+                />
+              )}
+            </div>
 
             {/* Project Selection */}
             <div>
@@ -265,6 +291,9 @@ export function EditTaskDialog({
                 />
               </button>
             </div>
+
+            {/* Recurrence */}
+            <RecurrenceEditor value={recurrence} onChange={setRecurrence} />
 
             {error && (
               <p className="text-accent-pink text-sm">{error}</p>

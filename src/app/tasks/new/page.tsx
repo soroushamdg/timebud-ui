@@ -10,6 +10,7 @@ import { useProjectsForTasks } from '@/hooks/useProjects'
 import { useTasks } from '@/hooks/useTasks'
 import { calculateNextDueDate, parseDateLocal } from '@/lib/dates'
 import { DbProject } from '@/types/database'
+import { RecurrenceEditor, RecurrenceValue, defaultRecurrenceValue, recurrenceValueToFields } from '@/components/tasks/RecurrenceEditor'
 
 const PRIORITY_OPTIONS = [
   { value: false, label: 'Normal', color: 'text-text-sec' },
@@ -55,14 +56,7 @@ export default function NewTaskPage(props: { searchParams: Promise<{ projectId?:
   const [showDepPicker, setShowDepPicker] = useState(false)
   const [depSearch, setDepSearch] = useState('')
   // Recurrence state
-  const [isRecurring, setIsRecurring] = useState(false)
-  const [recurrenceType, setRecurrenceType] = useState<'daily' | 'specific_days' | 'interval'>('daily')
-  const [recurrenceDays, setRecurrenceDays] = useState<number[]>([1]) // Mon default
-  const [recurrenceInterval, setRecurrenceInterval] = useState(2)
-  const [recurrenceEndType, setRecurrenceEndType] = useState<'none' | 'date' | 'after'>('none')
-  const [recurrenceEndDate, setRecurrenceEndDate] = useState('')
-  const [recurrenceEndAfter, setRecurrenceEndAfter] = useState(10)
-  const [recurrenceMissedBehavior, setRecurrenceMissedBehavior] = useState<'overdue' | 'skip'>('overdue')
+  const [recurrence, setRecurrence] = useState<RecurrenceValue>(defaultRecurrenceValue())
 
   const [titleError, setTitleError] = useState('')
   const [projectError, setProjectError] = useState('')
@@ -93,7 +87,7 @@ export default function NewTaskPage(props: { searchParams: Promise<{ projectId?:
   }, [searchParams.projectId, projects])
   
   const createTask = useMutation({
-    mutationFn: async (data: typeof formData & { itemType: 'task' | 'milestone'; recurring: boolean }) => {
+    mutationFn: async (data: typeof formData & { itemType: 'task' | 'milestone' }) => {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('User not authenticated')
@@ -167,11 +161,10 @@ export default function NewTaskPage(props: { searchParams: Promise<{ projectId?:
         })
       } else {
         // Task-specific fields
-        const isRecurring = data.recurring;
         let initialDueDate = data.due_date || null;
-        
+
         // For recurring tasks without a due_date, set it to today
-        if (isRecurring && !initialDueDate) {
+        if (recurrence.isRecurring && !initialDueDate) {
           initialDueDate = new Date().toISOString().split('T')[0];
         }
 
@@ -181,12 +174,7 @@ export default function NewTaskPage(props: { searchParams: Promise<{ projectId?:
           status: 'pending' as const,
           due_date: initialDueDate,
           priority: Boolean(data.priority),
-          recurrence_type: isRecurring ? recurrenceType : null,
-          recurrence_days: isRecurring && recurrenceType === 'specific_days' ? recurrenceDays : null,
-          recurrence_interval: isRecurring && recurrenceType === 'interval' ? recurrenceInterval : null,
-          recurrence_end_date: isRecurring && recurrenceEndType === 'date' && recurrenceEndDate ? recurrenceEndDate : null,
-          recurrence_end_after: isRecurring && recurrenceEndType === 'after' ? recurrenceEndAfter : null,
-          recurrence_missed_behavior: isRecurring ? recurrenceMissedBehavior : null,
+          ...recurrenceValueToFields(recurrence),
         })
       }
       
@@ -287,7 +275,7 @@ export default function NewTaskPage(props: { searchParams: Promise<{ projectId?:
       }
     }
     
-    createTask.mutate({ ...formData, itemType, recurring: isRecurring && itemType === 'task' })
+    createTask.mutate({ ...formData, itemType })
   }
   
   const handleInputChange = (field: keyof typeof formData, value: string | boolean | number) => {
@@ -451,7 +439,7 @@ export default function NewTaskPage(props: { searchParams: Promise<{ projectId?:
             )}
 
             {/* Due date — hidden when recurrence is on */}
-            {!(isRecurring && itemType === 'task') && (
+            {!(recurrence.isRecurring && itemType === 'task') && (
               <div>
                 <label className="text-text-sec text-sm font-medium mb-2 block">
                   {itemType === 'milestone' ? 'Deadline (optional)' : 'Due date (optional)'}
@@ -504,174 +492,7 @@ export default function NewTaskPage(props: { searchParams: Promise<{ projectId?:
         {itemType === 'task' && (
         <div>
           <SectionHeader icon={RefreshCw} label="Recurrence" />
-          <div className="space-y-4">
-            {/* Recurrence toggle */}
-            <div className="flex items-center justify-between bg-bg-card border border-border-card rounded-2xl px-5 py-4">
-              <div className="flex items-center gap-2">
-                <RefreshCw className="w-4 h-4 text-accent-yellow" />
-                <div>
-                  <span className="text-white font-medium">Repeats</span>
-                  <p className="text-text-sec text-sm mt-0.5">Make this a recurring job</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsRecurring(r => !r)}
-                className={`w-14 h-7 rounded-full transition-all duration-200 ${
-                  isRecurring ? 'bg-accent-yellow' : 'bg-border-card'
-                } relative border-2 ${
-                  isRecurring ? 'border-accent-yellow' : 'border-border-card'
-                }`}
-              >
-                <div
-                  className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-transform duration-200 shadow-sm ${
-                    isRecurring ? 'translate-x-7' : 'translate-x-0.5'
-                  }`}
-                />
-              </button>
-            </div>
-
-            {/* Recurrence config */}
-            {isRecurring && (
-          <div className="bg-bg-card border border-border-card rounded-2xl px-5 py-4 space-y-5">
-            {/* Pattern */}
-            <div>
-              <p className="text-text-sec text-sm font-medium mb-3">Repeat pattern</p>
-              <div className="flex gap-2 flex-wrap">
-                {(['daily', 'specific_days', 'interval'] as const).map(type => (
-                  <button
-                    key={type}
-                    type="button"
-                    onClick={() => setRecurrenceType(type)}
-                    className={`px-3 py-1.5 rounded-xl text-sm font-medium transition-colors ${
-                      recurrenceType === type
-                        ? 'bg-accent-yellow text-black'
-                        : 'bg-bg-primary text-text-sec border border-border-card'
-                    }`}
-                  >
-                    {type === 'daily' ? 'Every day' : type === 'specific_days' ? 'Specific days' : 'Every X days'}
-                  </button>
-                ))}
-              </div>
-
-              {recurrenceType === 'specific_days' && (
-                <div className="flex gap-2 mt-3 flex-wrap">
-                  {[{ label: 'Sun', val: 0 }, { label: 'Mon', val: 1 }, { label: 'Tue', val: 2 }, { label: 'Wed', val: 3 }, { label: 'Thu', val: 4 }, { label: 'Fri', val: 5 }, { label: 'Sat', val: 6 }].map(({ label, val }) => (
-                    <button
-                      key={val}
-                      type="button"
-                      onClick={() => setRecurrenceDays(prev =>
-                        prev.includes(val)
-                          ? prev.filter(d => d !== val).length > 0 ? prev.filter(d => d !== val) : prev
-                          : [...prev, val]
-                      )}
-                      className={`w-10 h-10 rounded-full text-sm font-medium transition-colors ${
-                        recurrenceDays.includes(val)
-                          ? 'bg-accent-yellow text-black'
-                          : 'bg-bg-primary text-text-sec border border-border-card'
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {recurrenceType === 'interval' && (
-                <div className="flex items-center gap-3 mt-3">
-                  <span className="text-text-sec text-sm">Every</span>
-                  <input
-                    type="number"
-                    min={2}
-                    max={365}
-                    value={recurrenceInterval}
-                    onChange={e => setRecurrenceInterval(Math.max(2, Math.min(365, parseInt(e.target.value) || 2)))}
-                    className="w-20 bg-bg-primary border border-border-card rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-accent-yellow"
-                  />
-                  <span className="text-text-sec text-sm">days</span>
-                </div>
-              )}
-            </div>
-
-            {/* End condition */}
-            <div>
-              <p className="text-text-sec text-sm font-medium mb-3">Ends</p>
-              <div className="flex gap-2 flex-wrap">
-                {(['none', 'date', 'after'] as const).map(et => (
-                  <button
-                    key={et}
-                    type="button"
-                    onClick={() => setRecurrenceEndType(et)}
-                    className={`px-3 py-1.5 rounded-xl text-sm font-medium transition-colors ${
-                      recurrenceEndType === et
-                        ? 'bg-accent-yellow text-black'
-                        : 'bg-bg-primary text-text-sec border border-border-card'
-                    }`}
-                  >
-                    {et === 'none' ? 'No end' : et === 'date' ? 'End date' : 'After X times'}
-                  </button>
-                ))}
-              </div>
-              {recurrenceEndType === 'date' && (
-                <input
-                  type="date"
-                  value={recurrenceEndDate}
-                  onChange={e => setRecurrenceEndDate(e.target.value)}
-                  className="mt-3 w-full bg-bg-primary border border-border-card rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-accent-yellow [&::-webkit-calendar-picker-indicator]:filter [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-70"
-                />
-              )}
-              {recurrenceEndType === 'after' && (
-                <div className="flex items-center gap-3 mt-3">
-                  <span className="text-text-sec text-sm">After</span>
-                  <input
-                    type="number"
-                    min={1}
-                    value={recurrenceEndAfter}
-                    onChange={e => setRecurrenceEndAfter(Math.max(1, parseInt(e.target.value) || 1))}
-                    className="w-20 bg-bg-primary border border-border-card rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-accent-yellow"
-                  />
-                  <span className="text-text-sec text-sm">times</span>
-                </div>
-              )}
-            </div>
-
-            {/* Missed behavior */}
-            <div>
-              <p className="text-text-sec text-sm font-medium mb-3">If a day is missed</p>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setRecurrenceMissedBehavior('overdue')}
-                  className={`p-3 rounded-xl text-left transition-colors border ${
-                    recurrenceMissedBehavior === 'overdue'
-                      ? 'border-accent-yellow bg-accent-yellow/10'
-                      : 'border-border-card bg-bg-primary'
-                  }`}
-                >
-                  <p className={`text-sm font-medium ${
-                    recurrenceMissedBehavior === 'overdue' ? 'text-accent-yellow' : 'text-white'
-                  }`}>Show as overdue</p>
-                  <p className="text-text-sec text-xs mt-0.5">Missed days stay visible</p>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setRecurrenceMissedBehavior('skip')}
-                  className={`p-3 rounded-xl text-left transition-colors border ${
-                    recurrenceMissedBehavior === 'skip'
-                      ? 'border-accent-yellow bg-accent-yellow/10'
-                      : 'border-border-card bg-bg-primary'
-                  }`}
-                >
-                  <p className={`text-sm font-medium ${
-                    recurrenceMissedBehavior === 'skip' ? 'text-accent-yellow' : 'text-white'
-                  }`}>Skip missed days</p>
-                  <p className="text-text-sec text-xs mt-0.5">Auto-skip and move on</p>
-                </button>
-              </div>
-            </div>
-              </div>
-            )}
-          </div>
+          <RecurrenceEditor value={recurrence} onChange={setRecurrence} />
         </div>
         )}
 

@@ -73,6 +73,9 @@ interface PlannedTask {
   chainPosition?: number;
   dependsOnTaskId?: string | null;
   isLocked?: boolean;
+  recurrenceType?: 'daily' | 'specific_days' | 'interval' | null;
+  recurrenceDays?: number[] | null;
+  recurrenceInterval?: number | null;
 }
 
 export default function Home() {
@@ -462,6 +465,9 @@ export default function Home() {
               description: dbTask?.description || undefined,
               isPinned: false,
               isManual: false,
+              recurrenceType: dbTask?.recurrence_type,
+              recurrenceDays: dbTask?.recurrence_days,
+              recurrenceInterval: dbTask?.recurrence_interval,
               isPartOfChain: task.isPartOfChain,
               chainPosition: task.chainPosition,
               dependsOnTaskId: task.dependsOnTaskId,
@@ -489,6 +495,9 @@ export default function Home() {
           description: task.description || undefined,
           isPinned: true,
           isManual: false,
+          recurrenceType: task.recurrence_type,
+          recurrenceDays: task.recurrence_days,
+          recurrenceInterval: task.recurrence_interval,
         };
       });
 
@@ -511,6 +520,9 @@ export default function Home() {
           description: task.description || undefined,
           isPinned: false,
           isManual: true,
+          recurrenceType: task.recurrence_type,
+          recurrenceDays: task.recurrence_days,
+          recurrenceInterval: task.recurrence_interval,
         };
       });
 
@@ -550,6 +562,9 @@ export default function Home() {
           deadline: t.deadline,
           isPinned: t.isPinned,
           isManual: t.isManual,
+          recurrenceType: t.recurrenceType,
+          recurrenceDays: t.recurrenceDays,
+          recurrenceInterval: t.recurrenceInterval,
           isPartOfChain: t.isPartOfChain,
           chainPosition: t.chainPosition,
           dependsOnTaskId: t.dependsOnTaskId,
@@ -600,6 +615,9 @@ export default function Home() {
           done: false,
           estimatedMinutes: task.estimated_minutes || undefined,
           deadline: task.due_date || undefined,
+          recurrenceType: task.recurrence_type,
+          recurrenceDays: task.recurrence_days,
+          recurrenceInterval: task.recurrence_interval,
         };
       });
 
@@ -621,6 +639,9 @@ export default function Home() {
           estimatedMinutes: task.estimated_minutes || undefined,
           priority: task.priority,
           deadline: task.due_date || undefined,
+          recurrenceType: task.recurrence_type,
+          recurrenceDays: task.recurrence_days,
+          recurrenceInterval: task.recurrence_interval,
         };
       });
       setPlannedTasks(plannedSessionTasks);

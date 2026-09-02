@@ -34,6 +34,9 @@ interface PlannedTask {
   chainPosition?: number
   dependsOnTaskId?: string | null
   isLocked?: boolean
+  recurrenceType?: 'daily' | 'specific_days' | 'interval' | null
+  recurrenceDays?: number[] | null
+  recurrenceInterval?: number | null
 }
 
 interface DayPlan {
@@ -58,6 +61,9 @@ function fromResult(result: PlannedTaskResult, tasks: DbTask[], projects: DbProj
     partial: result.partial,
     priority: dbTask?.priority,
     deadline: dbTask?.due_date || undefined,
+    recurrenceType: dbTask?.recurrence_type,
+    recurrenceDays: dbTask?.recurrence_days,
+    recurrenceInterval: dbTask?.recurrence_interval,
     isPartOfChain: result.isPartOfChain,
     chainPosition: result.chainPosition,
     dependsOnTaskId: result.dependsOnTaskId,
@@ -81,6 +87,9 @@ function fromDbTask(task: DbTask, projects: DbProject[], kind: 'pinned' | 'manua
     deadline: task.due_date || undefined,
     isPinned: kind === 'pinned',
     isManual: kind === 'manual',
+    recurrenceType: task.recurrence_type,
+    recurrenceDays: task.recurrence_days,
+    recurrenceInterval: task.recurrence_interval,
   }
 }
 

@@ -119,6 +119,7 @@ export const useUpdateTask = () => {
         const updateFields = {
           status: nextDueDate ? 'pending' : 'completed',
           due_date: nextDueDate,
+          recurrence_completed_count: (currentTask.recurrence_completed_count ?? 0) + 1,
         }
         const { data, error } = await supabase
           .from('tasks')

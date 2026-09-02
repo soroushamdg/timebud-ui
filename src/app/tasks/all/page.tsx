@@ -16,7 +16,7 @@ import { AllTasksTaskCard } from "./components/AllTasksTaskCard";
 import { EditTaskDialog } from "./components/EditTaskDialog";
 
 // Filter types
-type FilterType = 'status' | 'priority' | 'deadline' | 'projects';
+type FilterType = 'status' | 'priority' | 'deadline' | 'projects' | 'recurring';
 
 interface Filter {
   type: FilterType;
@@ -205,6 +205,13 @@ export default function AllTasksPage() {
             // Specific project IDs
             const projectIds = filter.value.split(',');
             filtered = filtered.filter(task => task.project_id && projectIds.includes(task.project_id));
+          }
+          break;
+        case 'recurring':
+          if (filter.value === 'recurring') {
+            filtered = filtered.filter(task => !!task.recurrence_type);
+          } else if (filter.value === 'one_time') {
+            filtered = filtered.filter(task => !task.recurrence_type);
           }
           break;
       }

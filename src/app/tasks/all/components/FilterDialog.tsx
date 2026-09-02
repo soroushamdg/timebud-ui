@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { X, Calendar, CheckSquare, Star, Folder } from "lucide-react";
+import { X, Calendar, CheckSquare, Star, Folder, RefreshCw } from "lucide-react";
 
 // Filter types
-type FilterType = 'status' | 'priority' | 'deadline' | 'projects';
+type FilterType = 'status' | 'priority' | 'deadline' | 'projects' | 'recurring';
 
 interface Filter {
   type: FilterType;
@@ -56,6 +56,11 @@ export function FilterDialog({
     editingFilter?.type === 'projects' && editingFilter.value === 'solo'
   );
 
+  // Recurring filter state
+  const [recurringValue, setRecurringValue] = useState(
+    editingFilter?.type === 'recurring' ? editingFilter.value : 'all'
+  );
+
   if (!isOpen) return null;
 
   const getFilterLabel = (type: FilterType, value: string): string => {
@@ -82,6 +87,8 @@ export function FilterDialog({
           return project?.name || 'Unknown';
         });
         return `Projects: ${projectNames.join(', ')}`;
+      case 'recurring':
+        return value === 'recurring' ? 'Recurring only' : 'One-time only';
       default:
         return '';
     }
@@ -130,6 +137,15 @@ export function FilterDialog({
             type: 'projects',
             value: selectedProjectIds.join(','),
             label: getFilterLabel('projects', selectedProjectIds.join(','))
+          };
+        }
+        break;
+      case 'recurring':
+        if (recurringValue !== 'all') {
+          newFilter = {
+            type: 'recurring',
+            value: recurringValue,
+            label: getFilterLabel('recurring', recurringValue)
           };
         }
         break;
@@ -280,6 +296,36 @@ export function FilterDialog({
           </div>
         );
         
+      case 'recurring':
+        return (
+          <div className="space-y-3">
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="radio"
+                name="recurring"
+                value="recurring"
+                checked={recurringValue === 'recurring'}
+                onChange={(e) => setRecurringValue(e.target.value)}
+                className="w-4 h-4 text-[#FFD233] bg-[#2A2A2A] border-gray-600"
+              />
+              <RefreshCw className="w-4 h-4 text-[#FFD233]" />
+              <span className="text-white">Recurring only</span>
+            </label>
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="radio"
+                name="recurring"
+                value="one_time"
+                checked={recurringValue === 'one_time'}
+                onChange={(e) => setRecurringValue(e.target.value)}
+                className="w-4 h-4 text-[#FFD233] bg-[#2A2A2A] border-gray-600"
+              />
+              <RefreshCw className="w-4 h-4 text-text-sec" />
+              <span className="text-white">One-time only</span>
+            </label>
+          </div>
+        );
+
       default:
         return null;
     }
@@ -307,7 +353,8 @@ export function FilterDialog({
               { type: 'status' as FilterType, label: 'Status', icon: CheckSquare },
               { type: 'priority' as FilterType, label: 'Priority', icon: Star },
               { type: 'deadline' as FilterType, label: 'Deadline', icon: Calendar },
-              { type: 'projects' as FilterType, label: 'Projects', icon: Folder }
+              { type: 'projects' as FilterType, label: 'Projects', icon: Folder },
+              { type: 'recurring' as FilterType, label: 'Recurring', icon: RefreshCw }
             ].map(({ type, label, icon: Icon }) => (
               <button
                 key={type}

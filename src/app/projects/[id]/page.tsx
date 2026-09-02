@@ -26,8 +26,10 @@ import { useTasks, useUpdateTask } from "@/hooks/useTasks";
 import { useProject, useDeleteProject } from "@/hooks/useProjects";
 import { AvatarImage } from "@/components/ui/AvatarImage";
 import { ProjectAvatarPicker } from "@/components/avatars/ProjectAvatarPicker";
-import { formatLocal, formatLocalSmart, parseDateLocal } from "@/lib/dates";
+import { formatLocal, formatLocalSmart, parseDateLocal, describeRecurrence } from "@/lib/dates";
 import { DbTask, TaskStatus, MissionDifficulty } from "@/types/database";
+import { RecurrenceEditor, RecurrenceValue, defaultRecurrenceValue, recurrenceValueFromTask, recurrenceValueToFields } from "@/components/tasks/RecurrenceEditor";
+import { RecurringBadge } from "@/components/tasks/RecurringBadge";
 import { TaskCardSkeleton } from "@/components/ui/Skeleton";
 import { createClient } from "@/lib/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
@@ -109,6 +111,9 @@ export default function ProjectOverviewPage({
   const [creatingMilestone, setCreatingMilestone] = useState(false);
   const [newItemTitle, setNewItemTitle] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+  const quickAddRowRef = useRef<HTMLDivElement>(null);
+  const [quickAddRecurrence, setQuickAddRecurrence] = useState<RecurrenceValue>(defaultRecurrenceValue());
+  const [showQuickAddRecurrence, setShowQuickAddRecurrence] = useState(false);
 
   // Edit states
   const [editingProject, setEditingProject] = useState(false);
@@ -135,6 +140,9 @@ export default function ProjectOverviewPage({
   const [editOnHoldReason, setEditOnHoldReason] = useState('');
   const [editOnHoldUntil, setEditOnHoldUntil] = useState('');
   const [editOnHoldError, setEditOnHoldError] = useState('');
+
+  // Recurrence state (edit modal)
+  const [editRecurrence, setEditRecurrence] = useState<RecurrenceValue>(defaultRecurrenceValue());
 
   // Recurrence info sheet state
   const [recurrenceSheetTask, setRecurrenceSheetTask] = useState<DbTask | null>(null);
@@ -276,10 +284,12 @@ export default function ProjectOverviewPage({
     return () => clearTimeout(timeout);
   }, [highlightedTaskId, router]);
 
-  // Handle click outside to finish creation
+  // Handle click outside to finish creation — scoped to the whole quick-add row (not just
+  // the text input) so clicking the recurrence toggle/popover inside it doesn't
+  // prematurely submit the in-progress title.
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (inputRef.current && !inputRef.current.contains(e.target as Node)) {
+      if (quickAddRowRef.current && !quickAddRowRef.current.contains(e.target as Node)) {
         if (creatingTask || creatingMilestone) {
           handleFinishCreation();
         }
@@ -776,6 +786,8 @@ export default function ProjectOverviewPage({
       setCreatingTask(false);
     }
     setNewItemTitle("");
+    setQuickAddRecurrence(defaultRecurrenceValue());
+    setShowQuickAddRecurrence(false);
   }, []);
 
   const handleFinishCreation = useCallback(async () => {
@@ -789,6 +801,7 @@ export default function ProjectOverviewPage({
     try {
       const supabase = createClient();
       const itemType = creatingTask ? "task" : "milestone";
+      const isRecurring = itemType === "task" && quickAddRecurrence.isRecurring;
 
       // Get the highest order value for new item
       const maxOrder = Math.max(...sortedItems.map((item) => item.order), 0);
@@ -802,6 +815,9 @@ export default function ProjectOverviewPage({
         priority: false,
         status: itemType === "task" ? "pending" : null,
         estimated_minutes: itemType === "task" ? null : null,
+        // A recurring task needs a due date to anchor its next occurrence from.
+        due_date: isRecurring ? new Date().toISOString().split('T')[0] : null,
+        ...(itemType === "task" ? recurrenceValueToFields(quickAddRecurrence) : {}),
       });
 
       if (error) throw error;
@@ -814,11 +830,14 @@ export default function ProjectOverviewPage({
       setCreatingTask(false);
       setCreatingMilestone(false);
       setNewItemTitle("");
+      setQuickAddRecurrence(defaultRecurrenceValue());
+      setShowQuickAddRecurrence(false);
     }
   }, [
     newItemTitle,
     creatingTask,
     creatingMilestone,
+    quickAddRecurrence,
     sortedItems,
     project,
     projectId,
@@ -834,9 +853,59 @@ export default function ProjectOverviewPage({
         setCreatingTask(false);
         setCreatingMilestone(false);
         setNewItemTitle("");
+        setQuickAddRecurrence(defaultRecurrenceValue());
+        setShowQuickAddRecurrence(false);
       }
     },
     [handleFinishCreation],
+  );
+
+  // Shared row for both quick-add render sites (empty state and regular list) so the
+  // recurrence toggle/popover only needs to be built once.
+  const renderQuickAddInput = () => (
+    <div
+      ref={quickAddRowRef}
+      className="mb-3 rounded-2xl px-4 py-3 border border-border-card bg-bg-card"
+    >
+      <div className="flex items-center gap-3">
+        <div className="w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 bg-bg-card text-white">
+          {creatingTask ? "J" : "O"}
+        </div>
+        <input
+          ref={inputRef}
+          type="text"
+          value={newItemTitle}
+          onChange={(e) => setNewItemTitle(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder={`Enter ${creatingTask ? "job" : "objective"} name...`}
+          className="flex-1 bg-transparent text-white placeholder-text-sec outline-none text-base font-semibold"
+        />
+        {creatingTask && (
+          <button
+            type="button"
+            onClick={() => setShowQuickAddRecurrence((v) => !v)}
+            title="Recurring"
+            className={`flex-shrink-0 transition-colors ${
+              quickAddRecurrence.isRecurring ? "text-accent-yellow" : "text-text-sec hover:text-white"
+            }`}
+          >
+            <RefreshCw size={16} />
+          </button>
+        )}
+        <div className="text-text-sec text-sm">
+          {creatingTask ? "Job" : "Objective"}
+        </div>
+      </div>
+      {creatingTask && showQuickAddRecurrence && (
+        <div className="mt-3 pt-3 border-t border-border-card">
+          <RecurrenceEditor
+            value={quickAddRecurrence}
+            onChange={setQuickAddRecurrence}
+            compact
+          />
+        </div>
+      )}
+    </div>
   );
 
   // Helper function to format date for input
@@ -866,6 +935,8 @@ export default function ProjectOverviewPage({
     setEditOnHoldReason(item.on_hold_reason || '');
     setEditOnHoldUntil(item.on_hold_until || '');
     setEditOnHoldError('');
+    // Populate recurrence state
+    setEditRecurrence(recurrenceValueFromTask(item));
   }, [])
 
   const handleSaveEditItem = useCallback(async () => {
@@ -924,14 +995,22 @@ export default function ProjectOverviewPage({
           updateData.on_hold_type = null;
           updateData.on_hold_until = null;
         }
+        // Recurrence fields
+        Object.assign(updateData, recurrenceValueToFields(editRecurrence));
       } else {
         // Milestone-specific
         updateData.status = null;
         updateData.estimated_minutes = null;
       }
 
-      // Add due date (null if cleared)
-      updateData.due_date = editFormData.due_date.trim() || null;
+      // Add due date (null if cleared) — a recurring task needs one to anchor its next
+      // occurrence from, so default to today if the user turned recurrence on without picking one.
+      const trimmedDueDate = editFormData.due_date.trim();
+      updateData.due_date = trimmedDueDate
+        ? trimmedDueDate
+        : editFormData.item_type === "task" && editRecurrence.isRecurring
+        ? new Date().toISOString().split('T')[0]
+        : null;
 
       const { error } = await supabase
         .from("tasks")
@@ -968,7 +1047,7 @@ export default function ProjectOverviewPage({
     } catch (error) {
       console.error("Failed to update item:", error);
     }
-  }, [editingItem, editFormData, project, queryClient, editDependencies, editOnHold, editOnHoldType, editOnHoldReason, editOnHoldUntil]);
+  }, [editingItem, editFormData, project, queryClient, editDependencies, editOnHold, editOnHoldType, editOnHoldReason, editOnHoldUntil, editRecurrence]);
 
   const handleCancelEditItem = useCallback(() => {
     setEditingItem(null);
@@ -981,6 +1060,7 @@ export default function ProjectOverviewPage({
       priority: false,
       item_type: "task",
     });
+    setEditRecurrence(defaultRecurrenceValue());
   }, []);
 
   // Project edit handlers
@@ -1409,16 +1489,11 @@ export default function ProjectOverviewPage({
                 >
                   {item.title}
                 </h3>
-                {item.recurrence_type && (
-                  <button
-                    type="button"
-                    onClick={(e) => { e.stopPropagation(); setRecurrenceSheetTask(item); }}
-                    className="flex-shrink-0 text-text-sec hover:text-accent-yellow transition-colors"
-                    title="Recurring task"
-                  >
-                    <RefreshCw size={13} />
-                  </button>
-                )}
+                <RecurringBadge
+                  task={item}
+                  onClick={(e) => { e.stopPropagation(); setRecurrenceSheetTask(item); }}
+                  iconOnly
+                />
                 {onHold && (
                   <span className="flex-shrink-0 flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-amber-500/20 text-amber-400">
                     <PauseCircle size={11} />
@@ -1874,27 +1949,7 @@ export default function ProjectOverviewPage({
 
             {/* Inline creation input in empty state */}
             {(creatingTask || creatingMilestone) && (
-              <div className="mt-4 w-full">
-                <div className="rounded-2xl px-4 py-3 flex items-center gap-3 border border-border-card bg-bg-card">
-                  <div className="w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 bg-bg-card text-white">
-                    {creatingTask ? "J" : "O"}
-                  </div>
-                  <input
-                    ref={inputRef}
-                    type="text"
-                    value={newItemTitle}
-                    onChange={(e) => setNewItemTitle(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder={`Enter ${
-                      creatingTask ? "job" : "objective"
-                    } name...`}
-                    className="flex-1 bg-transparent text-white placeholder-text-sec outline-none text-base font-semibold"
-                  />
-                  <div className="text-text-sec text-sm">
-                    {creatingTask ? "Job" : "Objective"}
-                  </div>
-                </div>
-              </div>
+              <div className="mt-4 w-full">{renderQuickAddInput()}</div>
             )}
           </div>
         ) : (
@@ -1955,27 +2010,7 @@ export default function ProjectOverviewPage({
             {/* Add new item buttons - always show */}
             <div className="mt-6 space-y-3">
               {/* Inline creation input */}
-              {(creatingTask || creatingMilestone) && (
-                <div className="mb-3 rounded-2xl px-4 py-3 flex items-center gap-3 border border-border-card bg-bg-card">
-                  <div className="w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 bg-bg-card text-white">
-                    {creatingTask ? "J" : "O"}
-                  </div>
-                  <input
-                    ref={inputRef}
-                    type="text"
-                    value={newItemTitle}
-                    onChange={(e) => setNewItemTitle(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder={`Enter ${
-                      creatingTask ? "job" : "objective"
-                    } name...`}
-                    className="flex-1 bg-transparent text-white placeholder-text-sec outline-none text-base font-semibold"
-                  />
-                  <div className="text-text-sec text-sm">
-                    {creatingTask ? "Job" : "Objective"}
-                  </div>
-                </div>
-              )}
+              {(creatingTask || creatingMilestone) && renderQuickAddInput()}
 
               {/* Add buttons */}
               {!creatingTask && !creatingMilestone && (
@@ -2352,6 +2387,9 @@ export default function ProjectOverviewPage({
                         </div>
                       )}
                     </div>
+
+                    {/* Recurrence */}
+                    <RecurrenceEditor value={editRecurrence} onChange={setEditRecurrence} />
                   </>
                 )}
 
@@ -2665,21 +2703,16 @@ export default function ProjectOverviewPage({
       {/* Recurrence Info Sheet */}
       {recurrenceSheetTask && (() => {
         const tmpl = recurrenceTemplate;
-        const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-        let patternDesc = '…';
-        if (tmpl) {
-          if (tmpl.recurrence_type === 'daily') patternDesc = 'Repeats every day';
-          else if (tmpl.recurrence_type === 'specific_days' && tmpl.recurrence_days?.length) {
-            const names = tmpl.recurrence_days.map((d: number) => DAY_NAMES[d]).join(', ');
-            patternDesc = `Repeats every ${names}`;
-          } else if (tmpl.recurrence_type === 'interval' && tmpl.recurrence_interval) {
-            patternDesc = `Repeats every ${tmpl.recurrence_interval} days`;
-          }
-        }
-        let endDesc = 'No end date';
-        if (tmpl?.recurrence_end_date) endDesc = `Ends on ${new Date(tmpl.recurrence_end_date).toLocaleDateString()}`;
-        else if (tmpl?.recurrence_end_after) endDesc = `Ends after ${tmpl.recurrence_end_after} times`;
-        const missedDesc = tmpl?.recurrence_missed_behavior === 'skip' ? 'Skips missed days' : 'Shows missed days as overdue';
+        const { pattern: patternDesc, end: endDesc, missed: missedDesc } = tmpl
+          ? describeRecurrence(tmpl)
+          : { pattern: '…', end: '…', missed: '…' };
+
+        const handleEditPattern = () => {
+          const task = recurrenceSheetTask;
+          setRecurrenceSheetTask(null);
+          setShowStopRecurringConfirm(false);
+          handleStartEditItem(task);
+        };
 
         const handleStopRecurring = async () => {
           const supabase = createClient();
@@ -2721,13 +2754,22 @@ export default function ProjectOverviewPage({
               </div>
 
               {!showStopRecurringConfirm ? (
-                <button
-                  onClick={() => setShowStopRecurringConfirm(true)}
-                  className="w-full flex items-center justify-center gap-2 bg-red-500/20 text-red-400 p-4 rounded-2xl hover:bg-red-500/30 transition-colors"
-                >
-                  <StopCircle size={18} />
-                  <span className="font-medium">Stop recurring</span>
-                </button>
+                <div className="space-y-2">
+                  <button
+                    onClick={handleEditPattern}
+                    className="w-full flex items-center justify-center gap-2 bg-accent-yellow/15 text-accent-yellow p-4 rounded-2xl hover:bg-accent-yellow/25 transition-colors"
+                  >
+                    <Edit size={18} />
+                    <span className="font-medium">Edit pattern</span>
+                  </button>
+                  <button
+                    onClick={() => setShowStopRecurringConfirm(true)}
+                    className="w-full flex items-center justify-center gap-2 bg-red-500/20 text-red-400 p-4 rounded-2xl hover:bg-red-500/30 transition-colors"
+                  >
+                    <StopCircle size={18} />
+                    <span className="font-medium">Stop recurring</span>
+                  </button>
+                </div>
               ) : (
                 <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-4">
                   <p className="text-white text-sm font-medium mb-1">Stop this recurring job?</p>

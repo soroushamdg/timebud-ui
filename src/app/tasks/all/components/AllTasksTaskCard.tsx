@@ -7,6 +7,7 @@ import { formatLocalSmart, parseDateLocal } from '@/lib/dates';
 import { Check, X, MoreVertical, Trash2, Edit } from 'lucide-react';
 import { DbTask, MissionDifficulty } from '@/types/database';
 import { getJobXpPreview } from '@/lib/gamification/xp';
+import { RecurringBadge } from '@/components/tasks/RecurringBadge';
 
 interface AllTasksTaskCardProps {
   task: DbTask;
@@ -148,6 +149,7 @@ export function AllTasksTaskCard({
             <h4 className="text-white text-base font-semibold truncate min-w-0">
               {task.title}
             </h4>
+            <RecurringBadge task={task} iconOnly />
           </div>
           <div className="flex items-center gap-2 mt-1">
             {task.due_date && (
