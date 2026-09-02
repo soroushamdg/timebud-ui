@@ -43,6 +43,53 @@
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
+
+  /* Desktop only: makes the app box the containing block for its
+     position:fixed descendants (tab bar, sheets, toasts) so they pin to
+     the box's edges instead of the real browser viewport. Left unset on
+     mobile, where the box IS the viewport and content still needs to
+     scroll the page normally rather than inside a clipped box. */
+  @media (min-width: 768px) {
+    .app-box {
+      contain: layout paint;
+    }
+  }
+
+  .ambient-blob {
+    position: absolute;
+    border-radius: 9999px;
+    filter: blur(70px);
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.5) 0%, transparent 70%);
+  }
+  .ambient-blob-1 {
+    top: -10%;
+    left: -8%;
+    width: 46%;
+    aspect-ratio: 1;
+    opacity: 0.5;
+    animation: ambient-drift-1 46s ease-in-out infinite alternate;
+  }
+  .ambient-blob-2 {
+    bottom: -10%;
+    right: -6%;
+    width: 38%;
+    aspect-ratio: 1;
+    opacity: 0.4;
+    animation: ambient-drift-2 58s ease-in-out infinite alternate;
+  }
+  @keyframes ambient-drift-1 {
+    from { transform: translate(0, 0) scale(1); }
+    to { transform: translate(6%, 10%) scale(1.15); }
+  }
+  @keyframes ambient-drift-2 {
+    from { transform: translate(0, 0) scale(1); }
+    to { transform: translate(-8%, -6%) scale(1.1); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ambient-blob {
+      animation: none;
+    }
+  }
 }
 
 /* Critical splash screen styles - inline these in production */

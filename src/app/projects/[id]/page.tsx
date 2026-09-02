@@ -24,6 +24,7 @@ import {
 import { ChevronDoubleUpIcon } from "@heroicons/react/24/outline";
 import { useTasks, useUpdateTask } from "@/hooks/useTasks";
 import { useProject, useDeleteProject } from "@/hooks/useProjects";
+import { AppShell } from "@/components/layout/AppShell";
 import { AvatarImage } from "@/components/ui/AvatarImage";
 import { ProjectAvatarPicker } from "@/components/avatars/ProjectAvatarPicker";
 import { formatLocal, formatLocalSmart, parseDateLocal, describeRecurrence } from "@/lib/dates";
@@ -385,14 +386,19 @@ export default function ProjectOverviewPage({
       })
   }, [tasks, queryClient])
 
-  // Parallax scroll effect
+  // Parallax scroll effect. Listens on the capture phase so this also picks up
+  // scroll events from the desktop app-box (which scrolls internally, since
+  // window itself no longer scrolls once the app is framed) as well as the
+  // window scroll used on mobile.
   useEffect(() => {
-    const handleScroll = () => {
-      setScrollY(window.scrollY);
+    const handleScroll = (e: Event) => {
+      const target = e.target;
+      const y = target instanceof HTMLElement ? target.scrollTop : window.scrollY;
+      setScrollY(y);
     };
 
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    document.addEventListener('scroll', handleScroll, true);
+    return () => document.removeEventListener('scroll', handleScroll, true);
   }, []);
 
   // Circular dependency check: returns true if adding candidateDepId as a dep of taskId would create a cycle
@@ -1641,7 +1647,7 @@ export default function ProjectOverviewPage({
 
   if (projectLoading || tasksLoading || !project) {
     return (
-      <div className="max-w-md mx-auto min-h-screen bg-bg-primary relative overflow-visible">
+      <AppShell showTabBar={false}>
         {/* Hero skeleton */}
         <div className="relative h-48 bg-gray-800 animate-pulse" />
 
@@ -1651,12 +1657,12 @@ export default function ProjectOverviewPage({
           <TaskCardSkeleton />
           <TaskCardSkeleton />
         </div>
-      </div>
+      </AppShell>
     );
   }
 
   return (
-    <div className="max-w-md mx-auto min-h-screen bg-bg-primary relative overflow-visible">
+    <AppShell showTabBar={false}>
       {/* Edit Toast */}
       {showEditToast && (
         <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 px-4 py-2 bg-bg-card border border-border-card rounded-lg shadow-lg transition-all duration-300">
@@ -2821,6 +2827,6 @@ export default function ProjectOverviewPage({
       )}
 
       {newLevel && <LevelUpModal levelProgress={newLevel} onDismiss={dismissLevelUp} />}
-    </div>
+    </AppShell>
   );
 }
