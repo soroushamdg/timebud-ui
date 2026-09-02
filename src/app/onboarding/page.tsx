@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { AppShell } from '@/components/layout/AppShell'
 import { useCurrentUser } from '@/hooks/useAuth'
 
 const ONBOARDING_STEPS = [
@@ -59,9 +60,11 @@ export default function OnboardingPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-bg-primary flex items-center justify-center">
-        <p className="text-text-sec">Loading...</p>
-      </div>
+      <AppShell showTabBar={false}>
+        <div className="flex flex-col h-[calc(100vh-5rem)] items-center justify-center">
+          <p className="text-text-sec">Loading...</p>
+        </div>
+      </AppShell>
     )
   }
 
@@ -72,10 +75,10 @@ export default function OnboardingPage() {
   const step = ONBOARDING_STEPS[currentStep]
 
   return (
-    <div className="min-h-screen bg-bg-primary flex flex-col">
-      <div className="max-w-md mx-auto w-full flex-1 flex flex-col">
+    <AppShell showTabBar={false}>
+      <div className="flex flex-col h-[calc(100vh-5rem)]">
         {/* Progress indicator */}
-        <div className="px-6 pt-8 pb-4">
+        <div className="flex-shrink-0 px-6 pt-8 pb-4">
           <div className="flex gap-2">
             {ONBOARDING_STEPS.map((_, index) => (
               <div
@@ -89,7 +92,7 @@ export default function OnboardingPage() {
         </div>
 
         {/* Content area - scrollable */}
-        <div className="flex-1 overflow-y-auto px-6 py-8">
+        <div className="flex-1 min-h-0 overflow-y-auto px-6 py-8">
           <div className="flex flex-col items-center justify-center min-h-full text-center">
             {step.image ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -103,7 +106,7 @@ export default function OnboardingPage() {
         </div>
 
         {/* Navigation buttons */}
-        <div className="px-6 pb-8 space-y-3">
+        <div className="flex-shrink-0 px-6 pb-8 space-y-3">
           <button
             onClick={handleNext}
             className="w-full bg-accent-yellow text-black font-bold text-lg py-4 rounded-none hover:bg-yellow-400 transition-colors border border-white"
@@ -130,6 +133,6 @@ export default function OnboardingPage() {
           )}
         </div>
       </div>
-    </div>
+    </AppShell>
   )
 }

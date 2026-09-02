@@ -18,9 +18,9 @@ export default function GanttPage() {
 
   return (
     <AppShell>
-      <div className="flex flex-col min-h-screen bg-bg-primary">
+      <div className="flex flex-col h-[calc(100vh-5rem)] pb-5 bg-bg-primary">
         {/* Header */}
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-border-card bg-bg-primary sticky top-0 z-20">
+        <div className="flex-shrink-0 flex items-center gap-3 px-4 py-3 border-b border-border-card bg-bg-primary">
           <button
             onClick={() => router.back()}
             className="w-9 h-9 rounded-xl bg-bg-card border border-border-card flex items-center justify-center text-white hover:bg-bg-card-hover transition-colors"
@@ -31,6 +31,7 @@ export default function GanttPage() {
         </div>
 
         {/* Content */}
+        <div className="flex-1 min-h-0 overflow-y-auto">
         {isLoading ? (
           <div className="flex items-center justify-center py-20">
             <p className="text-text-sec text-sm">Loading…</p>
@@ -48,6 +49,7 @@ export default function GanttPage() {
         ) : (
           <GanttChart tasks={tasks} projects={projects} />
         )}
+        </div>
       </div>
     </AppShell>
   )

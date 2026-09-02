@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { AvatarImage } from "@/components/ui/AvatarImage";
 import { PlannedTask } from "@/stores/sessionStore";
 import { CalendarIcon, LockClosedIcon } from "@heroicons/react/24/outline";
@@ -22,10 +22,46 @@ export function FocusTaskCard({
   isLoading,
   xpReward,
 }: FocusTaskCardProps) {
-  const [holdTimeout, setHoldTimeout] = useState<NodeJS.Timeout | null>(null);
-  const [showPartialOption, setShowPartialOption] = useState(false);
+  // A hold fires onHold directly from the timer callback — no nested confirm button
+  // inside the card's own onClick subtree (that used to bubble a click back up into
+  // handleCardClick, opening the overview dialog on top of the partial-completion one).
+  // longPressFiredRef swallows the native synthetic click that both touch and mouse
+  // dispatch right after a press-and-release, which would otherwise reach
+  // handleCardClick a second way even without any nested button involved.
+  const holdTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const longPressFiredRef = useRef(false);
+  const startPosRef = useRef<{ x: number; y: number } | null>(null);
+  const [isPressing, setIsPressing] = useState(false);
+
+  const HOLD_MS = 500;
+  const MOVE_CANCEL_PX = 10;
+
+  const clearHoldTimer = () => {
+    if (holdTimeoutRef.current) {
+      clearTimeout(holdTimeoutRef.current);
+      holdTimeoutRef.current = null;
+    }
+    setIsPressing(false);
+  };
+
+  const startHoldTimer = (x: number, y: number) => {
+    // Only offer "mark partial" for non-partial tasks that aren't done
+    if (task.partial || task.done || !onHold) return;
+    startPosRef.current = { x, y };
+    setIsPressing(true);
+    holdTimeoutRef.current = setTimeout(() => {
+      longPressFiredRef.current = true;
+      setIsPressing(false);
+      onHold?.();
+    }, HOLD_MS);
+  };
 
   const handleCardClick = () => {
+    if (longPressFiredRef.current) {
+      // Swallow the click that follows a completed long-press.
+      longPressFiredRef.current = false;
+      return;
+    }
     onClick?.();
   };
 
@@ -34,43 +70,24 @@ export function FocusTaskCard({
     onCheckmark?.();
   };
 
-  const handleMouseDown = () => {
-    // Only show partial option for non-partial tasks that aren't done
-    if (!task.partial && !task.done && onHold) {
-      const timeout = setTimeout(() => {
-        setShowPartialOption(true);
-      }, 500); // 500ms hold time
-      setHoldTimeout(timeout);
-    }
-  };
+  const handleMouseDown = (e: React.MouseEvent) => startHoldTimer(e.clientX, e.clientY);
+  const handleMouseUp = clearHoldTimer;
 
-  const handleMouseUp = () => {
-    if (holdTimeout) {
-      clearTimeout(holdTimeout);
-      setHoldTimeout(null);
-    }
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    if (touch) startHoldTimer(touch.clientX, touch.clientY);
   };
+  const handleTouchEnd = clearHoldTimer;
 
-  const handleTouchStart = () => {
-    // Only show partial option for non-partial tasks that aren't done
-    if (!task.partial && !task.done && onHold) {
-      const timeout = setTimeout(() => {
-        setShowPartialOption(true);
-      }, 500); // 500ms hold time
-      setHoldTimeout(timeout);
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!startPosRef.current || !holdTimeoutRef.current) return;
+    const touch = e.touches[0];
+    if (!touch) return;
+    const dx = Math.abs(touch.clientX - startPosRef.current.x);
+    const dy = Math.abs(touch.clientY - startPosRef.current.y);
+    if (dx > MOVE_CANCEL_PX || dy > MOVE_CANCEL_PX) {
+      clearHoldTimer();
     }
-  };
-
-  const handleTouchEnd = () => {
-    if (holdTimeout) {
-      clearTimeout(holdTimeout);
-      setHoldTimeout(null);
-    }
-  };
-
-  const handlePartialOptionClick = () => {
-    setShowPartialOption(false);
-    onHold?.();
   };
 
   const isOverdue = (deadline: string | undefined): boolean => {
@@ -143,13 +160,14 @@ export function FocusTaskCard({
         onMouseLeave={handleMouseUp}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
+        onTouchMove={handleTouchMove}
         style={{
           paddingLeft: task.isPartOfChain && task.chainPosition && task.chainPosition > 0 ? '28px' : '16px',
           opacity: isLocked ? 0.6 : 1,
         }}
         className={`flex-1 min-w-0 bg-bg-card rounded-2xl py-3 pr-4 flex items-center gap-3 border border-[#ffffff] cursor-pointer transition-all hover:bg-bg-card-hover relative overflow-hidden shadow-[0_4px_16px_rgba(0,0,0,0.35)] ${
           task.done ? "bg-bg-card-done border-accent-green/30" : ""
-        }`}
+        } ${isPressing ? "scale-[0.98] brightness-90" : ""}`}
       >
         {/* Mission color accent */}
         {task.projectId && !task.done && (
@@ -263,18 +281,6 @@ export function FocusTaskCard({
             </span>
           )}
         </div>
-
-        {/* Partial completion option overlay */}
-        {showPartialOption && !task.partial && !task.done && (
-          <div className="absolute inset-0 bg-black/80 flex items-center justify-center rounded-2xl">
-            <button
-              onClick={handlePartialOptionClick}
-              className="px-4 py-2 bg-accent-pink text-white font-bold rounded-lg hover:bg-accent-pink/90 transition-colors"
-            >
-              Mark as done partially
-            </button>
-          </div>
-        )}
       </div>
     </div>
   );

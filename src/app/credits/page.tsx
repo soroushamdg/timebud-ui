@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, useEffect, Suspense } from 'react'
 import { ChevronLeft, Sparkles, AlertCircle, Check } from 'lucide-react'
+import { AppShell } from '@/components/layout/AppShell'
 import { useTotalCredits } from '@/hooks/useCredits'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { StripePack } from '@/types/credits'
@@ -79,9 +80,10 @@ function CreditsContent() {
   const proPack = packs.find(p => p.isSubscription)
 
   return (
-    <div className="min-h-screen bg-bg-primary">
+    <AppShell showTabBar={false}>
+    <div className="flex flex-col h-[calc(100vh-5rem)] pb-5">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-border-card">
+      <div className="flex-shrink-0 flex items-center justify-between p-4 border-b border-border-card">
         <button
           onClick={() => router.back()}
           className="w-10 h-10 rounded-xl bg-bg-card border border-border-card flex items-center justify-center text-white hover:bg-opacity-80 transition-colors"
@@ -92,7 +94,7 @@ function CreditsContent() {
         <div className="w-10" />
       </div>
 
-      <div className="p-4 space-y-4">
+      <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4">
         {/* Success banner */}
         {success && (
           <div className="bg-accent-green/10 border border-accent-green/30 rounded-lg p-4 flex items-start gap-3">
@@ -305,15 +307,18 @@ function CreditsContent() {
         </details>
       </div>
     </div>
+    </AppShell>
   )
 }
 
 export default function CreditsPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-bg-primary flex items-center justify-center">
-        <div className="text-white">Loading...</div>
-      </div>
+      <AppShell showTabBar={false}>
+        <div className="flex flex-col h-[calc(100vh-5rem)] items-center justify-center">
+          <div className="text-white">Loading...</div>
+        </div>
+      </AppShell>
     }>
       <CreditsContent />
     </Suspense>

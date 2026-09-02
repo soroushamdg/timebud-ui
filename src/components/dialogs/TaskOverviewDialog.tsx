@@ -9,9 +9,11 @@ interface TaskOverviewDialogProps {
   isOpen?: boolean
   onClose: () => void
   task: PlannedTask
+  /** Omit to hide the button entirely (e.g. task already done or already partial). */
+  onMarkPartial?: () => void
 }
 
-export function TaskOverviewDialog({ isOpen, onClose, task }: TaskOverviewDialogProps) {
+export function TaskOverviewDialog({ isOpen, onClose, task, onMarkPartial }: TaskOverviewDialogProps) {
   if (!isOpen) return null
 
   return (
@@ -121,6 +123,17 @@ export function TaskOverviewDialog({ isOpen, onClose, task }: TaskOverviewDialog
                 Partial job - {task.scheduledMinutes} minutes allocated for this run
               </p>
             </div>
+          )}
+
+          {/* Mark partially done — the visible, gesture-free way to reach the same
+              action the run screen's card long-press offers */}
+          {onMarkPartial && (
+            <button
+              onClick={onMarkPartial}
+              className="w-full px-4 py-3 bg-accent-pink text-white font-bold rounded-lg hover:bg-accent-pink/90 transition-colors"
+            >
+              Mark as done partially
+            </button>
           )}
 
           {/* Job ID */}

@@ -6,6 +6,7 @@ import { ChevronLeft, Check, Camera, Upload } from 'lucide-react'
 import { ChevronDoubleUpIcon } from '@heroicons/react/24/outline'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
+import { AppShell } from '@/components/layout/AppShell'
 import { AvatarImage } from '@/components/ui/AvatarImage'
 import { ImageCropDialog } from '@/components/avatars/ImageCropDialog'
 import { LegoTransformSheet } from '@/components/avatars/LegoTransformSheet'
@@ -226,7 +227,9 @@ export default function NewProjectPage() {
   }
   
   return (
-    <div className="min-h-screen bg-bg-primary max-w-md mx-auto">
+    <AppShell showTabBar={false}>
+    <div className="flex flex-col h-[calc(100vh-5rem)] pb-5">
+    <div className="flex-1 min-h-0 overflow-y-auto">
       {/* Header */}
       <div className="flex items-center justify-between px-6 pt-6 pb-4">
         <button 
@@ -405,6 +408,8 @@ export default function NewProjectPage() {
           </button>
         </div>
       </form>
+    </div>
+    </div>
 
       {/* Avatar Picker Dialog */}
       {showAvatarPicker && (
@@ -503,6 +508,6 @@ export default function NewProjectPage() {
           onDismiss={handleTransformDismiss}
         />
       )}
-    </div>
+    </AppShell>
   )
 }

@@ -107,6 +107,10 @@ export const useActiveFocusSession = () => {
         .select('*')
         .eq('user_id', user.id)
         .in('status', ['running', 'paused'])
+        // Defense in depth: a row marked running/paused but already ended is a
+        // contradiction (e.g. a legacy insert that forgot to set status — see
+        // useCreateCompletedFocusSession below) — never treat it as "the active session."
+        .is('end_time', null)
         .order('start_time', { ascending: false })
         .limit(1)
         .maybeSingle()
@@ -147,6 +151,9 @@ export const useFocusSessionRealtime = (userId: string | undefined) => {
           queryClient.invalidateQueries({ queryKey: ['sessions'] })
 
           if (isActive) {
+            // force: true — a live event reporting running/paused is server truth about
+            // the current session, and should win over a stale local session id (see
+            // sessionStore's applyServerSnapshot for why that guard was blocking sync).
             useFocusSessionStore.getState().applyServerSnapshot({
               id: row.id,
               status: row.status,
@@ -155,7 +162,7 @@ export const useFocusSessionRealtime = (userId: string | undefined) => {
               total_paused_seconds: row.total_paused_seconds,
               budget_minutes: row.budget_minutes,
               planned_tasks: row.planned_tasks as unknown as PlannedTask[],
-            })
+            }, { force: true })
           } else if (useFocusSessionStore.getState().focusSessionId === row.id) {
             // The active session we were tracking just ended (or was abandoned) from
             // another device — clear it here too so this device isn't stuck showing it.
@@ -163,7 +170,14 @@ export const useFocusSessionRealtime = (userId: string | undefined) => {
           }
         }
       )
-      .subscribe()
+      .subscribe((status, err) => {
+        // Otherwise a dropped/failed channel (expired auth, blocked WebSocket,
+        // connection limit) is silently indistinguishable from "working, just relying on
+        // the 15s poll fallback" — this at least makes it observable.
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          console.error('[useFocusSessionRealtime] channel', status, err)
+        }
+      })
 
     return () => {
       supabase.removeChannel(channel)
@@ -264,6 +278,12 @@ export const useCreateCompletedFocusSession = () => {
       const focusSessionData = {
         ...focusSession,
         user_id: user.id,
+        // Every call site logs an already-finished run retroactively — without this,
+        // it falls through to the status column's 'running' default (added by the
+        // cross-device-sync migration, after this legacy path was written) despite
+        // end_time already being set, creating a permanent phantom "active session"
+        // that useActiveFocusSession would surface on every device.
+        status: 'completed' as const,
       }
 
       const { data, error } = await supabase

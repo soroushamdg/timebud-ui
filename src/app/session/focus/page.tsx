@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { X, Square, Pause, Play } from 'lucide-react'
+import { AppShell } from '@/components/layout/AppShell'
 import { useFocusSessionStore } from '@/stores/sessionStore'
 import { useUpdateTask } from '@/hooks/useTasks'
 import { useUpdateFocusSession, insertSessionTaskLogs } from '@/hooks/useSessions'
@@ -365,7 +366,8 @@ export default function FocusSession() {
   }
 
   return (
-    <div className="min-h-screen bg-black relative">
+    <AppShell showTabBar={false}>
+    <div className="flex flex-col h-[calc(100vh-5rem)] bg-black relative">
       {/* Floating X button - Top left corner */}
       <button
         onClick={() => setShowConfirmDialog(true)}
@@ -384,7 +386,7 @@ export default function FocusSession() {
       </button>
 
       {/* Timer display */}
-      <div className="flex flex-col items-center justify-center mt-32">
+      <div className="flex-shrink-0 flex flex-col items-center justify-center mt-32">
         <div className="text-[11px] font-extrabold tracking-[0.14em] text-text-sec uppercase mb-2">
           {isPaused ? 'Paused' : 'Run in progress'}
         </div>
@@ -402,7 +404,7 @@ export default function FocusSession() {
       </div>
 
       {/* Task list */}
-      <div className="px-4 mt-12 max-h-[calc(100vh-300px)] overflow-y-auto">
+      <div className="flex-1 min-h-0 overflow-y-auto px-4 mt-12">
         <div className="space-y-3 max-w-full">
           {focusSessionStore.plannedTasks.map((task, index) => {
             // Compute chain metadata on-the-fly if missing (for backward compatibility)
@@ -501,12 +503,21 @@ export default function FocusSession() {
 
       {/* Task overview dialog */}
       {showTaskOverview && selectedTask && (
-        <TaskOverviewDialog 
+        <TaskOverviewDialog
           isOpen={showTaskOverview}
           onClose={() => setShowTaskOverview(false)}
           task={selectedTask}
+          onMarkPartial={
+            !selectedTask.done && !selectedTask.partial
+              ? () => {
+                  setShowTaskOverview(false)
+                  handleTaskHold(selectedTask.taskId)
+                }
+              : undefined
+          }
         />
       )}
     </div>
+    </AppShell>
   )
 }

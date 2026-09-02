@@ -200,16 +200,17 @@ export default function PlannerPage() {
 
   return (
     <AppShell>
-      <div className="flex flex-col pb-24">
-        <div className="h-[2vh]" />
+      <div className="flex flex-col h-[calc(100vh-5rem)]">
+        <div className="flex-shrink-0 h-[2vh]" />
 
-        <div className="px-6 pt-4 mb-6 flex items-center gap-3">
+        <div className="flex-shrink-0 px-6 pt-4 mb-6 flex items-center gap-3">
           <button onClick={() => router.back()} className="text-white">
             <ChevronLeft className="w-6 h-6" />
           </button>
           <h1 className="text-white text-xl font-bold">Week Ahead</h1>
         </div>
 
+        <div className="flex-1 min-h-0 overflow-y-auto pb-24">
         {isLoading ? (
           <div className="flex items-center justify-center h-32">
             <p className="text-text-sec text-center">Loading your week...</p>
@@ -257,6 +258,7 @@ export default function PlannerPage() {
             </div>
           </>
         )}
+        </div>
       </div>
     </AppShell>
   )

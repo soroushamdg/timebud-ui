@@ -82,14 +82,15 @@ export default function NotificationSettingsPage() {
 
   return (
     <AppShell showTabBar={false}>
-      <div className="px-6 pt-4 mb-6 flex items-center gap-3">
+      <div className="flex flex-col h-[calc(100vh-5rem)] pb-5">
+      <div className="px-6 pt-4 mb-6 flex items-center gap-3 flex-shrink-0">
         <button onClick={() => router.back()} className="text-white">
           <ChevronLeft className="w-6 h-6" />
         </button>
         <h1 className="text-white text-xl font-bold">Notifications</h1>
       </div>
 
-      <div className="px-4 pb-8">
+      <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-8">
         <NotificationSettingsRow />
 
         {isSubscribed && (
@@ -155,6 +156,7 @@ export default function NotificationSettingsPage() {
             />
           </>
         )}
+      </div>
       </div>
     </AppShell>
   )

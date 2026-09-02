@@ -192,10 +192,10 @@ export default function ProfilePage() {
 
   return (
     <AppShell showTabBar={false}>
-      <div className="min-h-screen bg-bg-primary">
+      <div className="flex flex-col h-[calc(100vh-5rem)] pb-5">
         {/* Header with back button */}
-        <div className="flex items-center p-4">
-          <button 
+        <div className="flex items-center p-4 flex-shrink-0">
+          <button
             onClick={handleBack}
             className="w-10 h-10 rounded-xl bg-bg-card border border-border-card flex items-center justify-center text-white hover:bg-opacity-80 transition-colors"
           >
@@ -204,7 +204,7 @@ export default function ProfilePage() {
         </div>
 
         {/* Profile section */}
-        <div className="flex flex-col items-center px-6">
+        <div className="flex-1 min-h-0 overflow-y-auto flex flex-col items-center px-6">
           {/* ID Card */}
           <div
             className="w-full rounded-2xl p-5 mb-6 relative overflow-hidden border border-[#2a2a2a]"

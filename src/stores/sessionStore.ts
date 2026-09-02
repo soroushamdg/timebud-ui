@@ -63,7 +63,7 @@ interface FocusSessionStore {
   clearFocusSession: () => void;
   getElapsedTime: () => number;
   resumeTimer: () => void;
-  applyServerSnapshot: (row: FocusSessionServerSnapshot) => void;
+  applyServerSnapshot: (row: FocusSessionServerSnapshot, opts?: { force?: boolean }) => void;
 }
 
 const initialState = {
@@ -182,11 +182,17 @@ export const useFocusSessionStore = create<FocusSessionStore>()(
         return Math.max(0, rawElapsed - totalPausedSeconds);
       },
 
-      applyServerSnapshot: (row: FocusSessionServerSnapshot) => {
+      applyServerSnapshot: (row: FocusSessionServerSnapshot, opts) => {
         // Ignore snapshots for a different session than the one we're tracking locally
-        // (e.g. a stale event arriving after this device already started a new run).
+        // (e.g. a stale event arriving after this device already started a new run) —
+        // unless the caller passes force: true, for the two authoritative cross-device
+        // sync paths (the "what's my active session" poll/reconciliation in
+        // FocusSessionSync, and a live realtime event reporting a running/paused row).
+        // Both represent server truth about the current session and should win over a
+        // stale local pointer (e.g. a crashed tab that never cleared its old session id)
+        // — that mismatch was silently and permanently blocking real cross-device sync.
         const { focusSessionId } = get();
-        if (focusSessionId && focusSessionId !== row.id) return;
+        if (!opts?.force && focusSessionId && focusSessionId !== row.id) return;
 
         set({
           focusSessionId: row.id,

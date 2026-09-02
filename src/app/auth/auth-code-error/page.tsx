@@ -3,13 +3,15 @@
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Suspense } from 'react'
+import { AppShell } from '@/components/layout/AppShell'
 
 function ErrorContent() {
   const searchParams = useSearchParams()
   const reason = searchParams.get('reason')
 
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center px-6">
+    <AppShell showTabBar={false}>
+    <div className="flex flex-col h-[calc(100vh-5rem)] overflow-y-auto bg-black items-center justify-center px-6">
       <div className="w-full max-w-sm text-center">
         <h1 className="text-accent-yellow text-3xl font-bold mb-2">TimeBud</h1>
         <h2 className="text-white text-2xl font-bold mb-4">Sign-in failed</h2>
@@ -29,6 +31,7 @@ function ErrorContent() {
         </Link>
       </div>
     </div>
+    </AppShell>
   )
 }
 

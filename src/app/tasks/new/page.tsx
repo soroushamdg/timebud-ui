@@ -6,6 +6,7 @@ import { ChevronLeft, X, Plus, Search, RefreshCw, FileText, Calendar, Link2 } fr
 import { ChevronDoubleUpIcon } from '@heroicons/react/24/outline'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
+import { AppShell } from '@/components/layout/AppShell'
 import { useProjectsForTasks } from '@/hooks/useProjects'
 import { useTasks } from '@/hooks/useTasks'
 import { calculateNextDueDate, parseDateLocal } from '@/lib/dates'
@@ -302,7 +303,9 @@ export default function NewTaskPage(props: { searchParams: Promise<{ projectId?:
   }, [])
   
   return (
-    <div className="min-h-screen bg-bg-primary max-w-md mx-auto">
+    <AppShell showTabBar={false}>
+    <div className="flex flex-col h-[calc(100vh-5rem)] pb-5">
+    <div className="flex-1 min-h-0 overflow-y-auto">
       {/* Header */}
       <div className="flex items-center justify-between px-6 pt-6 pb-4">
         <button 
@@ -589,5 +592,7 @@ export default function NewTaskPage(props: { searchParams: Promise<{ projectId?:
         </div>
       </form>
     </div>
+    </div>
+    </AppShell>
   )
 }

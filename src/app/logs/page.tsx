@@ -284,9 +284,9 @@ export default function LogsPage() {
 
   return (
     <AppShell>
-      <div className="flex-1 flex flex-col bg-black">
+      <div className="flex flex-col h-[calc(100vh-5rem)] pb-5 bg-black">
         {/* Header */}
-        <div className="bg-[#1A1A1A] border-b border-[#333333] px-4 py-3 flex items-center justify-between">
+        <div className="flex-shrink-0 bg-[#1A1A1A] border-b border-[#333333] px-4 py-3 flex items-center justify-between">
           <h1 className="text-white text-lg font-semibold">Run History</h1>
           <Link
             href="/gantt"
@@ -299,7 +299,7 @@ export default function LogsPage() {
         </div>
 
         {/* Stats strip */}
-        <div className="grid grid-cols-4 divide-x divide-[#2A2A2A] border-b border-[#2A2A2A]">
+        <div className="flex-shrink-0 grid grid-cols-4 divide-x divide-[#2A2A2A] border-b border-[#2A2A2A]">
           <div className="bg-[#0D0D0D] px-3 py-3 flex flex-col items-center">
             <span className="text-white text-xl font-bold">
               {thisWeekSessions.length}
@@ -337,13 +337,13 @@ export default function LogsPage() {
         </div>
 
         {/* Week label */}
-        <div className="px-4 py-2 flex items-center gap-1.5">
+        <div className="flex-shrink-0 px-4 py-2 flex items-center gap-1.5">
           <CalendarDays size={11} className="text-[#444444]" />
           <span className="text-[#444444] text-[11px]">This week</span>
         </div>
 
         {/* Session list */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 min-h-0 overflow-y-auto">
           {isLoading ? (
             <div className="flex items-center justify-center py-16">
               <p className="text-[#555555] text-sm">Loading...</p>

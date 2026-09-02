@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { AppShell } from '@/components/layout/AppShell'
 import { useAllProjects, useUpdateProject, useDeleteProject } from '@/hooks/useProjects'
 import { useTasks } from '@/hooks/useTasks'
 import { useFocusSessionStore } from '@/stores/sessionStore'
@@ -105,13 +106,24 @@ export default function SelectProjectsPage() {
 
   const handleLongPressStart = useCallback((e: React.TouchEvent | React.MouseEvent, projectId: string) => {
     e.preventDefault()
-    
+
+    // Captured synchronously — e.currentTarget is nulled out by React once this handler
+    // returns, so it can't be read from inside the setTimeout below. The menu itself is
+    // `fixed`, which on desktop resolves against .app-box (not the real viewport) once
+    // CSS containment applies, so its coordinates need to be box-relative, not raw
+    // clientX/clientY — otherwise it'd open offset by however far the box sits from the
+    // browser window's corner.
+    const boxEl = (e.currentTarget as HTMLElement).closest('.app-box') as HTMLElement | null
+    const touch0 = 'touches' in e ? e.touches[0] : e
+    const startX = touch0.clientX
+    const startY = touch0.clientY
+
     longPressTimer.current = setTimeout(() => {
-      const touch = 'touches' in e ? e.touches[0] : e
+      const boxRect = boxEl?.getBoundingClientRect()
       setContextMenu({
         projectId,
-        x: touch.clientX,
-        y: touch.clientY,
+        x: startX - (boxRect?.left ?? 0),
+        y: startY - (boxRect?.top ?? 0),
       })
     }, 500)
   }, [])
@@ -359,39 +371,42 @@ export default function SelectProjectsPage() {
 
   if (isLoading) {
     return (
-      <div className="max-w-md mx-auto min-h-screen bg-black text-white relative overflow-visible">
+      <AppShell showTabBar={false}>
+      <div className="flex flex-col h-[calc(100vh-5rem)] bg-black text-white relative">
         {/* Header */}
-        <div className="flex justify-between items-center p-4">
+        <div className="flex-shrink-0 flex justify-between items-center p-4">
           <button className="text-accent-yellow font-bold">Cancel</button>
           <button className="text-accent-yellow font-bold">Done</button>
         </div>
-        
+
         {/* Heading */}
-        <h1 className="text-white text-xl font-bold px-4 mb-4">
+        <h1 className="flex-shrink-0 text-white text-xl font-bold px-4 mb-4">
           Pick the missions you&apos;re running:
         </h1>
-        
+
         {/* Loading skeleton */}
-        <div className="grid grid-cols-2 gap-4 px-4 pb-8">
+        <div className="flex-1 min-h-0 overflow-y-auto grid grid-cols-2 gap-4 px-4 pb-8">
           {[1, 2, 3, 4].map(i => (
             <ProjectCardSkeleton key={i} />
           ))}
         </div>
       </div>
+      </AppShell>
     )
   }
 
   return (
-    <div className="max-w-md mx-auto min-h-screen bg-black text-white relative overflow-visible">
+    <AppShell showTabBar={false}>
+    <div className="flex flex-col h-[calc(100vh-5rem)] bg-black text-white relative">
       {/* Header */}
-      <div className="flex justify-between items-center p-4">
-        <button 
+      <div className="flex-shrink-0 flex justify-between items-center p-4">
+        <button
           onClick={handleCancel}
           className="text-accent-yellow font-bold"
         >
           Cancel
         </button>
-        <button 
+        <button
           onClick={handleDone}
           className="text-accent-yellow font-bold"
           disabled={Object.keys(pendingChanges).length === 0}
@@ -399,16 +414,16 @@ export default function SelectProjectsPage() {
           Done
         </button>
       </div>
-      
+
       {/* Heading */}
-      <h1 className="text-white text-xl font-bold px-4 mb-2">
+      <h1 className="flex-shrink-0 text-white text-xl font-bold px-4 mb-2">
         Pick the missions you&apos;re running:
       </h1>
-      <p className="text-text-sec text-sm px-4 mb-4">
+      <p className="flex-shrink-0 text-text-sec text-sm px-4 mb-4">
         Tap to toggle active/paused • Long press for more options
       </p>
 
-      <div className="overflow-y-auto pb-8">
+      <div className="flex-1 min-h-0 overflow-y-auto pb-8">
         {/* Active and Paused Missions */}
         {activeAndPausedProjects.length > 0 && (
           <div className="px-4 mb-6">
@@ -639,5 +654,6 @@ export default function SelectProjectsPage() {
         </div>
       )}
     </div>
+    </AppShell>
   )
 }

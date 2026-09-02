@@ -34,16 +34,31 @@ function FocusSessionSync() {
 
   const { data: activeFocusSession } = useActiveFocusSession();
   useEffect(() => {
-    if (!activeFocusSession) return;
-    useFocusSessionStore.getState().applyServerSnapshot({
-      id: activeFocusSession.id,
-      status: activeFocusSession.status,
-      start_time: activeFocusSession.start_time,
-      paused_at: activeFocusSession.paused_at,
-      total_paused_seconds: activeFocusSession.total_paused_seconds,
-      budget_minutes: activeFocusSession.budget_minutes,
-      planned_tasks: activeFocusSession.planned_tasks as unknown as PlannedTask[],
-    });
+    // undefined = query hasn't resolved yet, leave local state alone. Once it has
+    // resolved, this query is authoritative for "what is my active session right now"
+    // (there's at most one), so it should win over a stale local session id either way —
+    // apply what it found (force: true, see sessionStore's applyServerSnapshot), or, if
+    // it found nothing but this device still thinks a session is running/paused (e.g. a
+    // crashed tab, or the run was stopped elsewhere while this device was asleep), clear
+    // that stale local state instead of leaving the device stuck showing a dead run.
+    if (activeFocusSession === undefined) return;
+
+    if (activeFocusSession) {
+      useFocusSessionStore.getState().applyServerSnapshot({
+        id: activeFocusSession.id,
+        status: activeFocusSession.status,
+        start_time: activeFocusSession.start_time,
+        paused_at: activeFocusSession.paused_at,
+        total_paused_seconds: activeFocusSession.total_paused_seconds,
+        budget_minutes: activeFocusSession.budget_minutes,
+        planned_tasks: activeFocusSession.planned_tasks as unknown as PlannedTask[],
+      }, { force: true });
+    } else {
+      const { focusSessionId, status } = useFocusSessionStore.getState();
+      if (focusSessionId && (status === 'running' || status === 'paused')) {
+        useFocusSessionStore.getState().clearFocusSession();
+      }
+    }
   }, [activeFocusSession]);
 
   return null;

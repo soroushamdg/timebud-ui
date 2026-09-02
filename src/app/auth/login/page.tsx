@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { AppShell } from '@/components/layout/AppShell'
 import { useLoading } from '@/contexts/LoadingContext'
 
 export default function LoginPage() {
@@ -74,7 +75,8 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center px-6">
+    <AppShell showTabBar={false}>
+    <div className="flex flex-col h-[calc(100vh-5rem)] overflow-y-auto bg-black items-center justify-center px-6">
       <div className="w-full max-w-sm">
         {/* Wordmark */}
         <div className="flex flex-col items-center mb-6">
@@ -170,5 +172,6 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+    </AppShell>
   )
 }
