@@ -208,7 +208,7 @@ export default function ProfilePage() {
         <div className="flex-1 min-h-0 overflow-y-auto flex flex-col items-center px-6">
           {/* ID Card */}
           <div
-            className="w-full rounded-2xl p-5 mb-6 relative overflow-hidden border border-subtle-border"
+            className="w-full flex-shrink-0 rounded-2xl p-5 mb-6 relative overflow-hidden border border-subtle-border"
             style={{ background: 'linear-gradient(150deg, var(--color-bg-card), var(--color-bg-card-locked))' }}
           >
             <div className="flex items-center gap-4">
