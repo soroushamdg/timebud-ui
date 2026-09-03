@@ -75,24 +75,24 @@ export function AddTaskToPlannerDialog({
 
   return (
     <>
-      <div className="fixed inset-0 bg-black/70 z-[100]" onClick={onClose} />
-      
-      <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-md mx-4 bg-[#1A1A1A] rounded-lg z-[100] max-h-[80vh] flex flex-col">
-        <div className="flex items-center justify-between p-4 border-b border-[#333333] flex-shrink-0">
+      <div className="fixed inset-0 bg-scrim/70 z-[100]" onClick={onClose} />
+
+      <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-md mx-4 bg-tab-bg rounded-lg z-[100] max-h-[80vh] flex flex-col">
+        <div className="flex items-center justify-between p-4 border-b border-border-card flex-shrink-0">
           <div className="flex items-center gap-3">
             <Plus className="w-5 h-5 text-accent-yellow" />
-            <h2 className="text-white font-bold text-lg">Add to Planner</h2>
+            <h2 className="text-text-primary font-bold text-lg">Add to Planner</h2>
           </div>
-          <button 
+          <button
             onClick={onClose}
-            className="text-[#666666] hover:text-white transition-colors"
+            className="text-text-tertiary hover:text-text-primary transition-colors"
           >
             <X className="w-6 h-6" />
           </button>
         </div>
-        
+
         <div className="p-4 flex-shrink-0">
-          <div className="bg-[#2A2A2A] rounded-lg px-3 py-2 border border-[#333333]">
+          <div className="bg-secondary-surface rounded-lg px-3 py-2 border border-border-card">
             <p className="text-text-sec text-sm">
               Budget: {calculateCurrentUsedTime()} / {budgetMinutes} min used
             </p>
@@ -113,7 +113,7 @@ export function AddTaskToPlannerDialog({
                 return (
                   <div
                     key={task.id}
-                    className="bg-[#2A2A2A] border border-[#333333] rounded-lg p-3 flex items-center gap-3"
+                    className="bg-secondary-surface border border-border-card rounded-lg p-3 flex items-center gap-3"
                   >
                     {project && (
                       <AvatarImage
@@ -123,20 +123,20 @@ export function AddTaskToPlannerDialog({
                         fallbackColor={project.color || '#F5C518'}
                         projectId={project.id}
                         size={32}
-                        className="flex-shrink-0 border-2 border-white"
+                        className="flex-shrink-0 border-2 border-avatar-ring"
                       />
                     )}
-                    
+
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         {task.priority && (
                           <ChevronDoubleUpIcon className="w-3 h-3 text-accent-yellow flex-shrink-0" />
                         )}
-                        <h4 className="text-white text-sm font-semibold truncate">
+                        <h4 className="text-text-primary text-sm font-semibold truncate">
                           {task.title}
                         </h4>
                       </div>
-                      
+
                       <div className="flex items-center gap-2 text-xs">
                         {task.estimated_minutes && (
                           <div className="flex items-center gap-1 text-text-sec">
@@ -144,9 +144,9 @@ export function AddTaskToPlannerDialog({
                             <span>{task.estimated_minutes}min</span>
                           </div>
                         )}
-                        
+
                         {task.due_date && (
-                          <div className={`flex items-center gap-1 ${taskIsOverdue ? 'text-red-500' : 'text-text-sec'}`}>
+                          <div className={`flex items-center gap-1 ${taskIsOverdue ? 'text-status-overdue' : 'text-text-sec'}`}>
                             <Calendar className="w-3 h-3" />
                             <span>{formatLocalSmart(task.due_date)}</span>
                           </div>
@@ -160,9 +160,9 @@ export function AddTaskToPlannerDialog({
                     
                     <button
                       onClick={() => handleAddTask(task)}
-                      className="flex-shrink-0 w-8 h-8 bg-accent-yellow rounded-lg flex items-center justify-center hover:bg-yellow-400 transition-colors"
+                      className="flex-shrink-0 w-8 h-8 bg-accent-yellow rounded-lg flex items-center justify-center hover:bg-accent-yellow-hover transition-colors"
                     >
-                      <Plus className="w-5 h-5 text-black" />
+                      <Plus className="w-5 h-5 text-on-light-accent" />
                     </button>
                   </div>
                 )
@@ -171,10 +171,10 @@ export function AddTaskToPlannerDialog({
           )}
         </div>
 
-        <div className="p-4 border-t border-[#333333] flex-shrink-0">
+        <div className="p-4 border-t border-border-card flex-shrink-0">
           <button
             onClick={onClose}
-            className="w-full bg-[#2A2A2A] text-white rounded-lg px-4 py-3 font-medium hover:bg-[#333333] transition-colors"
+            className="w-full bg-secondary-surface text-text-primary rounded-lg px-4 py-3 font-medium hover:bg-bg-card-hover transition-colors"
           >
             Done
           </button>

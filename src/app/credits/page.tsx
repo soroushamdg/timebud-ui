@@ -86,11 +86,11 @@ function CreditsContent() {
       <div className="flex-shrink-0 flex items-center justify-between p-4 border-b border-border-card">
         <button
           onClick={() => router.back()}
-          className="w-10 h-10 rounded-xl bg-bg-card border border-border-card flex items-center justify-center text-white hover:bg-opacity-80 transition-colors"
+          className="w-10 h-10 rounded-xl bg-bg-card border border-border-card flex items-center justify-center text-text-primary hover:bg-opacity-80 transition-colors"
         >
           <ChevronLeft size={20} />
         </button>
-        <h1 className="text-white font-bold text-xl">Credits & Billing</h1>
+        <h1 className="text-text-primary font-bold text-xl">Credits & Billing</h1>
         <div className="w-10" />
       </div>
 
@@ -139,9 +139,9 @@ function CreditsContent() {
           ) : (
             <>
               <div className="flex items-center gap-3 mb-3">
-                <div className="text-4xl font-bold text-white">{total.toLocaleString()}</div>
+                <div className="text-4xl font-bold text-text-primary">{total.toLocaleString()}</div>
                 {proSubscriber && (
-                  <div className="bg-accent-yellow text-black text-xs font-bold px-2 py-1 rounded">
+                  <div className="bg-accent-yellow text-on-light-accent text-xs font-bold px-2 py-1 rounded">
                     PRO
                   </div>
                 )}
@@ -169,7 +169,7 @@ function CreditsContent() {
 
         {/* One-time credit packs */}
         <div>
-          <h2 className="text-white font-bold text-lg mb-3">Top up credits</h2>
+          <h2 className="text-text-primary font-bold text-lg mb-3">Top up credits</h2>
           
           {packsLoading ? (
             <div className="grid grid-cols-1 gap-3">
@@ -191,26 +191,26 @@ function CreditsContent() {
                   } rounded-lg p-4 relative`}
                 >
                   {pack.popular && (
-                    <div className="absolute -top-2 left-4 bg-accent-yellow text-black text-xs font-bold px-2 py-0.5 rounded">
+                    <div className="absolute -top-2 left-4 bg-accent-yellow text-on-light-accent text-xs font-bold px-2 py-0.5 rounded">
                       MOST POPULAR
                     </div>
                   )}
                   <div className="flex items-center justify-between mb-3">
                     <div>
-                      <h3 className="text-white font-bold">{pack.name}</h3>
+                      <h3 className="text-text-primary font-bold">{pack.name}</h3>
                       <div className="text-2xl font-bold text-accent-yellow">
                         {pack.credits.toLocaleString()} <span className="text-sm text-text-sec">credits</span>
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-2xl font-bold text-white">
+                      <div className="text-2xl font-bold text-text-primary">
                         ${(pack.amount / 100).toFixed(2)}
                       </div>
                     </div>
                   </div>
                   <button
                     disabled={true}
-                    className="w-full bg-accent-yellow text-black font-semibold py-3 rounded-lg opacity-50 cursor-not-allowed"
+                    className="w-full bg-accent-yellow text-on-light-accent font-semibold py-3 rounded-lg opacity-50 cursor-not-allowed"
                   >
                     Coming Soon
                   </button>
@@ -223,13 +223,13 @@ function CreditsContent() {
         {/* Pro subscription */}
         {proPack && (
           <div>
-            <h2 className="text-white font-bold text-lg mb-3">Pro Subscription</h2>
+            <h2 className="text-text-primary font-bold text-lg mb-3">Pro Subscription</h2>
             
             {proSubscriber ? (
               <div className="bg-bg-card border-2 border-accent-yellow rounded-lg p-6">
                 <div className="flex items-center gap-2 mb-3">
                   <Sparkles className="w-6 h-6 text-accent-yellow" />
-                  <h3 className="text-white font-bold text-xl">You're on Pro ✓</h3>
+                  <h3 className="text-text-primary font-bold text-xl">You're on Pro ✓</h3>
                 </div>
                 <p className="text-text-sec mb-2">
                   {monthlyAllowance?.toLocaleString()} credits per month
@@ -240,7 +240,7 @@ function CreditsContent() {
                 <button
                   onClick={handleManageSubscription}
                   disabled={creatingPortalSession}
-                  className="w-full bg-bg-card-hover border border-border-card text-white font-semibold py-3 rounded-lg hover:bg-opacity-80 transition-opacity disabled:opacity-50"
+                  className="w-full bg-bg-card-hover border border-border-card text-text-primary font-semibold py-3 rounded-lg hover:bg-opacity-80 transition-opacity disabled:opacity-50"
                 >
                   {creatingPortalSession ? 'Loading...' : 'Manage Subscription'}
                 </button>
@@ -249,10 +249,10 @@ function CreditsContent() {
               <div className="bg-bg-card border-2 border-accent-yellow rounded-lg p-6">
                 <div className="flex items-center gap-2 mb-3">
                   <Sparkles className="w-6 h-6 text-accent-yellow" />
-                  <h3 className="text-white font-bold text-xl">{proPack.name}</h3>
+                  <h3 className="text-text-primary font-bold text-xl">{proPack.name}</h3>
                 </div>
                 <div className="mb-4">
-                  <div className="text-3xl font-bold text-white mb-1">
+                  <div className="text-3xl font-bold text-text-primary mb-1">
                     ${(proPack.amount / 100).toFixed(2)}
                     <span className="text-lg text-text-sec">/{proPack.interval}</span>
                   </div>
@@ -276,7 +276,7 @@ function CreditsContent() {
                 </ul>
                 <button
                   disabled={true}
-                  className="w-full bg-accent-yellow text-black font-semibold py-3 rounded-lg opacity-50 cursor-not-allowed"
+                  className="w-full bg-accent-yellow text-on-light-accent font-semibold py-3 rounded-lg opacity-50 cursor-not-allowed"
                 >
                   Coming Soon
                 </button>
@@ -287,20 +287,20 @@ function CreditsContent() {
 
         {/* How credits work */}
         <details className="bg-bg-card border border-border-card rounded-lg">
-          <summary className="p-4 cursor-pointer text-white font-medium hover:bg-bg-card-hover transition-colors">
+          <summary className="p-4 cursor-pointer text-text-primary font-medium hover:bg-bg-card-hover transition-colors">
             How credits work
           </summary>
           <div className="px-4 pb-4 text-text-sec text-sm space-y-2">
             <p>
-              <strong className="text-white">Free credits:</strong> You get {monthlyAllowance || 300} free credits every month. 
+              <strong className="text-text-primary">Free credits:</strong> You get {monthlyAllowance || 300} free credits every month. 
               These reset monthly and don't roll over.
             </p>
             <p>
-              <strong className="text-white">Purchased credits:</strong> Credits you buy never expire and are used 
+              <strong className="text-text-primary">Purchased credits:</strong> Credits you buy never expire and are used 
               after your free credits run out.
             </p>
             <p>
-              <strong className="text-white">Credit costs:</strong> Standard AI messages cost 20 credits, 
+              <strong className="text-text-primary">Credit costs:</strong> Standard AI messages cost 20 credits, 
               thinking mode costs 60 credits, and file analysis costs 25 credits per file.
             </p>
           </div>
@@ -316,7 +316,7 @@ export default function CreditsPage() {
     <Suspense fallback={
       <AppShell showTabBar={false}>
         <div className="flex flex-col h-[calc(100vh-5rem)] items-center justify-center">
-          <div className="text-white">Loading...</div>
+          <div className="text-text-primary">Loading...</div>
         </div>
       </AppShell>
     }>

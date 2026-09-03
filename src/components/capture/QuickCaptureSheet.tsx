@@ -126,13 +126,13 @@ export function QuickCaptureSheet({ onClose, onSuccess }: QuickCaptureSheetProps
   }
 
   return (
-    <div className="fixed inset-0 bg-black/70 z-[100] flex items-end" onClick={onClose}>
+    <div className="fixed inset-0 bg-scrim/70 z-[100] flex items-end" onClick={onClose}>
       <div
-        className="w-full max-w-md mx-auto bg-black rounded-t-3xl p-6 pb-8"
+        className="w-full max-w-md mx-auto bg-bg-primary rounded-t-3xl p-6 pb-8"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-white text-xl font-bold">Quick capture</h2>
+          <h2 className="text-text-primary text-xl font-bold">Quick capture</h2>
           <button onClick={onClose} className="text-text-sec">
             <X className="w-6 h-6" />
           </button>
@@ -144,7 +144,7 @@ export function QuickCaptureSheet({ onClose, onSuccess }: QuickCaptureSheetProps
           onChange={(e) => setText(e.target.value)}
           placeholder="What's on your mind?"
           rows={3}
-          className="w-full bg-bg-card border border-border-card rounded-2xl px-4 py-3 text-white placeholder-text-sec focus:outline-none focus:border-accent-yellow resize-none mb-3"
+          className="w-full bg-bg-card border border-border-card rounded-2xl px-4 py-3 text-text-primary placeholder-text-sec focus:outline-none focus:border-accent-yellow resize-none mb-3"
         />
 
         {error && <p className="text-accent-pink text-sm mb-3">{error}</p>}
@@ -166,7 +166,7 @@ export function QuickCaptureSheet({ onClose, onSuccess }: QuickCaptureSheetProps
                 isRecording ? 'bg-accent-pink' : 'bg-bg-card border border-border-card'
               }`}
             >
-              {isRecording ? <Square className="w-4 h-4 text-white" /> : <Mic className="w-5 h-5 text-white" />}
+              {isRecording ? <Square className="w-4 h-4 text-on-dark-accent" /> : <Mic className="w-5 h-5 text-text-primary" />}
             </button>
           </div>
           {isTranscribing && <span className="text-text-sec text-sm">Transcribing...</span>}
@@ -174,17 +174,17 @@ export function QuickCaptureSheet({ onClose, onSuccess }: QuickCaptureSheetProps
           <button
             onClick={handleSend}
             disabled={!text.trim() || isSending}
-            className="flex-1 bg-accent-yellow text-black font-bold py-3 rounded-2xl disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="flex-1 bg-accent-yellow text-on-light-accent font-bold py-3 rounded-2xl disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {isSending ? 'Sending...' : 'Send'}
           </button>
         </div>
 
         <div className="flex items-center justify-center gap-6 text-sm">
-          <button onClick={() => goTo('/tasks/new')} className="text-text-sec hover:text-white transition-colors">
+          <button onClick={() => goTo('/tasks/new')} className="text-text-sec hover:text-text-primary transition-colors">
             Full job form
           </button>
-          <button onClick={() => goTo('/projects/new')} className="text-text-sec hover:text-white transition-colors">
+          <button onClick={() => goTo('/projects/new')} className="text-text-sec hover:text-text-primary transition-colors">
             New mission
           </button>
         </div>

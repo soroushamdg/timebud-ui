@@ -359,38 +359,38 @@ export default function AllTasksPage() {
             <div className="px-6 pt-4 mb-6 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-bg-card border border-border-card animate-pulse"></div>
-                <div className="w-24 h-6 bg-gray-700 animate-pulse rounded"></div>
+                <div className="w-24 h-6 bg-skeleton animate-pulse rounded"></div>
               </div>
-              <div className="w-32 h-8 bg-gray-700 animate-pulse rounded-full"></div>
+              <div className="w-32 h-8 bg-skeleton animate-pulse rounded-full"></div>
             </div>
           </div>
           <div className="flex-1 px-6">
-            <div className="bg-bg-card rounded-2xl px-4 py-3 flex items-center gap-3 border border-[#ffffff] min-h-[72px] mb-3 animate-pulse">
-              <div className="w-5 h-5 bg-gray-700 rounded animate-pulse"></div>
-              <div className="w-10 h-10 bg-gray-700 rounded animate-pulse"></div>
+            <div className="bg-bg-card rounded-2xl px-4 py-3 flex items-center gap-3 border border-card-border-strong min-h-[72px] mb-3 animate-pulse">
+              <div className="w-5 h-5 bg-skeleton rounded animate-pulse"></div>
+              <div className="w-10 h-10 bg-skeleton rounded animate-pulse"></div>
               <div className="flex-1">
-                <div className="h-4 bg-gray-700 rounded animate-pulse mb-2"></div>
-                <div className="h-3 bg-gray-700 rounded animate-pulse w-3/4"></div>
+                <div className="h-4 bg-skeleton rounded animate-pulse mb-2"></div>
+                <div className="h-3 bg-skeleton rounded animate-pulse w-3/4"></div>
               </div>
-              <div className="w-12 h-4 bg-gray-700 rounded animate-pulse"></div>
+              <div className="w-12 h-4 bg-skeleton rounded animate-pulse"></div>
             </div>
-            <div className="bg-bg-card rounded-2xl px-4 py-3 flex items-center gap-3 border border-[#ffffff] min-h-[72px] mb-3 animate-pulse">
-              <div className="w-5 h-5 bg-gray-700 rounded animate-pulse"></div>
-              <div className="w-10 h-10 bg-gray-700 rounded animate-pulse"></div>
+            <div className="bg-bg-card rounded-2xl px-4 py-3 flex items-center gap-3 border border-card-border-strong min-h-[72px] mb-3 animate-pulse">
+              <div className="w-5 h-5 bg-skeleton rounded animate-pulse"></div>
+              <div className="w-10 h-10 bg-skeleton rounded animate-pulse"></div>
               <div className="flex-1">
-                <div className="h-4 bg-gray-700 rounded animate-pulse mb-2"></div>
-                <div className="h-3 bg-gray-700 rounded animate-pulse w-3/4"></div>
+                <div className="h-4 bg-skeleton rounded animate-pulse mb-2"></div>
+                <div className="h-3 bg-skeleton rounded animate-pulse w-3/4"></div>
               </div>
-              <div className="w-12 h-4 bg-gray-700 rounded animate-pulse"></div>
+              <div className="w-12 h-4 bg-skeleton rounded animate-pulse"></div>
             </div>
-            <div className="bg-bg-card rounded-2xl px-4 py-3 flex items-center gap-3 border border-[#ffffff] min-h-[72px] mb-3 animate-pulse">
-              <div className="w-5 h-5 bg-gray-700 rounded animate-pulse"></div>
-              <div className="w-10 h-10 bg-gray-700 rounded animate-pulse"></div>
+            <div className="bg-bg-card rounded-2xl px-4 py-3 flex items-center gap-3 border border-card-border-strong min-h-[72px] mb-3 animate-pulse">
+              <div className="w-5 h-5 bg-skeleton rounded animate-pulse"></div>
+              <div className="w-10 h-10 bg-skeleton rounded animate-pulse"></div>
               <div className="flex-1">
-                <div className="h-4 bg-gray-700 rounded animate-pulse mb-2"></div>
-                <div className="h-3 bg-gray-700 rounded animate-pulse w-3/4"></div>
+                <div className="h-4 bg-skeleton rounded animate-pulse mb-2"></div>
+                <div className="h-3 bg-skeleton rounded animate-pulse w-3/4"></div>
               </div>
-              <div className="w-12 h-4 bg-gray-700 rounded animate-pulse"></div>
+              <div className="w-12 h-4 bg-skeleton rounded animate-pulse"></div>
             </div>
           </div>
         </div>
@@ -439,20 +439,20 @@ export default function AllTasksPage() {
             <div className="flex items-center gap-3">
               <button 
                 onClick={() => router.back()} 
-                className="w-10 h-10 rounded-xl bg-bg-card border border-border-card flex items-center justify-center text-white hover:bg-opacity-80 transition-colors"
+                className="w-10 h-10 rounded-xl bg-bg-card border border-border-card flex items-center justify-center text-text-primary hover:bg-opacity-80 transition-colors"
               >
                 <ChevronLeft size={20} />
               </button>
-              <h1 className="text-white text-xl font-bold">
+              <h1 className="text-text-primary text-xl font-bold">
                 All Jobs
               </h1>
             </div>
             <button
               onClick={() => setShowSortDialog(true)}
-              className="bg-[#2A2A2A] rounded-full px-4 py-2 flex items-center gap-2 hover:bg-[#2A2A2A]/80 transition-colors"
+              className="bg-secondary-surface rounded-full px-4 py-2 flex items-center gap-2 hover:bg-bg-card-hover transition-colors"
             >
-              <ArrowUpDown className="w-4 h-4 text-[#949494]" />
-              <span className="text-white text-sm font-medium">
+              <ArrowUpDown className="w-4 h-4 text-text-sec" />
+              <span className="text-text-primary text-sm font-medium">
                 {getCurrentSortLabel()}
               </span>
             </button>
@@ -463,15 +463,15 @@ export default function AllTasksPage() {
             <div className="flex items-center gap-3 mb-3">
               <button
                 onClick={handleAddFilter}
-                className="bg-[#FFD233]/20 border border-[#FFD233]/50 rounded-full px-4 py-2 flex items-center gap-2 hover:bg-[#FFD233]/30 transition-colors"
+                className="bg-accent-yellow/20 border border-accent-yellow/50 rounded-full px-4 py-2 flex items-center gap-2 hover:bg-accent-yellow/30 transition-colors"
               >
-                <Plus className="w-4 h-4 text-[#FFD233]" />
-                <span className="text-[#FFD233] text-sm font-medium">
+                <Plus className="w-4 h-4 text-accent-yellow" />
+                <span className="text-accent-yellow text-sm font-medium">
                   Add filter
                 </span>
               </button>
             </div>
-            
+
             {/* Filter Pills */}
             {filters.length > 0 && (
               <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
@@ -479,13 +479,13 @@ export default function AllTasksPage() {
                   <button
                     key={index}
                     onClick={() => handleEditFilter(filter)}
-                    className="bg-[#FFD233]/20 border border-[#FFD233]/50 rounded-full px-3 py-1.5 flex items-center gap-2 hover:bg-[#FFD233]/30 transition-colors flex-shrink-0"
+                    className="bg-accent-yellow/20 border border-accent-yellow/50 rounded-full px-3 py-1.5 flex items-center gap-2 hover:bg-accent-yellow/30 transition-colors flex-shrink-0"
                   >
-                    <span className="text-[#FFD233] text-sm font-medium">
+                    <span className="text-accent-yellow text-sm font-medium">
                       {filter.label}
                     </span>
-                    <X 
-                      className="w-3 h-3 text-[#FFD233] hover:text-white"
+                    <X
+                      className="w-3 h-3 text-accent-yellow hover:text-text-primary"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleRemoveFilter(filter);
@@ -511,9 +511,9 @@ export default function AllTasksPage() {
               {groupedTasks.map(({ key, label, tasks }) => (
                 <div key={key} className="mb-5">
                   <div className="flex items-center gap-2 mb-3">
-                    {key === 'overdue' && <span className="w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0" />}
-                    {key === 'today' && <span className="w-1.5 h-1.5 rounded-full bg-blue-500 flex-shrink-0" />}
-                    <h2 className="text-white text-xs font-bold uppercase tracking-wider flex-shrink-0">
+                    {key === 'overdue' && <span className="w-1.5 h-1.5 rounded-full bg-status-overdue flex-shrink-0" />}
+                    {key === 'today' && <span className="w-1.5 h-1.5 rounded-full bg-status-today flex-shrink-0" />}
+                    <h2 className="text-text-primary text-xs font-bold uppercase tracking-wider flex-shrink-0">
                       {label}
                     </h2>
                     <span className="text-text-sec text-xs font-medium flex-shrink-0">{tasks.length}</span>
@@ -530,9 +530,9 @@ export default function AllTasksPage() {
 
         {/* Sort Dialog */}
         {showSortDialog && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100]">
+          <div className="fixed inset-0 bg-scrim/50 flex items-center justify-center z-[100]">
             <div className="bg-bg-card rounded-2xl border border-border-card p-6 w-80 shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
-              <h3 className="text-white text-lg font-semibold mb-4">Sort by</h3>
+              <h3 className="text-text-primary text-lg font-semibold mb-4">Sort by</h3>
               <div className="space-y-2">
                 {SORT_OPTIONS.map((option) => (
                   <button
@@ -540,8 +540,8 @@ export default function AllTasksPage() {
                     onClick={() => handleSortChange(option.option)}
                     className={`w-full text-left px-4 py-3 rounded-lg transition-colors ${
                       sortOption === option.option
-                        ? 'bg-[#FFD233]/20 text-[#FFD233]'
-                        : 'text-white hover:bg-[#2A2A2A]'
+                        ? 'bg-accent-yellow/20 text-accent-yellow'
+                        : 'text-text-primary hover:bg-bg-card-hover'
                     }`}
                   >
                     {option.label}
@@ -550,7 +550,7 @@ export default function AllTasksPage() {
               </div>
               <button
                 onClick={() => setShowSortDialog(false)}
-                className="mt-4 w-full bg-[#2A2A2A] text-white rounded-lg py-2 hover:bg-[#2A2A2A]/80 transition-colors"
+                className="mt-4 w-full bg-secondary-surface text-text-primary rounded-lg py-2 hover:bg-bg-card-hover transition-colors"
               >
                 Cancel
               </button>

@@ -100,7 +100,7 @@ export function RecurrenceEditor({
         <div className="flex items-center gap-2">
           <RefreshCw className="w-4 h-4 text-accent-yellow" />
           <div>
-            <span className="text-white font-medium">{toggleLabel}</span>
+            <span className="text-text-primary font-medium">{toggleLabel}</span>
             <p className="text-text-sec text-sm mt-0.5">{toggleDescription}</p>
           </div>
         </div>
@@ -114,7 +114,7 @@ export function RecurrenceEditor({
           }`}
         >
           <div
-            className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-transform duration-200 shadow-sm ${
+            className={`absolute top-0.5 w-5 h-5 bg-toggle-thumb rounded-full transition-transform duration-200 shadow-sm ${
               value.isRecurring ? 'translate-x-7' : 'translate-x-0.5'
             }`}
           />
@@ -135,7 +135,7 @@ export function RecurrenceEditor({
                   onClick={() => set({ recurrenceType: type })}
                   className={`px-3 py-1.5 rounded-xl text-sm font-medium transition-colors ${
                     value.recurrenceType === type
-                      ? 'bg-accent-yellow text-black'
+                      ? 'bg-accent-yellow text-on-light-accent'
                       : 'bg-bg-primary text-text-sec border border-border-card'
                   }`}
                 >
@@ -157,7 +157,7 @@ export function RecurrenceEditor({
                     })}
                     className={`w-10 h-10 rounded-full text-sm font-medium transition-colors ${
                       value.recurrenceDays.includes(val)
-                        ? 'bg-accent-yellow text-black'
+                        ? 'bg-accent-yellow text-on-light-accent'
                         : 'bg-bg-primary text-text-sec border border-border-card'
                     }`}
                   >
@@ -176,7 +176,7 @@ export function RecurrenceEditor({
                   max={365}
                   value={value.recurrenceInterval}
                   onChange={e => set({ recurrenceInterval: Math.max(2, Math.min(365, parseInt(e.target.value) || 2)) })}
-                  className="w-20 bg-bg-primary border border-border-card rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-accent-yellow"
+                  className="w-20 bg-bg-primary border border-border-card rounded-xl px-3 py-2 text-text-primary text-sm focus:outline-none focus:border-accent-yellow"
                 />
                 <span className="text-text-sec text-sm">days</span>
               </div>
@@ -194,7 +194,7 @@ export function RecurrenceEditor({
                   onClick={() => set({ recurrenceEndType: et })}
                   className={`px-3 py-1.5 rounded-xl text-sm font-medium transition-colors ${
                     value.recurrenceEndType === et
-                      ? 'bg-accent-yellow text-black'
+                      ? 'bg-accent-yellow text-on-light-accent'
                       : 'bg-bg-primary text-text-sec border border-border-card'
                   }`}
                 >
@@ -207,7 +207,7 @@ export function RecurrenceEditor({
                 type="date"
                 value={value.recurrenceEndDate}
                 onChange={e => set({ recurrenceEndDate: e.target.value })}
-                className="mt-3 w-full bg-bg-primary border border-border-card rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-accent-yellow [&::-webkit-calendar-picker-indicator]:filter [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-70"
+                className="mt-3 w-full bg-bg-primary border border-border-card rounded-xl px-4 py-2.5 text-text-primary focus:outline-none focus:border-accent-yellow [&::-webkit-calendar-picker-indicator]:filter [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-70"
               />
             )}
             {value.recurrenceEndType === 'after' && (
@@ -218,7 +218,7 @@ export function RecurrenceEditor({
                   min={1}
                   value={value.recurrenceEndAfter}
                   onChange={e => set({ recurrenceEndAfter: Math.max(1, parseInt(e.target.value) || 1) })}
-                  className="w-20 bg-bg-primary border border-border-card rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-accent-yellow"
+                  className="w-20 bg-bg-primary border border-border-card rounded-xl px-3 py-2 text-text-primary text-sm focus:outline-none focus:border-accent-yellow"
                 />
                 <span className="text-text-sec text-sm">times</span>
               </div>
@@ -239,7 +239,7 @@ export function RecurrenceEditor({
                 }`}
               >
                 <p className={`text-sm font-medium ${
-                  value.recurrenceMissedBehavior === 'overdue' ? 'text-accent-yellow' : 'text-white'
+                  value.recurrenceMissedBehavior === 'overdue' ? 'text-accent-yellow' : 'text-text-primary'
                 }`}>Show as overdue</p>
                 <p className="text-text-sec text-xs mt-0.5">Missed days stay visible</p>
               </button>
@@ -253,7 +253,7 @@ export function RecurrenceEditor({
                 }`}
               >
                 <p className={`text-sm font-medium ${
-                  value.recurrenceMissedBehavior === 'skip' ? 'text-accent-yellow' : 'text-white'
+                  value.recurrenceMissedBehavior === 'skip' ? 'text-accent-yellow' : 'text-text-primary'
                 }`}>Skip missed days</p>
                 <p className="text-text-sec text-xs mt-0.5">Auto-skip and move on</p>
               </button>

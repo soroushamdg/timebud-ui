@@ -19,9 +19,9 @@ export function BudgetMeter({ usedMinutes, budgetMinutes }: BudgetMeterProps) {
           <span className="text-accent-yellow text-xs font-semibold">Over budget</span>
         )}
       </div>
-      <div className="h-2 w-full rounded-full bg-[#2A2A2A] overflow-hidden">
+      <div className="h-2 w-full rounded-full bg-secondary-surface overflow-hidden">
         <div
-          className={`h-full rounded-full transition-all ${isOverBudget ? 'bg-red-500' : 'bg-accent-yellow'}`}
+          className={`h-full rounded-full transition-all ${isOverBudget ? 'bg-status-negative' : 'bg-accent-yellow'}`}
           style={{ width: `${percent}%` }}
         />
       </div>

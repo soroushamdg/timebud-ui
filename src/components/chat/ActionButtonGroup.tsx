@@ -81,20 +81,20 @@ export function ActionButtonGroup({
     const baseClasses = 'px-4 py-2 rounded-lg font-semibold transition-all flex items-center gap-2 whitespace-nowrap flex-shrink-0'
     
     if (confirmingButtonId === button.id) {
-      return `${baseClasses} bg-bg-card border border-border-card text-white`
+      return `${baseClasses} bg-bg-card border border-border-card text-text-primary`
     }
 
     switch (button.style) {
       case 'primary':
-        return `${baseClasses} bg-accent-yellow text-black hover:opacity-90`
+        return `${baseClasses} bg-accent-yellow text-on-light-accent hover:opacity-90`
       case 'secondary':
-        return `${baseClasses} bg-bg-card border border-border-card text-white hover:bg-bg-card-hover`
+        return `${baseClasses} bg-bg-card border border-border-card text-text-primary hover:bg-bg-card-hover`
       case 'danger':
-        return `${baseClasses} bg-accent-pink text-white hover:opacity-90`
+        return `${baseClasses} bg-accent-pink text-on-dark-accent hover:opacity-90`
       case 'success':
-        return `${baseClasses} bg-accent-green text-white hover:opacity-90`
+        return `${baseClasses} bg-accent-green text-on-dark-accent hover:opacity-90`
       default:
-        return `${baseClasses} bg-bg-card border border-border-card text-white hover:bg-bg-card-hover`
+        return `${baseClasses} bg-bg-card border border-border-card text-text-primary hover:bg-bg-card-hover`
     }
   }
 
@@ -112,13 +112,13 @@ export function ActionButtonGroup({
             <div key={button.id} className="flex gap-2 flex-shrink-0">
               <button
                 onClick={() => handleButtonClick(button)}
-                className="px-3 py-2 rounded-lg font-semibold bg-accent-pink text-white hover:opacity-90 transition-all text-sm"
+                className="px-3 py-2 rounded-lg font-semibold bg-accent-pink text-on-dark-accent hover:opacity-90 transition-all text-sm"
               >
                 Confirm
               </button>
               <button
                 onClick={handleCancelConfirmation}
-                className="px-3 py-2 rounded-lg font-semibold bg-bg-card border border-border-card text-white hover:bg-bg-card-hover transition-all text-sm"
+                className="px-3 py-2 rounded-lg font-semibold bg-bg-card border border-border-card text-text-primary hover:bg-bg-card-hover transition-all text-sm"
               >
                 Cancel
               </button>

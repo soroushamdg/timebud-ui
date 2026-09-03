@@ -14,7 +14,7 @@ export function WarningBanner({ warnings }: WarningBannerProps) {
     <div className="mt-3 space-y-2">
       {warnings.map((warning, idx) => {
         const severityColors = {
-          low: 'bg-gray-500/10 border-gray-500/30 text-gray-300',
+          low: 'bg-status-neutral-surface/10 border-status-neutral-surface/30 text-status-neutral-text',
           medium: 'bg-accent-yellow/10 border-accent-yellow/30 text-accent-yellow',
           high: 'bg-accent-pink/10 border-accent-pink/30 text-accent-pink',
         }

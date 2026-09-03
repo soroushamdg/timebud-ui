@@ -58,7 +58,7 @@ export function LoadingDialog({ isOpen, currentStage, progress }: LoadingDialogP
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[200]">
+    <div className="fixed inset-0 bg-scrim/80 flex items-center justify-center z-[200]">
       <div className="bg-bg-card rounded-3xl p-8 max-w-sm w-full mx-4 border border-border-card">
         {/* Yellow Circle Loader */}
         <div className="flex justify-center mb-6">
@@ -70,7 +70,7 @@ export function LoadingDialog({ isOpen, currentStage, progress }: LoadingDialogP
 
         {/* Single Message */}
         <div className="text-center mb-6">
-          <h3 className="text-white font-bold text-lg mb-4">{message}</h3>
+          <h3 className="text-text-primary font-bold text-lg mb-4">{message}</h3>
           
           {/* Checkbox */}
           <div className="flex items-center justify-center gap-3">
@@ -79,7 +79,7 @@ export function LoadingDialog({ isOpen, currentStage, progress }: LoadingDialogP
                 ? 'bg-accent-yellow border-accent-yellow' 
                 : 'border-border-card'
             }`}>
-              {isChecked && <Check size={12} className="text-black" />}
+              {isChecked && <Check size={12} className="text-on-light-accent" />}
             </div>
             <span className="text-text-sec text-sm">Completed</span>
           </div>

@@ -270,8 +270,8 @@ export function ProjectAvatarPicker({
 
   return (
     <>
-      <div className="fixed inset-0 bg-black/50 z-[150]" onClick={onClose} />
-      
+      <div className="fixed inset-0 bg-scrim/50 z-[150]" onClick={onClose} />
+
       <div className="fixed bottom-0 left-0 right-0 bg-bg-card rounded-t-3xl z-[160] max-h-[70vh] overflow-y-auto">
         {/* Handle bar */}
         <div className="flex justify-center pt-3 pb-2">
@@ -280,10 +280,10 @@ export function ProjectAvatarPicker({
 
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border-card">
-          <h2 className="text-white font-bold text-xl">Mission Avatar</h2>
+          <h2 className="text-text-primary font-bold text-xl">Mission Avatar</h2>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-lg bg-bg-primary flex items-center justify-center text-text-sec hover:text-white transition-colors"
+            className="w-8 h-8 rounded-lg bg-bg-primary flex items-center justify-center text-text-sec hover:text-text-primary transition-colors"
           >
             <X size={16} />
           </button>
@@ -305,14 +305,14 @@ export function ProjectAvatarPicker({
                 className="flex-1 h-20 bg-bg-card border-2 border-dashed border-border-card rounded-2xl flex flex-col items-center justify-center gap-2 hover:border-accent-yellow transition-colors"
               >
                 <Camera size={20} className="text-accent-yellow" />
-                <span className="text-white text-xs font-medium">Camera</span>
+                <span className="text-text-primary text-xs font-medium">Camera</span>
               </button>
               <button
                 onClick={handleLibrarySelect}
                 className="flex-1 h-20 bg-bg-card border-2 border-dashed border-border-card rounded-2xl flex flex-col items-center justify-center gap-2 hover:border-accent-yellow transition-colors"
               >
                 <Upload size={20} className="text-accent-yellow" />
-                <span className="text-white text-xs font-medium">Library</span>
+                <span className="text-text-primary text-xs font-medium">Library</span>
               </button>
             </div>
           </div>
@@ -361,14 +361,14 @@ export function ProjectAvatarPicker({
                   <div className="flex gap-3">
                     <button
                       onClick={() => setShowConfirmRemove(false)}
-                      className="flex-1 bg-bg-primary border border-border-card text-white font-medium py-2 rounded-xl"
+                      className="flex-1 bg-bg-primary border border-border-card text-text-primary font-medium py-2 rounded-xl"
                     >
                       Cancel
                     </button>
                     <button
                       onClick={handleRemoveConfirm}
                       disabled={removeAvatar.isPending}
-                      className="flex-1 bg-accent-pink text-white font-medium py-2 rounded-xl disabled:opacity-50"
+                      className="flex-1 bg-accent-pink text-on-dark-accent font-medium py-2 rounded-xl disabled:opacity-50"
                     >
                       {removeAvatar.isPending ? 'Removing...' : 'Confirm'}
                     </button>
@@ -388,7 +388,7 @@ export function ProjectAvatarPicker({
 
         {/* Loading overlay */}
         {setAvatar.isPending && (
-          <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-t-3xl">
+          <div className="absolute inset-0 bg-scrim/50 flex items-center justify-center rounded-t-3xl">
             <div className="w-8 h-8 border-4 border-accent-yellow border-t-transparent rounded-full animate-spin" />
           </div>
         )}

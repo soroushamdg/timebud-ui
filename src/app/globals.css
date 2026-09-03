@@ -13,14 +13,221 @@
   --color-text-sec: #888888;
   --color-border-card: #333333;
   --color-tab-bg: #1a1a1a;
+  /* Muted below text-sec — encountered during the Phase 1 sweep (not in the
+     original token research pass), added here for the same reason as the others:
+     a distinct visual-hierarchy role gets its own token rather than a raw hex. */
+  --color-text-tertiary: #666666;
+  --color-text-muted: #555555;
+  --color-text-faint: #444444;
+  --color-bg-inset: #0d0d0d;
+
+  /* Text roles. text-primary is the one that flips in a future light theme;
+     on-dark-accent/on-light-accent are about contrast against an accent surface
+     (pink/red vs. yellow/green), not about theme, so they stay constant. */
+  --color-text-primary: #ffffff;
+  --color-on-dark-accent: #ffffff;
+  --color-on-light-accent: #000000;
+
+  /* Secondary surfaces / borders, distinct from bg-card/border-card. */
+  --color-secondary-surface: #2a2a2a;
+  --color-subtle-border: #2a2a2a;
+  --color-card-border-strong: #ffffff;
+  --color-avatar-ring: #ffffff;
+  --color-cta-outline: #ffffff;
+  --color-toggle-thumb: #ffffff;
+  --color-overlay-surface: rgba(255, 255, 255, 0.1);
+  /* Encountered during the Phase 1 sweep: recurring roles not in the original
+     research pass, each with 3+ consistent usages across the app. */
+  --color-badge-ring: #000000; /* cutout ring separating a small circular badge from what's behind it */
+  --color-progress-track: #000000; /* XP/progress-bar groove background */
+  /* Modal backdrops and photo-overlay scrims need to stay dark regardless of theme —
+     a white dimming layer doesn't dim anything, and white text on a "translucent
+     white" glass button over a photo is illegible. Deliberately NOT redefined in the
+     light-theme override block below, so it stays constant across both themes. */
+  --color-scrim: #000000;
+
+  /* Level-up / mission-complete celebration modals: a deliberate full-bleed dark
+     "spotlight" moment (radial glow + confetti + a bright text gradient) that only
+     works against black — on white it'd be an inverted mess and the confetti/glow
+     would vanish. Kept as its own always-dark set, never redefined for light theme,
+     rather than reusing bg-primary/text-primary/etc. which do flip. */
+  --color-celebration-bg: #000000;
+  --color-celebration-card: #1c1c1c;
+  --color-celebration-border: #2a2a2a;
+  --color-celebration-text: #ffffff;
+  --color-celebration-ring: #000000;
+  --color-celebration-track: #000000;
+
+  /* Status colors, aliased to Tailwind's own default palette vars (imported above)
+     rather than re-typed hex/oklch, so there is zero risk of a transcription/
+     conversion mismatch against what's already on screen today. */
+  --color-status-overdue: var(--color-red-500);
+  --color-status-today: var(--color-blue-500);
+  --color-status-onhold-text: var(--color-amber-400);
+  --color-status-onhold-surface: var(--color-amber-500);
+  --color-status-negative: var(--color-red-500);
+  --color-status-negative-text: var(--color-red-400);
+  --color-status-neutral-surface: var(--color-gray-500);
+  --color-status-neutral-text: var(--color-gray-300);
+  --color-action-undo: var(--color-orange-500);
+
+  /* Disabled/locked state and native form-control chrome — same value as each
+     other and as status-neutral today by coincidence, kept as separate tokens
+     since they're different concepts that could diverge later. */
+  --color-disabled-text: var(--color-gray-400);
+  --color-disabled-icon: var(--color-gray-500);
+  --color-disabled-border: var(--color-gray-600);
+  --color-form-border: var(--color-gray-600);
+  --color-skeleton: var(--color-gray-700);
+
+  --color-accent-yellow-hover: var(--color-yellow-400);
+  --color-accent-yellow-light: #ffdf6b; /* XP-bar fill gradient's light endpoint, paired with accent-yellow */
 
   --font-family-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
 }
 
+/* Not in @theme (no utility class needed) — just the AmbientBackground blobs' glow
+   color, referenced directly via var(). White works as a soft glow on black; on a
+   light page it needs to be a colored (not white-on-white) tint instead. */
+:root {
+  --ambient-glow: rgba(255, 255, 255, 0.5);
+}
+
+/* Light theme — overrides every themeable token above. Applied via an explicit
+   data-theme="light" choice, or automatically under data-theme="system" when the OS
+   prefers light (see the media-query block below). No attribute at all (or
+   data-theme="dark") keeps the dark values above untouched — dark stays the default
+   for anyone who's never touched the setting, so this is zero-risk to ship.
+
+   accent-yellow/accent-green are genuinely re-tuned (not just carried over) here,
+   not merely darkened for form: at their dark-mode brightness they fail contrast as
+   plain text on a light page (~1.7:1), so both are deepened to the point they clear
+   4.5:1 as body text while keeping the same hue — same brand color, adapted so it's
+   still readable once the page around it goes from black to white. on-light-accent
+   flips from black to white for the same reason: it's "the color that reads against
+   OUR accent surface," and once that surface is a deep gold/forest-green instead of
+   a neon one, white clears contrast far more reliably than black does. accent-pink
+   is left as-is — it already clears 4.5:1 on white without any adjustment.
+
+   scrim and the celebration-* tokens are intentionally absent here — they're
+   defined once in the base block above and never redefined, so they stay constant
+   across both themes (see their comments there for why). */
+[data-theme="light"] {
+  --color-bg-primary: #fafafa;
+  --color-bg-card: #f0f0f0;
+  --color-bg-card-done: #e3f5ea;
+  --color-bg-card-hover: #e6e6e6;
+  --color-bg-card-locked: #f5f5f5;
+  --color-accent-yellow: #8a6a00;
+  --color-accent-pink: #e8004d;
+  --color-accent-green: #15803d;
+  --color-text-sec: #6b7280;
+  --color-border-card: #e0e0e0;
+  --color-tab-bg: #f7f7f7;
+  --color-text-tertiary: #86909c;
+  --color-text-muted: #9aa1ab;
+  --color-text-faint: #adb3bc;
+  --color-bg-inset: #ececec;
+
+  --color-text-primary: #171717;
+  --color-on-dark-accent: #ffffff;
+  --color-on-light-accent: #ffffff;
+
+  --color-secondary-surface: #ececec;
+  --color-subtle-border: #dcdcdc;
+  --color-card-border-strong: #171717;
+  --color-avatar-ring: #171717;
+  --color-cta-outline: #171717;
+  --color-toggle-thumb: #ffffff;
+  --color-overlay-surface: rgba(0, 0, 0, 0.06);
+  --color-badge-ring: #fafafa;
+  --color-progress-track: #e5e5e5;
+
+  --color-status-overdue: #b91c1c;
+  --color-status-today: #1d4ed8;
+  --color-status-onhold-text: #92400e;
+  --color-status-onhold-surface: #d97706;
+  --color-status-negative: #b91c1c;
+  --color-status-negative-text: #b91c1c;
+  --color-status-neutral-surface: #6b7280;
+  --color-status-neutral-text: #374151;
+  --color-action-undo: #c2410c;
+
+  --color-disabled-text: #9ca3af;
+  --color-disabled-icon: #9ca3af;
+  --color-disabled-border: #d1d5db;
+  --color-form-border: #d1d5db;
+  --color-skeleton: #e5e7eb;
+
+  --color-accent-yellow-hover: #a8820a;
+  --color-accent-yellow-light: #d4af37;
+
+  --ambient-glow: rgba(245, 197, 24, 0.35);
+}
+
+/* "System" mode: only takes effect while the OS itself prefers light — if the OS
+   prefers dark (or reports nothing), no rule here matches and the dark values from
+   the base @theme block apply automatically. Live too: the browser re-evaluates this
+   media query the instant the OS preference changes, no JS required. */
+@media (prefers-color-scheme: light) {
+  [data-theme="system"] {
+    --color-bg-primary: #fafafa;
+    --color-bg-card: #f0f0f0;
+    --color-bg-card-done: #e3f5ea;
+    --color-bg-card-hover: #e6e6e6;
+    --color-bg-card-locked: #f5f5f5;
+    --color-accent-yellow: #8a6a00;
+    --color-accent-pink: #e8004d;
+    --color-accent-green: #15803d;
+    --color-text-sec: #6b7280;
+    --color-border-card: #e0e0e0;
+    --color-tab-bg: #f7f7f7;
+    --color-text-tertiary: #86909c;
+    --color-text-muted: #9aa1ab;
+    --color-text-faint: #adb3bc;
+    --color-bg-inset: #ececec;
+
+    --color-text-primary: #171717;
+    --color-on-dark-accent: #ffffff;
+    --color-on-light-accent: #ffffff;
+
+    --color-secondary-surface: #ececec;
+    --color-subtle-border: #dcdcdc;
+    --color-card-border-strong: #171717;
+    --color-avatar-ring: #171717;
+    --color-cta-outline: #171717;
+    --color-toggle-thumb: #ffffff;
+    --color-overlay-surface: rgba(0, 0, 0, 0.06);
+    --color-badge-ring: #fafafa;
+    --color-progress-track: #e5e5e5;
+
+    --color-status-overdue: #b91c1c;
+    --color-status-today: #1d4ed8;
+    --color-status-onhold-text: #92400e;
+    --color-status-onhold-surface: #d97706;
+    --color-status-negative: #b91c1c;
+    --color-status-negative-text: #b91c1c;
+    --color-status-neutral-surface: #6b7280;
+    --color-status-neutral-text: #374151;
+    --color-action-undo: #c2410c;
+
+    --color-disabled-text: #9ca3af;
+    --color-disabled-icon: #9ca3af;
+    --color-disabled-border: #d1d5db;
+    --color-form-border: #d1d5db;
+    --color-skeleton: #e5e7eb;
+
+    --color-accent-yellow-hover: #a8820a;
+    --color-accent-yellow-light: #d4af37;
+
+    --ambient-glow: rgba(245, 197, 24, 0.35);
+  }
+}
+
 @layer base {
   body {
-    background-color: #000000;
-    color: #ffffff;
+    background-color: var(--color-bg-primary);
+    color: var(--color-text-primary);
     font-family: "Inter", sans-serif;
     -webkit-font-smoothing: antialiased;
   }
@@ -59,7 +266,7 @@
     position: absolute;
     border-radius: 9999px;
     filter: blur(70px);
-    background: radial-gradient(circle, rgba(255, 255, 255, 0.5) 0%, transparent 70%);
+    background: radial-gradient(circle, var(--ambient-glow) 0%, transparent 70%);
   }
   .ambient-blob-1 {
     top: -10%;
@@ -101,7 +308,7 @@
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    background-color: #000000 !important;
+    background-color: var(--color-bg-primary) !important;
   }
 
   .splash-icon {

@@ -234,11 +234,11 @@ export default function NewProjectPage() {
       <div className="flex items-center justify-between px-6 pt-6 pb-4">
         <button 
           onClick={() => router.back()} 
-          className="w-10 h-10 rounded-xl bg-bg-card border border-border-card flex items-center justify-center text-white hover:bg-opacity-80 transition-colors"
+          className="w-10 h-10 rounded-xl bg-bg-card border border-border-card flex items-center justify-center text-text-primary hover:bg-opacity-80 transition-colors"
         >
           <ChevronLeft size={20} />
         </button>
-        <h1 className="text-2xl font-bold text-white">
+        <h1 className="text-2xl font-bold text-text-primary">
           New Mission
         </h1>
         <div className="w-10" />
@@ -253,12 +253,12 @@ export default function NewProjectPage() {
             fallbackLabel={formData.name || 'New Mission'}
             fallbackColor={selectedColor}
             size={128}
-            className="shadow-lg border-4 border-white"
+            className="shadow-lg border-4 border-avatar-ring"
           />
           <button
             type="button"
             onClick={() => setShowAvatarPicker(true)}
-            className="absolute bottom-0 right-0 w-10 h-10 rounded-full bg-bg-card flex items-center justify-center text-white hover:opacity-90 transition-opacity border-2 border-bg-primary"
+            className="absolute bottom-0 right-0 w-10 h-10 rounded-full bg-bg-card flex items-center justify-center text-text-primary hover:opacity-90 transition-opacity border-2 border-bg-primary"
           >
             <Camera size={20} />
           </button>
@@ -284,7 +284,7 @@ export default function NewProjectPage() {
             placeholder="Enter mission name"
             value={formData.name}
             onChange={(e) => handleInputChange('name', e.target.value)}
-            className="w-full bg-bg-card border border-border-card rounded-2xl px-5 py-3.5 text-white placeholder-text-sec focus:outline-none focus:border-accent-yellow transition-colors"
+            className="w-full bg-bg-card border border-border-card rounded-2xl px-5 py-3.5 text-text-primary placeholder-text-sec focus:outline-none focus:border-accent-yellow transition-colors"
             required
           />
           {nameError && (
@@ -302,7 +302,7 @@ export default function NewProjectPage() {
             rows={4}
             value={formData.description}
             onChange={(e) => handleInputChange('description', e.target.value)}
-            className="w-full bg-bg-card border border-border-card rounded-2xl px-5 py-3.5 text-white placeholder-text-sec focus:outline-none focus:border-accent-yellow resize-none transition-colors"
+            className="w-full bg-bg-card border border-border-card rounded-2xl px-5 py-3.5 text-text-primary placeholder-text-sec focus:outline-none focus:border-accent-yellow resize-none transition-colors"
           />
         </div>
         
@@ -315,7 +315,7 @@ export default function NewProjectPage() {
             type="date"
             value={formData.deadline}
             onChange={(e) => handleInputChange('deadline', e.target.value)}
-            className="w-full bg-bg-card border border-border-card rounded-2xl px-5 py-3.5 text-white focus:outline-none focus:border-accent-yellow transition-colors [&::-webkit-calendar-picker-indicator]:filter [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-70 [&::-webkit-calendar-picker-indicator]:hover:opacity-100"
+            className="w-full bg-bg-card border border-border-card rounded-2xl px-5 py-3.5 text-text-primary focus:outline-none focus:border-accent-yellow transition-colors [&::-webkit-calendar-picker-indicator]:filter [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-70 [&::-webkit-calendar-picker-indicator]:hover:opacity-100"
           />
         </div>
         
@@ -328,7 +328,7 @@ export default function NewProjectPage() {
           <div className="flex items-center gap-2">
             <ChevronDoubleUpIcon className="w-4 h-4 text-accent-yellow" />
             <div className="text-left">
-              <span className="text-white font-medium">Priority Mission</span>
+              <span className="text-text-primary font-medium">Priority Mission</span>
               <p className="text-text-sec text-sm mt-0.5">Mark as high priority</p>
             </div>
           </div>
@@ -338,7 +338,7 @@ export default function NewProjectPage() {
             } relative flex items-center`}
           >
             <div
-              className={`w-6 h-6 bg-white rounded-full transition-transform duration-200 shadow-md ${
+              className={`w-6 h-6 bg-toggle-thumb rounded-full transition-transform duration-200 shadow-md ${
                 formData.priority ? 'translate-x-8' : 'translate-x-0'
               }`}
             />
@@ -347,7 +347,7 @@ export default function NewProjectPage() {
 
         {/* Difficulty — sets the XP multiplier every job in this mission earns */}
         <div className="bg-bg-card border border-border-card rounded-2xl p-5">
-          <label className="text-white font-medium mb-1 block">
+          <label className="text-text-primary font-medium mb-1 block">
             Difficulty
           </label>
           <p className="text-text-sec text-sm mb-3">Harder missions pay out more XP per job</p>
@@ -373,7 +373,7 @@ export default function NewProjectPage() {
 
         {/* Color swatches */}
         <div className="bg-bg-card border border-border-card rounded-2xl p-5">
-          <label className="text-white font-medium mb-3 block">
+          <label className="text-text-primary font-medium mb-3 block">
             Mission Color
           </label>
           <div className="flex justify-between gap-2">
@@ -383,7 +383,7 @@ export default function NewProjectPage() {
                 type="button"
                 onClick={() => setSelectedColor(color)}
                 className={`w-10 h-10 rounded-full relative transition-all ${
-                  selectedColor === color ? 'ring-2 ring-white ring-offset-2 ring-offset-bg-card scale-110' : 'hover:scale-105'
+                  selectedColor === color ? 'ring-2 ring-cta-outline ring-offset-2 ring-offset-bg-card scale-110' : 'hover:scale-105'
                 }`}
                 style={{ backgroundColor: color }}
               >
@@ -402,7 +402,7 @@ export default function NewProjectPage() {
           <button
             type="submit"
             disabled={createProject.isPending}
-            className="w-full bg-accent-yellow text-black font-bold text-lg py-4 rounded-2xl hover:bg-yellow-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+            className="w-full bg-accent-yellow text-on-light-accent font-bold text-lg py-4 rounded-2xl hover:bg-accent-yellow-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
           >
             {createProject.isPending ? 'Creating...' : 'Create Mission'}
           </button>
@@ -413,13 +413,13 @@ export default function NewProjectPage() {
 
       {/* Avatar Picker Dialog */}
       {showAvatarPicker && (
-        <div className="fixed inset-0 bg-black/70 z-50 flex items-end">
+        <div className="fixed inset-0 bg-scrim/70 z-50 flex items-end">
           <div className="bg-bg-card w-full rounded-t-3xl max-h-[80vh] overflow-y-auto">
             <div className="sticky top-0 bg-bg-card border-b border-border-card px-6 py-4 flex items-center justify-between">
-              <h3 className="text-white text-lg font-semibold">Choose Avatar</h3>
+              <h3 className="text-text-primary text-lg font-semibold">Choose Avatar</h3>
               <button
                 onClick={() => setShowAvatarPicker(false)}
-                className="text-text-sec hover:text-white transition-colors"
+                className="text-text-sec hover:text-text-primary transition-colors"
               >
                 <Check size={24} />
               </button>
@@ -441,14 +441,14 @@ export default function NewProjectPage() {
                     className="flex-1 h-20 bg-bg-card border-2 border-dashed border-border-card rounded-2xl flex flex-col items-center justify-center gap-2 hover:border-accent-yellow transition-colors"
                   >
                     <Camera size={20} className="text-accent-yellow" />
-                    <span className="text-white text-xs font-medium">Camera</span>
+                    <span className="text-text-primary text-xs font-medium">Camera</span>
                   </button>
                   <button
                     onClick={handleLibrarySelect}
                     className="flex-1 h-20 bg-bg-card border-2 border-dashed border-border-card rounded-2xl flex flex-col items-center justify-center gap-2 hover:border-accent-yellow transition-colors"
                   >
                     <Upload size={20} className="text-accent-yellow" />
-                    <span className="text-white text-xs font-medium">Library</span>
+                    <span className="text-text-primary text-xs font-medium">Library</span>
                   </button>
                 </div>
               </div>

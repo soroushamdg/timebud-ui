@@ -372,7 +372,7 @@ export default function SelectProjectsPage() {
   if (isLoading) {
     return (
       <AppShell showTabBar={false}>
-      <div className="flex flex-col h-[calc(100vh-5rem)] bg-black text-white relative">
+      <div className="flex flex-col h-[calc(100vh-5rem)] bg-bg-primary text-text-primary relative">
         {/* Header */}
         <div className="flex-shrink-0 flex justify-between items-center p-4">
           <button className="text-accent-yellow font-bold">Cancel</button>
@@ -380,7 +380,7 @@ export default function SelectProjectsPage() {
         </div>
 
         {/* Heading */}
-        <h1 className="flex-shrink-0 text-white text-xl font-bold px-4 mb-4">
+        <h1 className="flex-shrink-0 text-text-primary text-xl font-bold px-4 mb-4">
           Pick the missions you&apos;re running:
         </h1>
 
@@ -397,7 +397,7 @@ export default function SelectProjectsPage() {
 
   return (
     <AppShell showTabBar={false}>
-    <div className="flex flex-col h-[calc(100vh-5rem)] bg-black text-white relative">
+    <div className="flex flex-col h-[calc(100vh-5rem)] bg-bg-primary text-text-primary relative">
       {/* Header */}
       <div className="flex-shrink-0 flex justify-between items-center p-4">
         <button
@@ -416,7 +416,7 @@ export default function SelectProjectsPage() {
       </div>
 
       {/* Heading */}
-      <h1 className="flex-shrink-0 text-white text-xl font-bold px-4 mb-2">
+      <h1 className="flex-shrink-0 text-text-primary text-xl font-bold px-4 mb-2">
         Pick the missions you&apos;re running:
       </h1>
       <p className="flex-shrink-0 text-text-sec text-sm px-4 mb-4">
@@ -428,10 +428,10 @@ export default function SelectProjectsPage() {
         {activeAndPausedProjects.length > 0 && (
           <div className="px-4 mb-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-white text-lg font-semibold">Active Missions</h2>
+              <h2 className="text-text-primary text-lg font-semibold">Active Missions</h2>
               <button
                 onClick={cycleSortMode}
-                className="flex items-center gap-2 bg-[#2A2A2A] text-white rounded-full px-4 py-2 text-sm font-medium hover:bg-[#3A3A3A] transition-colors"
+                className="flex items-center gap-2 bg-secondary-surface text-text-primary rounded-full px-4 py-2 text-sm font-medium hover:bg-bg-card-hover transition-colors"
               >
                 <ArrowUpDown className="w-4 h-4" />
                 {getSortLabel(sortMode)}
@@ -464,17 +464,17 @@ export default function SelectProjectsPage() {
                   
                   {/* Mission-complete badge */}
                   {project.completion.isCompleted && (
-                    <div className="absolute top-2 right-2 w-7 h-7 rounded-full bg-accent-green border-2 border-black flex items-center justify-center z-10">
-                      <Check className="w-4 h-4 text-black" strokeWidth={3} />
+                    <div className="absolute top-2 right-2 w-7 h-7 rounded-full bg-accent-green border-2 border-badge-ring flex items-center justify-center z-10">
+                      <Check className="w-4 h-4 text-on-light-accent" strokeWidth={3} />
                     </div>
                   )}
 
                   {/* Difficulty tag */}
                   {!project.completion.isCompleted && (
                     <div className={`absolute top-2 right-2 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wide z-10 ${
-                      project.difficulty === 'hard' ? 'bg-accent-pink/90 text-white'
-                        : project.difficulty === 'easy' ? 'bg-accent-green/90 text-black'
-                        : 'bg-accent-yellow/90 text-black'
+                      project.difficulty === 'hard' ? 'bg-accent-pink/90 text-on-dark-accent'
+                        : project.difficulty === 'easy' ? 'bg-accent-green/90 text-on-light-accent'
+                        : 'bg-accent-yellow/90 text-on-light-accent'
                     }`}>
                       {project.difficulty}
                     </div>
@@ -483,8 +483,8 @@ export default function SelectProjectsPage() {
                   {/* Status badge */}
                   <div className={`absolute top-2 left-2 px-2 py-1 rounded-none text-xs font-medium ${
                     getProjectStatus(project) === 'active'
-                      ? 'bg-accent-green text-white'
-                      : 'bg-text-sec text-white'
+                      ? 'bg-accent-green text-on-dark-accent'
+                      : 'bg-text-sec text-on-dark-accent'
                   }`}>
                     {getProjectStatus(project) === 'active' ? 'Active' : 'Paused'}
                   </div>
@@ -492,12 +492,12 @@ export default function SelectProjectsPage() {
                   {/* Active state badge */}
                   {isActive(project) && (
                     <div className="absolute bottom-1 right-1 bg-accent-yellow rounded-none w-[20%] aspect-square flex items-center justify-center z-20">
-                      <Check className="w-1/2 h-1/2 text-black" />
+                      <Check className="w-1/2 h-1/2 text-on-light-accent" />
                     </div>
                   )}
                   
                   {/* Project name overlay */}
-                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent p-2">
+                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-scrim/90 to-transparent p-2">
                     <AutoSizeText 
                       text={project.name}
                       avatarHeight={avatarHeights[project.id]}
@@ -552,13 +552,13 @@ export default function SelectProjectsPage() {
                   
                   {/* Mission-complete badge */}
                   {project.completion.isCompleted && (
-                    <div className="absolute top-2 right-2 w-7 h-7 rounded-full bg-accent-green border-2 border-black flex items-center justify-center z-10">
-                      <Check className="w-4 h-4 text-black" strokeWidth={3} />
+                    <div className="absolute top-2 right-2 w-7 h-7 rounded-full bg-accent-green border-2 border-badge-ring flex items-center justify-center z-10">
+                      <Check className="w-4 h-4 text-on-light-accent" strokeWidth={3} />
                     </div>
                   )}
 
                   {/* Mission name overlay */}
-                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent p-2">
+                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-scrim/90 to-transparent p-2">
                     <AutoSizeText
                       text={project.name}
                       avatarHeight={avatarHeights[project.id]}
@@ -589,7 +589,7 @@ export default function SelectProjectsPage() {
           >
             <button
               onClick={() => handleOverview(contextMenu.projectId!)}
-              className="block w-full text-left px-4 py-2 text-white hover:bg-bg-card-locked"
+              className="block w-full text-left px-4 py-2 text-text-primary hover:bg-bg-card-locked"
             >
               Overview
             </button>
@@ -612,7 +612,7 @@ export default function SelectProjectsPage() {
               <>
                 <button
                   onClick={() => handleArchive(contextMenu.projectId!)}
-                  className="block w-full text-left px-4 py-2 text-white hover:bg-bg-card-locked"
+                  className="block w-full text-left px-4 py-2 text-text-primary hover:bg-bg-card-locked"
                 >
                   Archive
                 </button>
@@ -630,22 +630,22 @@ export default function SelectProjectsPage() {
       
       {/* Delete Confirmation Dialog */}
       {deleteConfirm && (
-        <div className="fixed inset-0 bg-black/70 z-[100] flex items-center justify-center">
+        <div className="fixed inset-0 bg-scrim/70 z-[100] flex items-center justify-center">
           <div className="bg-bg-card rounded-none p-6 max-w-sm mx-4">
-            <h3 className="text-white font-bold text-lg mb-4">Delete Mission</h3>
+            <h3 className="text-text-primary font-bold text-lg mb-4">Delete Mission</h3>
             <p className="text-text-sec mb-6">
               Are you sure you want to delete this mission? This action cannot be undone.
             </p>
             <div className="flex gap-4">
               <button
                 onClick={() => setDeleteConfirm(null)}
-                className="flex-1 py-2 border border-border-card rounded-none text-white"
+                className="flex-1 py-2 border border-border-card rounded-none text-text-primary"
               >
                 Cancel
               </button>
               <button
                 onClick={confirmDelete}
-                className="flex-1 py-2 bg-accent-pink rounded-none text-white"
+                className="flex-1 py-2 bg-accent-pink rounded-none text-on-dark-accent"
               >
                 Delete
               </button>

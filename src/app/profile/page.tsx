@@ -23,6 +23,7 @@ import { useTotalCredits } from '@/hooks/useCredits'
 import { useUIStore } from '@/stores/uiStore'
 import { TimezoneSettingsRow } from '@/components/settings/TimezoneSettingsRow'
 import { CalendarSettingsRow } from '@/components/settings/CalendarSettingsRow'
+import { ThemeSettingsRow } from '@/components/settings/ThemeSettingsRow'
 import { useTasks } from '@/hooks/useTasks'
 import { useProjects } from '@/hooks/useProjects'
 import { getLevelProgress } from '@/lib/gamification/xp'
@@ -197,7 +198,7 @@ export default function ProfilePage() {
         <div className="flex items-center p-4 flex-shrink-0">
           <button
             onClick={handleBack}
-            className="w-10 h-10 rounded-xl bg-bg-card border border-border-card flex items-center justify-center text-white hover:bg-opacity-80 transition-colors"
+            className="w-10 h-10 rounded-xl bg-bg-card border border-border-card flex items-center justify-center text-text-primary hover:bg-opacity-80 transition-colors"
           >
             <ChevronLeft size={20} />
           </button>
@@ -207,8 +208,8 @@ export default function ProfilePage() {
         <div className="flex-1 min-h-0 overflow-y-auto flex flex-col items-center px-6">
           {/* ID Card */}
           <div
-            className="w-full rounded-2xl p-5 mb-6 relative overflow-hidden border border-[#2a2a2a]"
-            style={{ background: 'linear-gradient(150deg,#1c1c1c,#131313)' }}
+            className="w-full rounded-2xl p-5 mb-6 relative overflow-hidden border border-subtle-border"
+            style={{ background: 'linear-gradient(150deg, var(--color-bg-card), var(--color-bg-card-locked))' }}
           >
             <div className="flex items-center gap-4">
               <div className="relative flex-shrink-0">
@@ -217,30 +218,30 @@ export default function ProfilePage() {
                   fallbackType="profile"
                   fallbackSeed={`${userProfile?.first_name || ''}${userProfile?.last_name || ''}`}
                   size={72}
-                  className="cursor-pointer border-4 border-white"
+                  className="cursor-pointer border-4 border-avatar-ring"
                   onClick={() => setIsAvatarEditorOpen(true)}
                 />
-                <div className="absolute -right-1.5 -bottom-1.5 w-7 h-7 rounded-full bg-accent-yellow border-[3px] border-black flex items-center justify-center">
-                  <span className="text-black text-[11px] font-black leading-none">{levelProgress.level}</span>
+                <div className="absolute -right-1.5 -bottom-1.5 w-7 h-7 rounded-full bg-accent-yellow border-[3px] border-badge-ring flex items-center justify-center">
+                  <span className="text-on-light-accent text-[11px] font-black leading-none">{levelProgress.level}</span>
                 </div>
                 <button
                   onClick={() => setIsAvatarEditorOpen(true)}
-                  className="absolute -top-1 -left-1 w-6 h-6 rounded-full bg-bg-card flex items-center justify-center text-white hover:opacity-90 transition-opacity"
+                  className="absolute -top-1 -left-1 w-6 h-6 rounded-full bg-bg-card flex items-center justify-center text-text-primary hover:opacity-90 transition-opacity"
                 >
                   <PencilIcon className="w-3 h-3" />
                 </button>
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <h1 className="text-white text-xl font-bold truncate">{getDisplayName()}</h1>
+                  <h1 className="text-text-primary text-xl font-bold truncate">{getDisplayName()}</h1>
                   <button
                     onClick={() => setIsEditProfileOpen(true)}
-                    className="w-6 h-6 rounded-full bg-bg-card border border-border-card flex items-center justify-center text-text-sec hover:text-white hover:bg-bg-card-hover transition-colors flex-shrink-0"
+                    className="w-6 h-6 rounded-full bg-bg-card border border-border-card flex items-center justify-center text-text-sec hover:text-text-primary hover:bg-bg-card-hover transition-colors flex-shrink-0"
                   >
                     <Edit3 size={12} />
                   </button>
                   {proSubscriber && (
-                    <div className="bg-accent-yellow text-black text-xs font-bold px-2 py-0.5 rounded flex-shrink-0">
+                    <div className="bg-accent-yellow text-on-light-accent text-xs font-bold px-2 py-0.5 rounded flex-shrink-0">
                       PRO
                     </div>
                   )}
@@ -253,12 +254,12 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            <div className="h-2 rounded-full bg-black mt-4 overflow-hidden">
+            <div className="h-2 rounded-full bg-progress-track mt-4 overflow-hidden">
               <div
                 className="h-full rounded-full"
                 style={{
                   width: `${Math.min(100, (levelProgress.xpIntoLevel / Math.max(1, levelProgress.xpForNextLevel)) * 100)}%`,
-                  background: 'linear-gradient(90deg,#f5c518,#ffdf6b)',
+                  background: 'linear-gradient(90deg, var(--color-accent-yellow), var(--color-accent-yellow-light))',
                 }}
               />
             </div>
@@ -271,22 +272,22 @@ export default function ProfilePage() {
           {/* Stats row */}
           <div className="flex gap-3 w-full mb-6">
             <div className="flex-1 bg-bg-card rounded-none p-3 text-center">
-              <div className="text-white font-bold text-lg">{totalSessions}</div>
+              <div className="text-text-primary font-bold text-lg">{totalSessions}</div>
               <div className="text-text-sec text-xs">Runs</div>
             </div>
             <div className="flex-1 bg-bg-card rounded-none p-3 text-center">
-              <div className="text-white font-bold text-lg">{formatTimeDisplay(totalMinutes)}</div>
+              <div className="text-text-primary font-bold text-lg">{formatTimeDisplay(totalMinutes)}</div>
               <div className="text-text-sec text-xs">Time</div>
             </div>
             <div className="flex-1 bg-bg-card rounded-none p-3 text-center">
-              <div className="text-white font-bold text-lg">{tasksDone}</div>
+              <div className="text-text-primary font-bold text-lg">{tasksDone}</div>
               <div className="text-text-sec text-xs">Jobs done</div>
             </div>
           </div>
 
           {/* Badges */}
           <div className="w-full mb-8">
-            <h2 className="text-white text-sm font-semibold mb-2">Badges</h2>
+            <h2 className="text-text-primary text-sm font-semibold mb-2">Badges</h2>
             <div className="flex gap-2.5">
               {badges.map((badge) => (
                 <div
@@ -304,7 +305,7 @@ export default function ProfilePage() {
 
           {/* Settings section */}
           <div className="w-full">
-            <h2 className="text-lg font-bold text-white mb-4 px-4">Settings</h2>
+            <h2 className="text-lg font-bold text-text-primary mb-4 px-4">Settings</h2>
             
             {/* Settings list */}
             <div className="px-4">
@@ -312,7 +313,7 @@ export default function ProfilePage() {
                 onClick={() => router.push('/credits')}
                 className="w-full bg-bg-card rounded-none px-4 py-4 mb-2 flex justify-between items-center hover:bg-bg-card/80 transition-colors"
               >
-                <span className="text-white">Credits & Billing</span>
+                <span className="text-text-primary">Credits & Billing</span>
                 <div className="flex items-center gap-2">
                   {creditsLoading ? (
                     <div className="h-4 w-16 bg-border-card rounded animate-pulse"></div>
@@ -327,7 +328,7 @@ export default function ProfilePage() {
                 onClick={() => setIsDialogOpen(true)}
                 className="w-full bg-bg-card rounded-none px-4 py-4 mb-2 flex justify-between items-center hover:bg-bg-card/80 transition-colors"
               >
-                <span className="text-white">Daily time budget</span>
+                <span className="text-text-primary">Daily time budget</span>
                 <div className="flex items-center gap-2">
                   <span className="text-accent-yellow font-semibold">{formatTimeDisplay(preferredBudgetMinutes)}</span>
                   <ChevronRight className="w-5 h-5 text-text-sec" />
@@ -338,7 +339,7 @@ export default function ProfilePage() {
                 onClick={() => setIsPartialDialogOpen(true)}
                 className="w-full bg-bg-card rounded-none px-4 py-4 mb-2 flex justify-between items-center hover:bg-bg-card/80 transition-colors"
               >
-                <span className="text-white">Partial jobs</span>
+                <span className="text-text-primary">Partial jobs</span>
                 <ChevronRight className="w-5 h-5 text-text-sec" />
               </button>
               
@@ -346,7 +347,7 @@ export default function ProfilePage() {
                 onClick={() => router.push('/profile/notifications')}
                 className="w-full bg-bg-card rounded-none px-4 py-4 mb-2 flex justify-between items-center hover:bg-bg-card/80 transition-colors"
               >
-                <span className="text-white">Notifications</span>
+                <span className="text-text-primary">Notifications</span>
                 <ChevronRight className="w-5 h-5 text-text-sec" />
               </button>
 
@@ -354,11 +355,13 @@ export default function ProfilePage() {
 
               <TimezoneSettingsRow />
 
+              <ThemeSettingsRow />
+
               <button
                 className="w-full bg-bg-card rounded-none px-4 py-4 mb-2 flex justify-between items-center hover:bg-bg-card/80 transition-colors"
                 disabled
               >
-                <span className="text-white">About</span>
+                <span className="text-text-primary">About</span>
                 <ChevronRight className="w-5 h-5 text-text-sec" />
               </button>
             </div>
@@ -366,7 +369,7 @@ export default function ProfilePage() {
 
           {/* AI Settings section */}
           <div className="w-full mt-8">
-            <h2 className="text-lg font-bold text-white mb-4 px-4">AI Settings</h2>
+            <h2 className="text-lg font-bold text-text-primary mb-4 px-4">AI Settings</h2>
             
             <div className="px-4 space-y-4">
               {/* Provider selector */}
@@ -385,7 +388,7 @@ export default function ProfilePage() {
                         selectedProvider === provider ? 'border-accent-yellow' : 'border-border-card'
                       } rounded-lg p-3 text-center hover:bg-bg-card-hover transition-colors`}
                     >
-                      <p className="text-white font-medium text-sm capitalize">{provider}</p>
+                      <p className="text-text-primary font-medium text-sm capitalize">{provider}</p>
                     </button>
                   ))}
                 </div>
@@ -401,8 +404,8 @@ export default function ProfilePage() {
                       onClick={() => setSelectedModel(model.id)}
                       className={`${
                         selectedModel === model.id
-                          ? 'bg-accent-yellow text-black'
-                          : 'bg-bg-card text-white border border-border-card'
+                          ? 'bg-accent-yellow text-on-light-accent'
+                          : 'bg-bg-card text-text-primary border border-border-card'
                       } px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap flex-shrink-0 hover:opacity-90 transition-opacity flex items-center gap-2`}
                     >
                       {model.supportsThinking && <Brain className="w-4 h-4" />}
@@ -418,7 +421,7 @@ export default function ProfilePage() {
                   <div className="flex items-center gap-2">
                     <Brain className="w-5 h-5 text-accent-yellow" />
                     <div>
-                      <p className="text-white font-medium">Thinking Mode</p>
+                      <p className="text-text-primary font-medium">Thinking Mode</p>
                       <p className="text-xs text-text-sec">Extended reasoning for complex jobs</p>
                     </div>
                   </div>
@@ -429,7 +432,7 @@ export default function ProfilePage() {
                     }`}
                   >
                     <div
-                      className={`w-5 h-5 rounded-full bg-white transition-transform ${
+                      className={`w-5 h-5 rounded-full bg-toggle-thumb transition-transform ${
                         thinkingMode ? 'translate-x-6' : 'translate-x-1'
                       }`}
                     />
@@ -447,8 +450,8 @@ export default function ProfilePage() {
                       onClick={() => setFirstDayOfWeek(day)}
                       className={`${
                         firstDayOfWeek === day
-                          ? 'bg-accent-yellow text-black'
-                          : 'bg-bg-card text-white border border-border-card'
+                          ? 'bg-accent-yellow text-on-light-accent'
+                          : 'bg-bg-card text-text-primary border border-border-card'
                       } px-4 py-2 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity`}
                     >
                       {day}
@@ -460,7 +463,7 @@ export default function ProfilePage() {
               {/* Allow web research toggle */}
               <div className="flex items-center justify-between bg-bg-card border border-border-card rounded-lg p-4">
                 <div>
-                  <p className="text-white font-medium">Allow Web Research</p>
+                  <p className="text-text-primary font-medium">Allow Web Research</p>
                   <p className="text-xs text-text-sec">AI can search the web (100 credits per search)</p>
                 </div>
                 <button
@@ -470,7 +473,7 @@ export default function ProfilePage() {
                   }`}
                 >
                   <div
-                    className={`w-5 h-5 rounded-full bg-white transition-transform ${
+                    className={`w-5 h-5 rounded-full bg-toggle-thumb transition-transform ${
                       allowResearch ? 'translate-x-6' : 'translate-x-1'
                     }`}
                   />
@@ -482,7 +485,7 @@ export default function ProfilePage() {
                 <button
                   onClick={handleSaveAISettings}
                   disabled={upsertSettings.isPending}
-                  className="w-full bg-accent-yellow text-black font-semibold py-3 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="w-full bg-accent-yellow text-on-light-accent font-semibold py-3 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {saveSuccess ? (
                     <>
@@ -501,7 +504,7 @@ export default function ProfilePage() {
           <div className="w-full px-4 mt-8">
             <button
               onClick={handleSignOutConfirm}
-              className="w-full bg-accent-pink text-white font-bold py-3 rounded-none hover:bg-accent-pink/90 transition-colors"
+              className="w-full bg-accent-pink text-on-dark-accent font-bold py-3 rounded-none hover:bg-accent-pink/90 transition-colors"
             >
               Sign out
             </button>

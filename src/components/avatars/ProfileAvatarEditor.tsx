@@ -132,14 +132,14 @@ export function ProfileAvatarEditor({
 
   return (
     <>
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+      <div className="fixed inset-0 bg-scrim/50 flex items-center justify-center p-4 z-50">
         <div className="bg-bg-card rounded-2xl w-full max-w-sm">
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-border-card">
-            <h2 className="text-white font-bold text-lg">Profile Picture</h2>
+            <h2 className="text-text-primary font-bold text-lg">Profile Picture</h2>
             <button
               onClick={onClose}
-              className="w-8 h-8 rounded-lg bg-bg-primary flex items-center justify-center text-text-sec hover:text-white transition-colors"
+              className="w-8 h-8 rounded-lg bg-bg-primary flex items-center justify-center text-text-sec hover:text-text-primary transition-colors"
             >
               <X size={16} />
             </button>
@@ -157,8 +157,8 @@ export function ProfileAvatarEditor({
                   size={96}
                 />
                 {uploadImage.isPending && (
-                  <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
-                    <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <div className="absolute inset-0 bg-scrim/50 rounded-full flex items-center justify-center">
+                    <div className="w-6 h-6 border-2 border-on-dark-accent border-t-transparent rounded-full animate-spin" />
                   </div>
                 )}
               </div>
@@ -170,7 +170,7 @@ export function ProfileAvatarEditor({
                     <button
                       onClick={handleCameraSelect}
                       disabled={uploadImage.isPending}
-                      className="flex-1 flex items-center justify-center gap-2 bg-accent-yellow text-black text-sm font-medium py-2 rounded-xl hover:opacity-80 transition-opacity disabled:opacity-50"
+                      className="flex-1 flex items-center justify-center gap-2 bg-accent-yellow text-on-light-accent text-sm font-medium py-2 rounded-xl hover:opacity-80 transition-opacity disabled:opacity-50"
                     >
                       <Camera size={16} />
                       <span>Take Photo</span>
@@ -178,7 +178,7 @@ export function ProfileAvatarEditor({
                     <button
                       onClick={handleLibrarySelect}
                       disabled={uploadImage.isPending}
-                      className="flex-1 flex items-center justify-center gap-2 bg-bg-card border border-border-card text-white text-sm font-medium py-2 rounded-xl hover:bg-opacity-80 transition-opacity disabled:opacity-50"
+                      className="flex-1 flex items-center justify-center gap-2 bg-bg-card border border-border-card text-text-primary text-sm font-medium py-2 rounded-xl hover:bg-opacity-80 transition-opacity disabled:opacity-50"
                     >
                       <Upload size={16} />
                       <span>Library</span>

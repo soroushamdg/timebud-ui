@@ -76,7 +76,7 @@ export default function LoginPage() {
 
   return (
     <AppShell showTabBar={false}>
-    <div className="flex flex-col h-[calc(100vh-5rem)] overflow-y-auto bg-black items-center justify-center px-6">
+    <div className="flex flex-col h-[calc(100vh-5rem)] overflow-y-auto bg-bg-primary items-center justify-center px-6">
       <div className="w-full max-w-sm">
         {/* Wordmark */}
         <div className="flex flex-col items-center mb-6">
@@ -88,7 +88,7 @@ export default function LoginPage() {
 
         {/* Welcome message */}
         <div className="text-center mb-8">
-          <h2 className="text-white text-2xl font-bold">Welcome back, Grinder.</h2>
+          <h2 className="text-text-primary text-2xl font-bold">Welcome back, Grinder.</h2>
           <p className="text-text-sec text-sm mt-1">Bud kept your streak warm.</p>
         </div>
 
@@ -101,7 +101,7 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Email"
-              className="w-full bg-bg-card border border-border-card rounded-2xl px-4 py-3 text-white placeholder:text-text-sec focus:outline-none focus:ring-2 focus:ring-accent-yellow"
+              className="w-full bg-bg-card border border-border-card rounded-2xl px-4 py-3 text-text-primary placeholder:text-text-sec focus:outline-none focus:ring-2 focus:ring-accent-yellow"
               required
             />
           </div>
@@ -113,7 +113,7 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Password"
-              className="w-full bg-bg-card border border-border-card rounded-2xl px-4 py-3 text-white placeholder:text-text-sec focus:outline-none focus:ring-2 focus:ring-accent-yellow"
+              className="w-full bg-bg-card border border-border-card rounded-2xl px-4 py-3 text-text-primary placeholder:text-text-sec focus:outline-none focus:ring-2 focus:ring-accent-yellow"
               required
             />
           </div>
@@ -129,11 +129,11 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-accent-yellow text-black font-bold text-lg rounded-2xl h-14 disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
+            className="w-full bg-accent-yellow text-on-light-accent font-bold text-lg rounded-2xl h-14 disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
           >
             {loading ? (
               <div className="flex items-center justify-center">
-                <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
+                <div className="w-5 h-5 border-2 border-on-light-accent border-t-transparent rounded-full animate-spin"></div>
               </div>
             ) : (
               'Sign In'
@@ -152,7 +152,7 @@ export default function LoginPage() {
         <button
           onClick={handleGoogleSignIn}
           disabled={true}
-          className="w-full bg-bg-card border border-border-card text-white rounded-2xl h-14 flex items-center justify-center gap-3 opacity-50 cursor-not-allowed"
+          className="w-full bg-bg-card border border-border-card text-text-primary rounded-2xl h-14 flex items-center justify-center gap-3 opacity-50 cursor-not-allowed"
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
             <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>

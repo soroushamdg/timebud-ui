@@ -11,10 +11,10 @@ function ErrorContent() {
 
   return (
     <AppShell showTabBar={false}>
-    <div className="flex flex-col h-[calc(100vh-5rem)] overflow-y-auto bg-black items-center justify-center px-6">
+    <div className="flex flex-col h-[calc(100vh-5rem)] overflow-y-auto bg-bg-primary items-center justify-center px-6">
       <div className="w-full max-w-sm text-center">
         <h1 className="text-accent-yellow text-3xl font-bold mb-2">TimeBud</h1>
-        <h2 className="text-white text-2xl font-bold mb-4">Sign-in failed</h2>
+        <h2 className="text-text-primary text-2xl font-bold mb-4">Sign-in failed</h2>
         <p className="text-text-sec mb-2">
           Something went wrong during Google sign-in. Please try again.
         </p>
@@ -25,7 +25,7 @@ function ErrorContent() {
         )}
         <Link
           href="/auth/login"
-          className="inline-block bg-accent-yellow text-black font-bold text-base rounded-2xl px-8 py-3 hover:opacity-90 transition-opacity"
+          className="inline-block bg-accent-yellow text-on-light-accent font-bold text-base rounded-2xl px-8 py-3 hover:opacity-90 transition-opacity"
         >
           Back to Login
         </Link>

@@ -85,6 +85,8 @@ export interface DbFocusSession {
 
 export type AIProvider = "anthropic" | "openai" | "google";
 
+export type ThemePreference = "dark" | "light" | "system";
+
 export interface DbAIMemory {
   id: string;
   user_id: string;
@@ -116,6 +118,7 @@ export interface DbUserAISettings {
   last_streak_milestone?: number;
   xp_total?: number;
   calendar_block_alerts_enabled?: boolean;
+  theme_preference?: ThemePreference;
 }
 
 export interface DbPushSubscription {

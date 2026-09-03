@@ -883,26 +883,26 @@ export default function Home() {
                   fallbackType="profile"
                   fallbackSeed={`${userProfile?.first_name || ''}${userProfile?.last_name || ''}`}
                   size={52}
-                  className="border-4 border-white"
+                  className="border-4 border-avatar-ring"
                 />
-                <div className="absolute -right-1.5 -bottom-1.5 w-7 h-7 rounded-full bg-accent-yellow border-[3px] border-black flex items-center justify-center shadow-[0_0_10px_rgba(245,197,24,0.5)]">
-                  <span className="text-black text-[11px] font-black leading-none">{levelProgress.level}</span>
+                <div className="absolute -right-1.5 -bottom-1.5 w-7 h-7 rounded-full bg-accent-yellow border-[3px] border-badge-ring flex items-center justify-center shadow-[0_0_10px_rgba(245,197,24,0.5)]">
+                  <span className="text-on-light-accent text-[11px] font-black leading-none">{levelProgress.level}</span>
                 </div>
               </div>
               <div className="text-left min-w-0">
-                <span className="text-white text-base font-bold block">
+                <span className="text-text-primary text-base font-bold block">
                   {userProfile?.first_name ? `Hey, ${userProfile.first_name}` : 'Your studio'}
                 </span>
                 <span className="text-text-sec text-xs flex items-center gap-1 mt-0.5">
                   {currentStreak > 0 && <>&#128293; {currentStreak}-day grind &middot; </>}
                   Level {levelProgress.level} &middot; {levelProgress.levelTitle}
                 </span>
-                <div className="h-1.5 w-28 rounded-full bg-[#2a2a2a] overflow-hidden mt-1.5">
+                <div className="h-1.5 w-28 rounded-full bg-secondary-surface overflow-hidden mt-1.5">
                   <div
                     className="h-full rounded-full"
                     style={{
                       width: `${Math.min(100, (levelProgress.xpIntoLevel / Math.max(1, levelProgress.xpForNextLevel)) * 100)}%`,
-                      background: 'linear-gradient(90deg,#f5c518,#ffdf6b)',
+                      background: 'linear-gradient(90deg, var(--color-accent-yellow), var(--color-accent-yellow-light))',
                     }}
                   />
                 </div>
@@ -911,7 +911,7 @@ export default function Home() {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => router.push("/chat")}
-                className="w-11 h-11 bg-[#2A2A2A] rounded-full flex items-center justify-center hover:bg-[#2A2A2A]/80 transition-colors"
+                className="w-11 h-11 bg-secondary-surface rounded-full flex items-center justify-center hover:bg-bg-card-hover/80 transition-colors"
                 title="Chat with Bud"
               >
                 <Sparkles className="w-5 h-5 text-accent-yellow" />
@@ -923,11 +923,11 @@ export default function Home() {
           {/* Missions (slimmed — full detail lives on the Missions list, not duplicated here) */}
           <div className="mb-6 overflow-visible">
             <div className="flex items-center justify-between mb-2 px-6">
-              <h2 className="text-white text-xl font-bold">Your Missions</h2>
+              <h2 className="text-text-primary text-xl font-bold">Your Missions</h2>
               {projects && projects.length > 0 && (
                 <button
                   onClick={() => router.push('/projects/select')}
-                  className="text-text-sec text-xs hover:text-white transition-colors"
+                  className="text-text-sec text-xs hover:text-text-primary transition-colors"
                 >
                   {projects.length} mission{projects.length === 1 ? '' : 's'} &middot; view all
                 </button>
@@ -952,15 +952,15 @@ export default function Home() {
                         fallbackLabel={project.name}
                         fallbackColor={project.color || undefined}
                         size={60}
-                        className="border-2 border-white"
+                        className="border-2 border-avatar-ring"
                       />
                     </div>
-                    <div className="w-[60px] h-1 rounded-full bg-[#333] overflow-hidden mt-1">
+                    <div className="w-[60px] h-1 rounded-full bg-border-card overflow-hidden mt-1">
                       <div
                         className="h-full rounded-full"
                         style={{
                           width: `${project.completion.percentage}%`,
-                          background: project.completion.isCompleted ? '#2ecc71' : '#f5c518',
+                          background: project.completion.isCompleted ? 'var(--color-accent-green)' : 'var(--color-accent-yellow)',
                         }}
                       />
                     </div>
@@ -977,7 +977,7 @@ export default function Home() {
               className="mx-6 mb-4 px-3.5 py-2.5 rounded-2xl bg-accent-yellow/[0.08] border border-accent-yellow/30 flex items-center gap-2.5 text-left"
             >
               <CalendarIcon className="w-4 h-4 text-accent-yellow flex-shrink-0" />
-              <span className="flex-1 text-white text-xs">
+              <span className="flex-1 text-text-primary text-xs">
                 New block &ldquo;{unconfirmedBlock.event_title}&rdquo; detected &mdash; set up which mission it&apos;s for
               </span>
               <span className="text-accent-yellow text-xs font-bold flex-shrink-0">Set up &rarr;</span>
@@ -1015,23 +1015,23 @@ export default function Home() {
           {showAllJobs && (
             <div className="flex items-center justify-between px-6 mb-4 mt-2">
               <div className="flex items-center gap-3">
-                <h3 className="text-white text-lg font-semibold">
+                <h3 className="text-text-primary text-lg font-semibold">
                   {isLoading ? "..." : plannedTasks.length} Jobs
                 </h3>
                 <button
                   onClick={() => setShowAddTaskDialog(true)}
-                  className="w-8 h-8 bg-accent-yellow rounded-full flex items-center justify-center hover:bg-yellow-400 transition-colors"
+                  className="w-8 h-8 bg-accent-yellow rounded-full flex items-center justify-center hover:bg-accent-yellow-hover transition-colors"
                   title="Add job to planner"
                 >
-                  <Plus className="w-5 h-5 text-black" />
+                  <Plus className="w-5 h-5 text-on-light-accent" />
                 </button>
               </div>
               <button
                 onClick={() => setShowTimeDialog(true)}
-                className="bg-[#2A2A2A] rounded-full px-4 py-2 flex items-center gap-2 hover:bg-[#2A2A2A]/80 transition-colors"
+                className="bg-secondary-surface rounded-full px-4 py-2 flex items-center gap-2 hover:bg-bg-card-hover/80 transition-colors"
               >
                 <svg
-                  className="w-4 h-4 text-[#949494]"
+                  className="w-4 h-4 text-text-sec"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -1043,7 +1043,7 @@ export default function Home() {
                     d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
                   />
                 </svg>
-                <span className="text-white text-sm font-medium">
+                <span className="text-text-primary text-sm font-medium">
                   {preferredBudgetMinutes}min
                 </span>
               </button>
@@ -1077,7 +1077,7 @@ export default function Home() {
             <button
               onClick={handleStartWork}
               disabled={plannedTasks.length === 0 || isLoading}
-              className="w-full bg-accent-yellow text-black font-bold text-lg py-4 rounded-none hover:bg-yellow-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed border-4 border-white"
+              className="w-full bg-accent-yellow text-on-light-accent font-bold text-lg py-4 rounded-none hover:bg-accent-yellow-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed border-4 border-cta-outline"
             >
               Start Run
             </button>

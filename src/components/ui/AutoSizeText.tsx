@@ -31,7 +31,7 @@ export function AutoSizeText({
     <div ref={containerRef} className={`w-full h-full ${className}`}>
       <p
         ref={textRef}
-        className="text-white font-bold leading-tight"
+        className="text-on-dark-accent font-bold leading-tight"
         style={{
           fontSize: `${fontSize}px`,
           display: isMultiline ? '-webkit-box' : 'block',

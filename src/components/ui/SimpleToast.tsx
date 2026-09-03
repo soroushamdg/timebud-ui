@@ -35,15 +35,15 @@ export function SimpleToast({
   const bgColor = {
     info: 'bg-bg-card',
     warning: 'bg-accent-yellow',
-    error: 'bg-red-500',
-    success: 'bg-green-500'
+    error: 'bg-status-negative',
+    success: 'bg-accent-green'
   }[type]
 
   const textColor = {
-    info: 'text-white',
-    warning: 'text-black',
-    error: 'text-white',
-    success: 'text-white'
+    info: 'text-text-primary',
+    warning: 'text-on-light-accent',
+    error: 'text-on-dark-accent',
+    success: 'text-on-dark-accent'
   }[type]
 
   return (
@@ -54,7 +54,7 @@ export function SimpleToast({
           {action && (
             <button
               onClick={action.onClick}
-              className="text-xs font-bold bg-accent-yellow text-black px-3 py-1 rounded-full hover:opacity-90 transition-opacity whitespace-nowrap"
+              className="text-xs font-bold bg-accent-yellow text-on-light-accent px-3 py-1 rounded-full hover:opacity-90 transition-opacity whitespace-nowrap"
             >
               {action.label}
             </button>

@@ -20,10 +20,10 @@ export function HomeMenu() {
     <div className="relative">
       <button
         onClick={() => setIsOpen((v) => !v)}
-        className="w-11 h-11 bg-[#2A2A2A] rounded-full flex items-center justify-center hover:bg-[#2A2A2A]/80 transition-colors"
+        className="w-11 h-11 bg-secondary-surface rounded-full flex items-center justify-center hover:bg-bg-card-hover/80 transition-colors"
         title="Menu"
       >
-        <Menu className="w-5 h-5 text-white" />
+        <Menu className="w-5 h-5 text-text-primary" />
       </button>
 
       {isOpen && (
@@ -37,7 +37,7 @@ export function HomeMenu() {
                   setIsOpen(false);
                   router.push(href);
                 }}
-                className="w-full px-3 py-2.5 text-left text-white hover:bg-[#2A2A2A] rounded-xl transition-colors flex items-center gap-3"
+                className="w-full px-3 py-2.5 text-left text-text-primary hover:bg-secondary-surface rounded-xl transition-colors flex items-center gap-3"
               >
                 <Icon size={18} className="text-accent-yellow flex-shrink-0" />
                 {label}

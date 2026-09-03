@@ -1,12 +1,27 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
+import { useResolvedTheme } from '@/hooks/useResolvedTheme'
 
 const DESKTOP_QUERY = '(min-width: 768px)'
 const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)'
 
 export function AmbientBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const resolvedTheme = useResolvedTheme()
+  // The draw loop's closure is set up once on mount (see the effect below) and reads
+  // this ref every frame, rather than tearing down/restarting the whole
+  // ResizeObserver + rAF loop whenever the theme flips mid-session.
+  const themeRef = useRef(resolvedTheme)
+  themeRef.current = resolvedTheme
+  const redrawRef = useRef<(() => void) | null>(null)
+
+  // Reduced-motion draws exactly once (below) and never loops again, so a live
+  // theme toggle needs an explicit nudge to repaint with the new color — the
+  // animated path already picks it up on its next frame regardless.
+  useEffect(() => {
+    redrawRef.current?.()
+  }, [resolvedTheme])
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -37,6 +52,11 @@ export function AmbientBackground() {
       ctx.clearRect(0, 0, width, height)
       if (!desktopQuery.matches) return
 
+      // White lines read as a soft glow on the dark theme's near-black background;
+      // on light they need to go dark instead, or they'd be nearly invisible against
+      // the near-white page.
+      const [r, g, b] = themeRef.current === 'light' ? [0, 0, 0] : [255, 255, 255]
+
       const lines = 9
       for (let i = 0; i < lines; i++) {
         const baseY = ((i + 0.5) / lines) * height
@@ -54,13 +74,14 @@ export function AmbientBackground() {
           if (x === 0) ctx.moveTo(x, y)
           else ctx.lineTo(x, y)
         }
-        ctx.strokeStyle = `rgba(255,255,255,${alpha})`
+        ctx.strokeStyle = `rgba(${r},${g},${b},${alpha})`
         ctx.lineWidth = dpr
         ctx.stroke()
       }
 
       if (!reduceMotion) t += 0.0016
     }
+    redrawRef.current = draw
 
     if (reduceMotion) {
       draw()
@@ -75,11 +96,12 @@ export function AmbientBackground() {
     return () => {
       ro.disconnect()
       if (frameId) cancelAnimationFrame(frameId)
+      redrawRef.current = null
     }
   }, [])
 
   return (
-    <div className="hidden md:block fixed inset-0 -z-10 overflow-hidden bg-black" aria-hidden="true">
+    <div className="hidden md:block fixed inset-0 -z-10 overflow-hidden bg-bg-primary" aria-hidden="true">
       <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" />
       <div className="ambient-blob ambient-blob-1" />
       <div className="ambient-blob ambient-blob-2" />

@@ -27,7 +27,7 @@ export function NotificationSettingsRow() {
     <div className="bg-bg-card rounded-none px-4 py-4 mb-2">
       <div className="flex justify-between items-center">
         <div>
-          <span className="text-white">Allow notifications</span>
+          <span className="text-text-primary">Allow notifications</span>
           {!isSupported && (
             <p className="text-text-sec text-xs mt-0.5">Not supported on this device/browser</p>
           )}
@@ -40,7 +40,7 @@ export function NotificationSettingsRow() {
           }`}
         >
           <div
-            className={`w-5 h-5 rounded-full bg-white transition-transform ${
+            className={`w-5 h-5 rounded-full bg-toggle-thumb transition-transform ${
               isSubscribed ? 'translate-x-6' : 'translate-x-1'
             }`}
           />

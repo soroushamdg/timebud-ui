@@ -27,7 +27,7 @@ function ToggleRow({ label, description, checked, disabled, onChange }: ToggleRo
     <div className="bg-bg-card rounded-none px-4 py-4 mb-2">
       <div className="flex justify-between items-center gap-3">
         <div className="min-w-0">
-          <span className="text-white">{label}</span>
+          <span className="text-text-primary">{label}</span>
           <p className="text-text-sec text-xs mt-0.5">{description}</p>
         </div>
         <button
@@ -38,7 +38,7 @@ function ToggleRow({ label, description, checked, disabled, onChange }: ToggleRo
           }`}
         >
           <div
-            className={`w-5 h-5 rounded-full bg-white transition-transform ${
+            className={`w-5 h-5 rounded-full bg-toggle-thumb transition-transform ${
               checked ? 'translate-x-6' : 'translate-x-1'
             }`}
           />
@@ -56,7 +56,7 @@ function TimeRow({ label, value, onChange }: { label: string; value: string; onC
         type="time"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="bg-black border border-border-card text-white px-3 py-1.5 rounded-lg text-sm focus:outline-none focus:border-accent-yellow"
+        className="bg-bg-primary border border-border-card text-text-primary px-3 py-1.5 rounded-lg text-sm focus:outline-none focus:border-accent-yellow"
       />
     </div>
   )
@@ -84,10 +84,10 @@ export default function NotificationSettingsPage() {
     <AppShell showTabBar={false}>
       <div className="flex flex-col h-[calc(100vh-5rem)] pb-5">
       <div className="px-6 pt-4 mb-6 flex items-center gap-3 flex-shrink-0">
-        <button onClick={() => router.back()} className="text-white">
+        <button onClick={() => router.back()} className="text-text-primary">
           <ChevronLeft className="w-6 h-6" />
         </button>
-        <h1 className="text-white text-xl font-bold">Notifications</h1>
+        <h1 className="text-text-primary text-xl font-bold">Notifications</h1>
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-8">
@@ -95,7 +95,7 @@ export default function NotificationSettingsPage() {
 
         {isSubscribed && (
           <>
-            <h2 className="text-white text-sm font-semibold mt-6 mb-2 px-1">Morning</h2>
+            <h2 className="text-text-primary text-sm font-semibold mt-6 mb-2 px-1">Morning</h2>
 
             <ToggleRow
               label="Morning briefing"
@@ -122,7 +122,7 @@ export default function NotificationSettingsPage() {
               <TimeRow label="Sent at" value={morningTime} onChange={(v) => update({ morning_briefing_time: v })} />
             )}
 
-            <h2 className="text-white text-sm font-semibold mt-6 mb-2 px-1">Throughout the day</h2>
+            <h2 className="text-text-primary text-sm font-semibold mt-6 mb-2 px-1">Throughout the day</h2>
 
             <ToggleRow
               label="Inactivity nudge"

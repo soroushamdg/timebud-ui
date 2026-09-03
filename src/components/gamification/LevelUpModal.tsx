@@ -5,6 +5,11 @@ interface LevelUpModalProps {
   onDismiss: () => void
 }
 
+// This whole modal is a deliberate, always-dark "spotlight" moment (see the
+// celebration-* token comments in globals.css) — every color reference below is
+// either one of those fixed tokens or a literal hex pinned to the app's dark-mode
+// brand colors, never the flipping accent-*/text-*/bg-* tokens the rest of the app
+// uses, so it doesn't wash out (or invert into a mess) when the app theme is light.
 const CONFETTI = [
   { left: '8%', top: '18%', w: 8, h: 14, color: '#f5c518', rot: 20 },
   { left: '20%', top: '12%', w: 6, h: 6, color: '#e8004d', round: true },
@@ -22,7 +27,7 @@ export function LevelUpModal({ levelProgress, onDismiss }: LevelUpModalProps) {
       className="fixed inset-0 z-[200] flex flex-col items-center text-center overflow-hidden"
       style={{
         background:
-          'radial-gradient(ellipse 500px 400px at 50% 30%, rgba(245,197,24,.22), transparent 65%), #000',
+          'radial-gradient(ellipse 500px 400px at 50% 30%, rgba(245,197,24,.22), transparent 65%), var(--color-celebration-bg)',
       }}
     >
       {CONFETTI.map((c, i) => (
@@ -43,7 +48,7 @@ export function LevelUpModal({ levelProgress, onDismiss }: LevelUpModalProps) {
 
       <button
         onClick={onDismiss}
-        className="absolute top-14 right-5 w-9 h-9 rounded-full bg-white/10 flex items-center justify-center text-white/70 text-sm"
+        className="absolute top-14 right-5 w-9 h-9 rounded-full bg-overlay-surface flex items-center justify-center text-celebration-text/70 text-sm"
       >
         &#10005;
       </button>
@@ -53,15 +58,16 @@ export function LevelUpModal({ levelProgress, onDismiss }: LevelUpModalProps) {
         <img
           src="/bud/bud-avatar.png"
           alt="Bud"
-          className="w-20 h-20 rounded-full border-2 border-accent-yellow object-cover mb-3 shadow-[0_0_30px_rgba(245,197,24,0.35)]"
+          className="w-20 h-20 rounded-full border-2 object-cover mb-3 shadow-[0_0_30px_rgba(245,197,24,0.35)]"
+          style={{ borderColor: '#f5c518' }}
         />
-        <div className="text-xs font-extrabold tracking-[0.14em] text-accent-yellow uppercase">
+        <div className="text-xs font-extrabold tracking-[0.14em] uppercase" style={{ color: '#f5c518' }}>
           Level Up
         </div>
         <div
           className="text-7xl font-black leading-none mt-2"
           style={{
-            background: 'linear-gradient(180deg,#fff,#FFD233)',
+            background: 'linear-gradient(180deg, #fff, #f5c518)',
             WebkitBackgroundClip: 'text',
             backgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
@@ -69,26 +75,29 @@ export function LevelUpModal({ levelProgress, onDismiss }: LevelUpModalProps) {
         >
           LVL {levelProgress.level}
         </div>
-        <div className="text-lg font-bold text-white mt-3">
+        <div className="text-lg font-bold text-celebration-text mt-3">
           You outgrew Level {levelProgress.level - 1}.
         </div>
-        <div className="text-sm text-text-sec mt-1.5">
+        <div className="text-sm text-celebration-text/60 mt-1.5">
           {levelProgress.xpTotal} XP total &middot; welcome to {levelProgress.levelTitle}
         </div>
 
-        <div className="mt-6 w-full max-w-sm bg-[#1c1c1c] border border-[#2a2a2a] rounded-2xl px-5 py-4 text-left">
+        <div
+          className="mt-6 w-full max-w-sm rounded-2xl px-5 py-4 text-left"
+          style={{ backgroundColor: 'var(--color-celebration-card)', border: '1px solid var(--color-celebration-border)' }}
+        >
           <div className="flex justify-between text-sm">
-            <span className="text-text-sec">Progress to Level {levelProgress.level + 1}</span>
-            <span className="font-bold text-accent-yellow">
+            <span className="text-celebration-text/60">Progress to Level {levelProgress.level + 1}</span>
+            <span className="font-bold" style={{ color: '#f5c518' }}>
               {levelProgress.xpIntoLevel}/{levelProgress.xpForNextLevel} XP
             </span>
           </div>
-          <div className="h-2 rounded-full bg-black mt-2 overflow-hidden">
+          <div className="h-2 rounded-full bg-celebration-track mt-2 overflow-hidden">
             <div
               className="h-full rounded-full"
               style={{
                 width: `${Math.min(100, (levelProgress.xpIntoLevel / Math.max(1, levelProgress.xpForNextLevel)) * 100)}%`,
-                background: 'linear-gradient(90deg,#f5c518,#ffdf6b)',
+                background: 'linear-gradient(90deg, #f5c518, #ffdf6b)',
               }}
             />
           </div>
@@ -98,7 +107,8 @@ export function LevelUpModal({ levelProgress, onDismiss }: LevelUpModalProps) {
       <div className="w-full max-w-sm px-6 pb-10">
         <button
           onClick={onDismiss}
-          className="w-full bg-accent-yellow text-black font-extrabold py-4 rounded-full"
+          className="w-full font-extrabold py-4 rounded-full"
+          style={{ backgroundColor: '#f5c518', color: '#000000' }}
         >
           Keep grinding
         </button>

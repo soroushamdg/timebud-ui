@@ -175,7 +175,7 @@ export function LegoTransformSheet({
 
   return (
     <>
-      <div className="fixed inset-0 bg-black/50 z-[150]" onClick={onDismiss} />
+      <div className="fixed inset-0 bg-scrim/50 z-[150]" onClick={onDismiss} />
       
       <div className="fixed bottom-0 left-0 right-0 bg-bg-card rounded-t-3xl z-[160] max-h-[55vh] overflow-y-auto">
         {/* Handle bar */}
@@ -185,7 +185,7 @@ export function LegoTransformSheet({
 
         {/* Header */}
         <div className="px-6 py-4">
-          <h2 className="text-white font-bold text-xl text-center">Use this photo?</h2>
+          <h2 className="text-text-primary font-bold text-xl text-center">Use this photo?</h2>
         </div>
 
         <div className="px-6 pb-6 space-y-4">
@@ -229,11 +229,11 @@ export function LegoTransformSheet({
             <button
               onClick={handleApplyTheme}
               disabled={!hasEnoughCredits || isTransforming || isUploading}
-              className="w-full bg-accent-yellow text-black font-bold py-4 rounded-2xl hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="w-full bg-accent-yellow text-on-light-accent font-bold py-4 rounded-2xl hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {isTransforming ? (
                 <>
-                  <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                  <div className="w-5 h-5 border-2 border-on-light-accent border-t-transparent rounded-full animate-spin" />
                   <span>Transforming...</span>
                 </>
               ) : (
@@ -247,11 +247,11 @@ export function LegoTransformSheet({
             <button
               onClick={handleKeepOriginal}
               disabled={isTransforming || isUploading}
-              className="w-full bg-bg-card border border-border-card text-white font-bold py-4 rounded-2xl hover:bg-opacity-80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-bg-card border border-border-card text-text-primary font-bold py-4 rounded-2xl hover:bg-opacity-80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isUploading ? (
                 <div className="flex items-center justify-center gap-2">
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <div className="w-5 h-5 border-2 border-text-primary border-t-transparent rounded-full animate-spin" />
                   <span>Uploading...</span>
                 </div>
               ) : (

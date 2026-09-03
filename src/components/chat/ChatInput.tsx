@@ -150,13 +150,13 @@ export function ChatInput({ onSend, disabled, placeholder = 'Ask me anything...'
               className="bg-bg-card border border-border-card rounded-lg px-3 py-2 flex items-center gap-2 whitespace-nowrap flex-shrink-0"
             >
               <Paperclip className="w-4 h-4 text-text-sec" />
-              <span className="text-sm text-white">{file.filename}</span>
+              <span className="text-sm text-text-primary">{file.filename}</span>
               {file.uploadProgress < 100 && (
                 <span className="text-xs text-text-sec">{file.uploadProgress}%</span>
               )}
               <button
                 onClick={() => removeFile(file.id)}
-                className="text-text-sec hover:text-white transition-colors"
+                className="text-text-sec hover:text-text-primary transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -172,7 +172,7 @@ export function ChatInput({ onSend, disabled, placeholder = 'Ask me anything...'
           whileTap={{ scale: 0.9 }}
           onClick={() => fileInputRef.current?.click()}
           disabled={disabled}
-          className="w-10 h-10 rounded-full bg-bg-card border border-border-card flex items-center justify-center text-text-sec hover:text-white hover:bg-bg-card-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+          className="w-10 h-10 rounded-full bg-bg-card border border-border-card flex items-center justify-center text-text-sec hover:text-text-primary hover:bg-bg-card-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
         >
           <Paperclip className="w-5 h-5" />
         </motion.button>
@@ -212,7 +212,7 @@ export function ChatInput({ onSend, disabled, placeholder = 'Ask me anything...'
                   className={`w-2.5 h-2.5 rounded-full ${isRecording ? 'bg-accent-pink animate-pulse' : 'bg-text-sec'}`}
                 />
               </div>
-              <span className="text-sm text-white">
+              <span className="text-sm text-text-primary">
                 {isTranscribing ? 'Transcribing...' : `Recording... ${formatElapsed(elapsedSeconds)}`}
               </span>
             </motion.div>
@@ -233,7 +233,7 @@ export function ChatInput({ onSend, disabled, placeholder = 'Ask me anything...'
                 placeholder={placeholder}
                 disabled={disabled}
                 rows={1}
-                className="w-full bg-bg-card border border-border-card rounded-2xl px-4 py-3 text-white placeholder-text-sec resize-none focus:outline-none focus:ring-2 focus:ring-accent-yellow disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-bg-card border border-border-card rounded-2xl px-4 py-3 text-text-primary placeholder-text-sec resize-none focus:outline-none focus:ring-2 focus:ring-accent-yellow disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ maxHeight: '96px' }}
               />
             </motion.div>
@@ -250,8 +250,8 @@ export function ChatInput({ onSend, disabled, placeholder = 'Ask me anything...'
             transition={{ duration: 0.3 }}
             className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0 ${
               isRecording
-                ? 'bg-accent-pink text-white'
-                : 'bg-bg-card border border-border-card text-text-sec hover:text-white hover:bg-bg-card-hover'
+                ? 'bg-accent-pink text-on-dark-accent'
+                : 'bg-bg-card border border-border-card text-text-sec hover:text-text-primary hover:bg-bg-card-hover'
             }`}
           >
             <AnimatePresence mode="wait" initial={false}>
@@ -287,7 +287,7 @@ export function ChatInput({ onSend, disabled, placeholder = 'Ask me anything...'
           whileTap={{ scale: 0.9 }}
           onClick={handleSend}
           disabled={disabled || isRecording || (!message.trim() && files.length === 0)}
-          className="w-10 h-10 rounded-full bg-accent-yellow flex items-center justify-center text-black hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+          className="w-10 h-10 rounded-full bg-accent-yellow flex items-center justify-center text-on-light-accent hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
         >
           <Send className="w-5 h-5" />
         </motion.button>

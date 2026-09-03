@@ -38,11 +38,11 @@ export function RightNowCard({
     : null
 
   return (
-    <div className="mx-6 mb-6 relative overflow-hidden rounded-2xl border border-[#2a2a2a]" style={{ background: 'linear-gradient(135deg,#1c1c1c,#151515)' }}>
+    <div className="mx-6 mb-6 relative overflow-hidden rounded-2xl border border-subtle-border" style={{ background: 'linear-gradient(135deg, var(--color-bg-card), var(--color-bg-card-locked))' }}>
       <div className="absolute right-0 top-0 w-28 h-28 rounded-full pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(245,197,24,0.14), transparent 70%)' }} />
       <div className="relative px-5 py-4">
         <div className="flex items-center justify-between mb-3">
-          <span className="text-white text-[15px] font-bold">
+          <span className="text-text-primary text-[15px] font-bold">
             {activeBlock ? `🎯 ${activeBlock.missionLabel} block` : 'Right Now'}
           </span>
           {activeBlock ? (
@@ -60,12 +60,12 @@ export function RightNowCard({
           </span>
           {isOverBudget && <span className="text-accent-yellow text-xs font-semibold flex-shrink-0">Over budget</span>}
         </div>
-        <div className="h-2 w-full rounded-full bg-black overflow-hidden mb-4">
+        <div className="h-2 w-full rounded-full bg-progress-track overflow-hidden mb-4">
           <div
             className="h-full rounded-full transition-all"
             style={{
               width: `${percent}%`,
-              background: isOverBudget ? '#e8004d' : 'linear-gradient(90deg,#f5c518,#ffdf6b)',
+              background: isOverBudget ? 'var(--color-accent-pink)' : 'linear-gradient(90deg, var(--color-accent-yellow), var(--color-accent-yellow-light))',
             }}
           />
         </div>
@@ -75,7 +75,7 @@ export function RightNowCard({
         {jobCount > 0 && (
           <button
             onClick={onToggleExpanded}
-            className="w-full flex items-center justify-center gap-1.5 py-1.5 text-text-sec text-xs font-semibold hover:text-white transition-colors"
+            className="w-full flex items-center justify-center gap-1.5 py-1.5 text-text-sec text-xs font-semibold hover:text-text-primary transition-colors"
           >
             {isExpanded ? 'Hide jobs' : `Show all ${jobCount} job${jobCount === 1 ? '' : 's'}`}
             {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}

@@ -185,10 +185,10 @@ export function FilterDialog({
                 value="pending"
                 checked={statusValue === 'pending'}
                 onChange={(e) => setStatusValue(e.target.value)}
-                className="w-4 h-4 text-[#FFD233] bg-[#2A2A2A] border-gray-600"
+                className="w-4 h-4 text-accent-yellow bg-secondary-surface border-form-border"
               />
               <CheckSquare className="w-4 h-4 text-text-sec" />
-              <span className="text-white">Pending jobs</span>
+              <span className="text-text-primary">Pending jobs</span>
             </label>
             <label className="flex items-center gap-3 cursor-pointer">
               <input
@@ -197,10 +197,10 @@ export function FilterDialog({
                 value="completed"
                 checked={statusValue === 'completed'}
                 onChange={(e) => setStatusValue(e.target.value)}
-                className="w-4 h-4 text-[#FFD233] bg-[#2A2A2A] border-gray-600"
+                className="w-4 h-4 text-accent-yellow bg-secondary-surface border-form-border"
               />
               <CheckSquare className="w-4 h-4 text-accent-green" />
-              <span className="text-white">Completed jobs</span>
+              <span className="text-text-primary">Completed jobs</span>
             </label>
           </div>
         );
@@ -215,10 +215,10 @@ export function FilterDialog({
                 value="high"
                 checked={priorityValue === 'high'}
                 onChange={(e) => setPriorityValue(e.target.value)}
-                className="w-4 h-4 text-[#FFD233] bg-[#2A2A2A] border-gray-600"
+                className="w-4 h-4 text-accent-yellow bg-secondary-surface border-form-border"
               />
-              <Star className="w-4 h-4 text-[#FFD233]" />
-              <span className="text-white">High priority</span>
+              <Star className="w-4 h-4 text-accent-yellow" />
+              <span className="text-text-primary">High priority</span>
             </label>
             <label className="flex items-center gap-3 cursor-pointer">
               <input
@@ -227,10 +227,10 @@ export function FilterDialog({
                 value="normal"
                 checked={priorityValue === 'normal'}
                 onChange={(e) => setPriorityValue(e.target.value)}
-                className="w-4 h-4 text-[#FFD233] bg-[#2A2A2A] border-gray-600"
+                className="w-4 h-4 text-accent-yellow bg-secondary-surface border-form-border"
               />
               <Star className="w-4 h-4 text-text-sec" />
-              <span className="text-white">Normal priority</span>
+              <span className="text-text-primary">Normal priority</span>
             </label>
           </div>
         );
@@ -252,10 +252,10 @@ export function FilterDialog({
                   value={value}
                   checked={deadlineValue === value}
                   onChange={(e) => setDeadlineValue(e.target.value)}
-                  className="w-4 h-4 text-[#FFD233] bg-[#2A2A2A] border-gray-600"
+                  className="w-4 h-4 text-accent-yellow bg-secondary-surface border-form-border"
                 />
                 <Calendar className="w-4 h-4 text-text-sec" />
-                <span className="text-white">{label}</span>
+                <span className="text-text-primary">{label}</span>
               </label>
             ))}
           </div>
@@ -269,10 +269,10 @@ export function FilterDialog({
                 type="checkbox"
                 checked={includeSoloTasks}
                 onChange={(e) => setIncludeSoloTasks(e.target.checked)}
-                className="w-4 h-4 text-[#FFD233] bg-[#2A2A2A] border-gray-600 rounded"
+                className="w-4 h-4 text-accent-yellow bg-secondary-surface border-form-border rounded"
               />
               <Folder className="w-4 h-4 text-text-sec" />
-              <span className="text-white">Solo jobs (no mission)</span>
+              <span className="text-text-primary">Solo jobs (no mission)</span>
             </label>
             
             <div className="border-t border-border-card pt-3">
@@ -285,10 +285,10 @@ export function FilterDialog({
                       checked={selectedProjectIds.includes(project.id)}
                       onChange={() => handleProjectToggle(project.id)}
                       disabled={includeSoloTasks}
-                      className="w-4 h-4 text-[#FFD233] bg-[#2A2A2A] border-gray-600 rounded disabled:opacity-50"
+                      className="w-4 h-4 text-accent-yellow bg-secondary-surface border-form-border rounded disabled:opacity-50"
                     />
                     <div className="w-4 h-4 rounded" style={{ backgroundColor: project.color || '#F5C518' }} />
-                    <span className="text-white">{project.name}</span>
+                    <span className="text-text-primary">{project.name}</span>
                   </label>
                 ))}
               </div>
@@ -306,10 +306,10 @@ export function FilterDialog({
                 value="recurring"
                 checked={recurringValue === 'recurring'}
                 onChange={(e) => setRecurringValue(e.target.value)}
-                className="w-4 h-4 text-[#FFD233] bg-[#2A2A2A] border-gray-600"
+                className="w-4 h-4 text-accent-yellow bg-secondary-surface border-form-border"
               />
-              <RefreshCw className="w-4 h-4 text-[#FFD233]" />
-              <span className="text-white">Recurring only</span>
+              <RefreshCw className="w-4 h-4 text-accent-yellow" />
+              <span className="text-text-primary">Recurring only</span>
             </label>
             <label className="flex items-center gap-3 cursor-pointer">
               <input
@@ -318,10 +318,10 @@ export function FilterDialog({
                 value="one_time"
                 checked={recurringValue === 'one_time'}
                 onChange={(e) => setRecurringValue(e.target.value)}
-                className="w-4 h-4 text-[#FFD233] bg-[#2A2A2A] border-gray-600"
+                className="w-4 h-4 text-accent-yellow bg-secondary-surface border-form-border"
               />
               <RefreshCw className="w-4 h-4 text-text-sec" />
-              <span className="text-white">One-time only</span>
+              <span className="text-text-primary">One-time only</span>
             </label>
           </div>
         );
@@ -332,15 +332,15 @@ export function FilterDialog({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4">
+    <div className="fixed inset-0 bg-scrim/50 flex items-center justify-center z-[100] p-4">
       <div className="bg-bg-card rounded-2xl border border-border-card p-6 w-96 max-h-[80vh] overflow-y-auto shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-white text-lg font-semibold">
+          <h3 className="text-text-primary text-lg font-semibold">
             {editingFilter ? 'Edit filter' : 'Add filter'}
           </h3>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full flex items-center justify-center text-text-sec hover:text-white hover:bg-[#2A2A2A] transition-colors"
+            className="w-8 h-8 rounded-full flex items-center justify-center text-text-sec hover:text-text-primary hover:bg-bg-card-hover transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -359,12 +359,12 @@ export function FilterDialog({
               <button
                 key={type}
                 onClick={() => setSelectedFilterType(type)}
-                className="w-full flex items-center gap-3 px-3 py-3 text-left rounded-xl hover:bg-[#2A2A2A] transition-colors"
+                className="w-full flex items-center gap-3 px-3 py-3 text-left rounded-xl hover:bg-bg-card-hover transition-colors"
               >
-                <div className="w-9 h-9 rounded-full bg-[#FFD233]/15 flex items-center justify-center flex-shrink-0">
-                  <Icon className="w-4 h-4 text-[#FFD233]" />
+                <div className="w-9 h-9 rounded-full bg-accent-yellow/15 flex items-center justify-center flex-shrink-0">
+                  <Icon className="w-4 h-4 text-accent-yellow" />
                 </div>
-                <span className="text-white font-medium">{label}</span>
+                <span className="text-text-primary font-medium">{label}</span>
               </button>
             ))}
           </div>
@@ -373,7 +373,7 @@ export function FilterDialog({
           <div>
             <button
               onClick={() => setSelectedFilterType(null)}
-              className="mb-4 text-[#FFD233] text-sm font-medium hover:underline"
+              className="mb-4 text-accent-yellow text-sm font-medium hover:underline"
             >
               ← Back to filter types
             </button>
@@ -385,13 +385,13 @@ export function FilterDialog({
           <button
             onClick={handleApply}
             disabled={!selectedFilterType}
-            className="flex-1 bg-[#FFD233] text-black font-bold py-3 rounded-xl hover:bg-[#FFD233]/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_12px_rgba(255,210,51,0.35)]"
+            className="flex-1 bg-accent-yellow text-on-light-accent font-bold py-3 rounded-xl hover:bg-accent-yellow/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_12px_rgba(255,210,51,0.35)]"
           >
             {editingFilter ? 'Update filter' : 'Add filter'}
           </button>
           <button
             onClick={onClose}
-            className="flex-1 bg-[#2A2A2A] text-white font-medium py-3 rounded-xl hover:bg-[#2A2A2A]/80 transition-colors"
+            className="flex-1 bg-secondary-surface text-text-primary font-medium py-3 rounded-xl hover:bg-bg-card-hover transition-colors"
           >
             Cancel
           </button>

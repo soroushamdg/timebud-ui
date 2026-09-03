@@ -45,7 +45,7 @@ export function RecurringBadge({ task, onClick, iconOnly = false, className = ''
         type="button"
         onClick={onClick}
         title={`Recurring: ${short}`}
-        className={`${sharedClasses} hover:text-white transition-colors`}
+        className={`${sharedClasses} hover:text-text-primary transition-colors`}
       >
         {content}
       </button>

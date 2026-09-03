@@ -19,7 +19,7 @@ export function SuggestedActions({ suggestions, onSelect }: SuggestedActionsProp
         <button
           key={idx}
           onClick={() => onSelect(suggestion.prompt)}
-          className="bg-bg-card border border-border-card text-white text-sm px-4 py-2 rounded-full hover:border-accent-yellow transition-colors whitespace-nowrap flex-shrink-0"
+          className="bg-bg-card border border-border-card text-text-primary text-sm px-4 py-2 rounded-full hover:border-accent-yellow transition-colors whitespace-nowrap flex-shrink-0"
         >
           {suggestion.label}
         </button>

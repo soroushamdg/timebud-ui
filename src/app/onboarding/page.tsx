@@ -84,7 +84,7 @@ export default function OnboardingPage() {
               <div
                 key={index}
                 className={`h-1 flex-1 rounded-full transition-colors ${
-                  index <= currentStep ? 'bg-accent-yellow' : 'bg-[#2A2A2A]'
+                  index <= currentStep ? 'bg-accent-yellow' : 'bg-secondary-surface'
                 }`}
               />
             ))}
@@ -100,7 +100,7 @@ export default function OnboardingPage() {
             ) : (
               <div className="text-8xl mb-8">{step.emoji}</div>
             )}
-            <h1 className="text-3xl font-bold text-white mb-4">{step.title}</h1>
+            <h1 className="text-3xl font-bold text-text-primary mb-4">{step.title}</h1>
             <p className="text-lg text-text-sec max-w-sm">{step.description}</p>
           </div>
         </div>
@@ -109,7 +109,7 @@ export default function OnboardingPage() {
         <div className="flex-shrink-0 px-6 pb-8 space-y-3">
           <button
             onClick={handleNext}
-            className="w-full bg-accent-yellow text-black font-bold text-lg py-4 rounded-none hover:bg-yellow-400 transition-colors border border-white"
+            className="w-full bg-accent-yellow text-on-light-accent font-bold text-lg py-4 rounded-none hover:bg-accent-yellow-hover transition-colors border border-cta-outline"
           >
             {currentStep === ONBOARDING_STEPS.length - 1 ? "Let's run it" : 'Next'}
           </button>
@@ -117,7 +117,7 @@ export default function OnboardingPage() {
           {currentStep > 0 && (
             <button
               onClick={handlePrevious}
-              className="w-full bg-transparent text-text-sec font-medium text-base py-3 rounded-none hover:text-white transition-colors"
+              className="w-full bg-transparent text-text-sec font-medium text-base py-3 rounded-none hover:text-text-primary transition-colors"
             >
               Previous
             </button>
@@ -126,7 +126,7 @@ export default function OnboardingPage() {
           {currentStep < ONBOARDING_STEPS.length - 1 && (
             <button
               onClick={handleComplete}
-              className="w-full bg-transparent text-text-sec font-medium text-sm py-2 rounded-none hover:text-white transition-colors"
+              className="w-full bg-transparent text-text-sec font-medium text-sm py-2 rounded-none hover:text-text-primary transition-colors"
             >
               Skip onboarding
             </button>

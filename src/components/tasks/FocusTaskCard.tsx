@@ -153,7 +153,7 @@ export function FocusTaskCard({
     >
       {/* Connection line for chain tasks */}
       {showChainConnector && (
-        <div className="absolute left-3 -top-3 w-px h-6 bg-gray-600" />
+        <div className="absolute left-3 -top-3 w-px h-6 bg-form-border" />
       )}
 
       {/* Checkmark - Outside the card on the leading side */}
@@ -168,7 +168,7 @@ export function FocusTaskCard({
         ) : task.done ? (
           <div className="w-6 h-6 rounded-none bg-accent-green flex items-center justify-center">
             <svg
-              className="w-4 h-4 text-white"
+              className="w-4 h-4 text-on-dark-accent"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -184,7 +184,7 @@ export function FocusTaskCard({
         ) : (
           <div className={`w-6 h-6 rounded-none border-2 transition-colors ${
             isLocked
-              ? "border-gray-600 cursor-not-allowed"
+              ? "border-disabled-border cursor-not-allowed"
               : "border-border-card hover:border-accent-yellow cursor-pointer"
           }`} />
         )}
@@ -203,7 +203,7 @@ export function FocusTaskCard({
           opacity: isLocked ? 0.6 : 1,
           touchAction: 'pan-y',
         }}
-        className={`flex-1 min-w-0 bg-bg-card rounded-2xl py-3 pr-4 flex items-center gap-3 border border-[#ffffff] cursor-pointer transition-all hover:bg-bg-card-hover relative overflow-hidden shadow-[0_4px_16px_rgba(0,0,0,0.35)] ${
+        className={`flex-1 min-w-0 bg-bg-card rounded-2xl py-3 pr-4 flex items-center gap-3 border border-card-border-strong cursor-pointer transition-all hover:bg-bg-card-hover relative overflow-hidden shadow-[0_4px_16px_rgba(0,0,0,0.35)] ${
           task.done ? "bg-bg-card-done border-accent-green/30" : ""
         } ${isActive && !task.done ? "border-accent-yellow shadow-[0_0_16px_rgba(245,197,24,0.25)]" : ""} ${isPressing ? "scale-[0.98] brightness-90" : ""}`}
       >
@@ -217,7 +217,7 @@ export function FocusTaskCard({
         {/* Lock icon for locked tasks */}
         {isLocked && (
           <div className="absolute top-2 right-2">
-            <LockClosedIcon className="w-4 h-4 text-gray-500" />
+            <LockClosedIcon className="w-4 h-4 text-disabled-icon" />
           </div>
         )}
         {/* Project Avatar or Solo Task Avatar */}
@@ -229,7 +229,7 @@ export function FocusTaskCard({
             fallbackColor={task.projectColor || "#F5C518"}
             projectId={task.projectId}
             size={40}
-            className="flex-shrink-0 border-3 border-white"
+            className="flex-shrink-0 border-3 border-avatar-ring"
           />
         ) : (
           <div className="w-10 h-10 rounded-none bg-accent-pink/20 flex items-center justify-center flex-shrink-0">
@@ -241,7 +241,7 @@ export function FocusTaskCard({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 min-w-0">
             <h4 className={`text-base font-semibold truncate min-w-0 ${
-              isLocked ? "text-gray-400" : "text-white"
+              isLocked ? "text-disabled-text" : "text-text-primary"
             }`}>
               {task.title}
             </h4>
@@ -262,30 +262,30 @@ export function FocusTaskCard({
                 <CalendarIcon
                   className={`w-3 h-3 flex-shrink-0 ${
                     taskIsOverdue && !task.done
-                      ? "text-red-500"
+                      ? "text-status-overdue"
                       : taskIsToday && !task.done
-                      ? "text-blue-500"
+                      ? "text-status-today"
                       : "text-text-sec"
                   }`}
                 />
                 <span
                   className={`text-sm truncate ${
                     taskIsOverdue && !task.done
-                      ? "text-red-500 font-semibold"
+                      ? "text-status-overdue font-semibold"
                       : taskIsToday && !task.done
-                      ? "text-blue-500 font-semibold"
+                      ? "text-status-today font-semibold"
                       : "text-text-sec"
                   }`}
                 >
                   {formatLocalSmart(task.deadline)}
                 </span>
                 {taskIsOverdue && !task.done && (
-                  <span className="px-1.5 py-0.5 bg-red-500 text-white text-xs font-bold rounded flex-shrink-0">
+                  <span className="px-1.5 py-0.5 bg-status-overdue text-on-dark-accent text-xs font-bold rounded flex-shrink-0">
                     OVERDUE
                   </span>
                 )}
                 {!taskIsOverdue && taskIsToday && !task.done && (
-                  <span className="px-1.5 py-0.5 bg-blue-500 text-white text-xs font-bold rounded flex-shrink-0">
+                  <span className="px-1.5 py-0.5 bg-status-today text-on-dark-accent text-xs font-bold rounded flex-shrink-0">
                     TODAY
                   </span>
                 )}
@@ -355,7 +355,7 @@ export function FocusTaskCard({
             </div>
           )}
           {xpReward !== undefined && !task.done && (
-            <span className="text-[10px] font-bold text-black bg-accent-yellow px-2 py-0.5 rounded-full shadow-[0_0_8px_rgba(245,197,24,0.45)]">
+            <span className="text-[10px] font-bold text-on-light-accent bg-accent-yellow px-2 py-0.5 rounded-full shadow-[0_0_8px_rgba(245,197,24,0.45)]">
               +{xpReward} XP
             </span>
           )}

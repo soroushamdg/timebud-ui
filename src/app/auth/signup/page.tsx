@@ -68,13 +68,13 @@ export default function SignupPage() {
   if (success) {
     return (
       <AppShell showTabBar={false}>
-      <div className="flex flex-col h-[calc(100vh-5rem)] overflow-y-auto bg-black items-center justify-center px-6">
+      <div className="flex flex-col h-[calc(100vh-5rem)] overflow-y-auto bg-bg-primary items-center justify-center px-6">
         <div className="w-full max-w-sm text-center">
           <div className="text-center mb-8">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/bud/bud-avatar.png" alt="Bud" className="w-16 h-16 rounded-full border-2 border-accent-yellow mb-3 mx-auto object-cover" />
             <h1 className="text-accent-yellow text-3xl font-bold">TimeBud</h1>
-            <h2 className="text-white text-2xl font-bold mt-4">Check your email</h2>
+            <h2 className="text-text-primary text-2xl font-bold mt-4">Check your email</h2>
           </div>
           
           <div className="text-text-sec mb-8">
@@ -95,7 +95,7 @@ export default function SignupPage() {
 
   return (
     <AppShell showTabBar={false}>
-    <div className="flex flex-col h-[calc(100vh-5rem)] overflow-y-auto bg-black items-center justify-center px-6">
+    <div className="flex flex-col h-[calc(100vh-5rem)] overflow-y-auto bg-bg-primary items-center justify-center px-6">
       <div className="w-full max-w-sm">
         {/* Wordmark */}
         <div className="flex flex-col items-center mb-6">
@@ -107,7 +107,7 @@ export default function SignupPage() {
 
         {/* Welcome message */}
         <div className="text-center mb-8">
-          <h2 className="text-white text-2xl font-bold">Start your first mission</h2>
+          <h2 className="text-text-primary text-2xl font-bold">Start your first mission</h2>
           <p className="text-text-sec text-sm mt-1">Bud&apos;s ready when you are.</p>
         </div>
 
@@ -121,7 +121,7 @@ export default function SignupPage() {
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
                 placeholder="First name"
-                className="w-full bg-bg-card border border-border-card rounded-2xl px-4 py-3 text-white placeholder:text-text-sec focus:outline-none focus:ring-2 focus:ring-accent-yellow"
+                className="w-full bg-bg-card border border-border-card rounded-2xl px-4 py-3 text-text-primary placeholder:text-text-sec focus:outline-none focus:ring-2 focus:ring-accent-yellow"
                 required
               />
             </div>
@@ -131,7 +131,7 @@ export default function SignupPage() {
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
                 placeholder="Last name"
-                className="w-full bg-bg-card border border-border-card rounded-2xl px-4 py-3 text-white placeholder:text-text-sec focus:outline-none focus:ring-2 focus:ring-accent-yellow"
+                className="w-full bg-bg-card border border-border-card rounded-2xl px-4 py-3 text-text-primary placeholder:text-text-sec focus:outline-none focus:ring-2 focus:ring-accent-yellow"
                 required
               />
             </div>
@@ -144,7 +144,7 @@ export default function SignupPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Email"
-              className="w-full bg-bg-card border border-border-card rounded-2xl px-4 py-3 text-white placeholder:text-text-sec focus:outline-none focus:ring-2 focus:ring-accent-yellow"
+              className="w-full bg-bg-card border border-border-card rounded-2xl px-4 py-3 text-text-primary placeholder:text-text-sec focus:outline-none focus:ring-2 focus:ring-accent-yellow"
               required
             />
           </div>
@@ -156,7 +156,7 @@ export default function SignupPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Password"
-              className="w-full bg-bg-card border border-border-card rounded-2xl px-4 py-3 text-white placeholder:text-text-sec focus:outline-none focus:ring-2 focus:ring-accent-yellow"
+              className="w-full bg-bg-card border border-border-card rounded-2xl px-4 py-3 text-text-primary placeholder:text-text-sec focus:outline-none focus:ring-2 focus:ring-accent-yellow"
               required
             />
           </div>
@@ -172,11 +172,11 @@ export default function SignupPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-accent-yellow text-black font-bold text-lg rounded-2xl h-14 disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
+            className="w-full bg-accent-yellow text-on-light-accent font-bold text-lg rounded-2xl h-14 disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
           >
             {loading ? (
               <div className="flex items-center justify-center">
-                <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
+                <div className="w-5 h-5 border-2 border-on-light-accent border-t-transparent rounded-full animate-spin"></div>
               </div>
             ) : (
               'Sign Up'

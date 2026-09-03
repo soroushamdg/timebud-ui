@@ -9,6 +9,7 @@ import { AuthProvider, useAuth } from "@/components/providers/AuthProvider";
 import { OnboardingProvider } from "@/components/providers/OnboardingProvider";
 import { useSyncDailyBudget } from "@/hooks/useAISettings";
 import { useTimezoneSync } from "@/hooks/useTimezoneSync";
+import { useThemeSync } from "@/hooks/useTheme";
 import { useActiveFocusSession, useFocusSessionRealtime } from "@/hooks/useSessions";
 import { useFocusSessionStore, PlannedTask } from "@/stores/sessionStore";
 import { SimpleToast } from "@/components/ui/SimpleToast";
@@ -16,6 +17,11 @@ import { Session } from "@supabase/supabase-js";
 
 function BudgetSync() {
   useSyncDailyBudget();
+  return null;
+}
+
+function ThemeSync() {
+  useThemeSync();
   return null;
 }
 
@@ -100,6 +106,7 @@ export function Providers({ children, initialSession }: ProvidersProps) {
         <QueryClientProvider client={queryClient}>
           <AuthProvider initialSession={initialSession}>
             <BudgetSync />
+            <ThemeSync />
             <TimezoneSync />
             <FocusSessionSync />
             <OnboardingProvider>

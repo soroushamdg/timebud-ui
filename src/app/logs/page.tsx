@@ -64,7 +64,7 @@ function TimeDelta({ actual, scheduled }: { actual: number; scheduled: number })
   return (
     <span
       className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
-        delta < 0 ? 'bg-accent-green/15 text-accent-green' : 'bg-red-500/15 text-red-400'
+        delta < 0 ? 'bg-accent-green/15 text-accent-green' : 'bg-status-negative/15 text-status-negative-text'
       }`}
     >
       {delta > 0 ? '+' : ''}
@@ -97,16 +97,16 @@ function SessionCard({ session, taskLogs, getDifficulty }: SessionCardProps) {
   const sessionXp = completed.reduce((sum, l) => sum + getJobXpPreview(getDifficulty(l.project_id)), 0)
 
   return (
-    <div className="bg-[#1A1A1A] rounded-xl border border-[#2A2A2A] overflow-hidden">
+    <div className="bg-tab-bg rounded-xl border border-secondary-surface overflow-hidden">
       <button
         className="w-full px-4 py-3 flex items-center justify-between text-left"
         onClick={() => setExpanded(e => !e)}
       >
         <div className="flex flex-col">
-          <span className="text-white text-sm font-medium">
+          <span className="text-text-primary text-sm font-medium">
             {formatSessionDate(session.start_time)}
           </span>
-          <span className="text-[#666666] text-xs mt-0.5">
+          <span className="text-text-tertiary text-xs mt-0.5">
             {formatSessionTime(session.start_time)}
             {' · '}
             {formatDuration(session.start_time, session.end_time)}
@@ -114,12 +114,12 @@ function SessionCard({ session, taskLogs, getDifficulty }: SessionCardProps) {
         </div>
         <div className="flex items-center gap-2">
           {isLegacy ? (
-            <span className="text-[#555555] text-xs bg-[#222222] border border-[#333333] px-2 py-0.5 rounded-full">
+            <span className="text-text-muted text-xs bg-bg-card border border-border-card px-2 py-0.5 rounded-full">
               Legacy
             </span>
           ) : (
             <>
-              <span className="text-[#888888] text-xs">
+              <span className="text-text-sec text-xs">
                 {doneCount}/{totalCount} jobs
               </span>
               {sessionXp > 0 && (
@@ -130,17 +130,17 @@ function SessionCard({ session, taskLogs, getDifficulty }: SessionCardProps) {
             </>
           )}
           {expanded ? (
-            <ChevronUp size={16} className="text-[#555555]" />
+            <ChevronUp size={16} className="text-text-muted" />
           ) : (
-            <ChevronDown size={16} className="text-[#555555]" />
+            <ChevronDown size={16} className="text-text-muted" />
           )}
         </div>
       </button>
 
       {expanded && (
-        <div className="px-4 pb-4 border-t border-[#252525] pt-3 space-y-4">
+        <div className="px-4 pb-4 border-t border-bg-card-hover pt-3 space-y-4">
           {isLegacy ? (
-            <p className="text-[#666666] text-xs">
+            <p className="text-text-tertiary text-xs">
               {session.tasks_list?.length ?? 0} job
               {(session.tasks_list?.length ?? 0) !== 1 ? 's' : ''} in this
               run
@@ -164,17 +164,17 @@ function SessionCard({ session, taskLogs, getDifficulty }: SessionCardProps) {
                           className="flex items-center justify-between"
                         >
                           <div className="flex flex-col min-w-0 flex-1 mr-3">
-                            <span className="text-white text-sm truncate">
+                            <span className="text-text-primary text-sm truncate">
                               {log.task_title}
                             </span>
                             {log.project_name && (
-                              <span className="text-[#666666] text-xs truncate">
+                              <span className="text-text-tertiary text-xs truncate">
                                 {log.project_name}
                               </span>
                             )}
                           </div>
                           <div className="flex items-center gap-1.5 flex-shrink-0">
-                            <span className="text-[#888888] text-xs whitespace-nowrap">
+                            <span className="text-text-sec text-xs whitespace-nowrap">
                               {actual} min
                             </span>
                             <TimeDelta actual={actual} scheduled={log.scheduled_minutes} />
@@ -189,8 +189,8 @@ function SessionCard({ session, taskLogs, getDifficulty }: SessionCardProps) {
               {partial.length > 0 && (
                 <div>
                   <div className="flex items-center gap-1.5 mb-2">
-                    <Clock size={13} className="text-amber-400" />
-                    <span className="text-amber-400 text-[11px] font-semibold uppercase tracking-wider">
+                    <Clock size={13} className="text-status-onhold-text" />
+                    <span className="text-status-onhold-text text-[11px] font-semibold uppercase tracking-wider">
                       Partial
                     </span>
                   </div>
@@ -203,17 +203,17 @@ function SessionCard({ session, taskLogs, getDifficulty }: SessionCardProps) {
                           className="flex items-center justify-between"
                         >
                           <div className="flex flex-col min-w-0 flex-1 mr-3">
-                            <span className="text-white text-sm truncate">
+                            <span className="text-text-primary text-sm truncate">
                               {log.task_title}
                             </span>
                             {log.project_name && (
-                              <span className="text-[#666666] text-xs truncate">
+                              <span className="text-text-tertiary text-xs truncate">
                                 {log.project_name}
                               </span>
                             )}
                           </div>
                           <div className="flex items-center gap-1.5 flex-shrink-0">
-                            <span className="text-[#888888] text-xs whitespace-nowrap">
+                            <span className="text-text-sec text-xs whitespace-nowrap">
                               {actual} / {log.scheduled_minutes} min
                             </span>
                             <TimeDelta actual={actual} scheduled={log.scheduled_minutes} />
@@ -228,8 +228,8 @@ function SessionCard({ session, taskLogs, getDifficulty }: SessionCardProps) {
               {skipped.length > 0 && (
                 <div>
                   <div className="flex items-center gap-1.5 mb-2">
-                    <SkipForward size={13} className="text-[#555555]" />
-                    <span className="text-[#555555] text-[11px] font-semibold uppercase tracking-wider">
+                    <SkipForward size={13} className="text-text-muted" />
+                    <span className="text-text-muted text-[11px] font-semibold uppercase tracking-wider">
                       Skipped
                     </span>
                   </div>
@@ -240,16 +240,16 @@ function SessionCard({ session, taskLogs, getDifficulty }: SessionCardProps) {
                         className="flex items-center justify-between"
                       >
                         <div className="flex flex-col min-w-0 flex-1 mr-3">
-                          <span className="text-[#888888] text-sm truncate">
+                          <span className="text-text-sec text-sm truncate">
                             {log.task_title}
                           </span>
                           {log.project_name && (
-                            <span className="text-[#555555] text-xs truncate">
+                            <span className="text-text-muted text-xs truncate">
                               {log.project_name}
                             </span>
                           )}
                         </div>
-                        <span className="text-[#555555] text-xs whitespace-nowrap">
+                        <span className="text-text-muted text-xs whitespace-nowrap">
                           {log.scheduled_minutes} min
                         </span>
                       </div>
@@ -310,13 +310,13 @@ export default function LogsPage() {
 
   return (
     <AppShell>
-      <div className="flex flex-col h-[calc(100vh-5rem)] pb-5 bg-black">
+      <div className="flex flex-col h-[calc(100vh-5rem)] pb-5 bg-bg-primary">
         {/* Header */}
-        <div className="flex-shrink-0 bg-[#1A1A1A] border-b border-[#333333] px-4 py-3 flex items-center justify-between">
-          <h1 className="text-white text-lg font-semibold">Run History</h1>
+        <div className="flex-shrink-0 bg-tab-bg border-b border-border-card px-4 py-3 flex items-center justify-between">
+          <h1 className="text-text-primary text-lg font-semibold">Run History</h1>
           <Link
             href="/gantt"
-            className="p-1.5 rounded-lg text-[#888888] hover:text-[#f5c518] transition-colors"
+            className="p-1.5 rounded-lg text-text-sec hover:text-accent-yellow transition-colors"
             title="View Timeline"
             aria-label="View Timeline"
           >
@@ -325,38 +325,38 @@ export default function LogsPage() {
         </div>
 
         {/* Stats strip */}
-        <div className="flex-shrink-0 grid grid-cols-4 divide-x divide-[#2A2A2A] border-b border-[#2A2A2A]">
-          <div className="bg-[#0D0D0D] px-3 py-3 flex flex-col items-center">
-            <span className="text-white text-xl font-bold">
+        <div className="flex-shrink-0 grid grid-cols-4 divide-x divide-secondary-surface border-b border-secondary-surface">
+          <div className="bg-bg-inset px-3 py-3 flex flex-col items-center">
+            <span className="text-text-primary text-xl font-bold">
               {thisWeekSessions.length}
             </span>
-            <span className="text-[#555555] text-[11px] text-center mt-0.5">
+            <span className="text-text-muted text-[11px] text-center mt-0.5">
               runs
             </span>
           </div>
-          <div className="bg-[#0D0D0D] px-3 py-3 flex flex-col items-center">
-            <span className="text-white text-xl font-bold">
+          <div className="bg-bg-inset px-3 py-3 flex flex-col items-center">
+            <span className="text-text-primary text-xl font-bold">
               {focusMinutesThisWeek > 0
                 ? formatStatTime(focusMinutesThisWeek)
                 : '—'}
             </span>
-            <span className="text-[#555555] text-[11px] text-center mt-0.5">
+            <span className="text-text-muted text-[11px] text-center mt-0.5">
               focused
             </span>
           </div>
-          <div className="bg-[#0D0D0D] px-3 py-3 flex flex-col items-center">
+          <div className="bg-bg-inset px-3 py-3 flex flex-col items-center">
             <span className="text-accent-green text-xl font-bold">
               {jobsCompletedThisWeek}
             </span>
-            <span className="text-[#555555] text-[11px] text-center mt-0.5">
+            <span className="text-text-muted text-[11px] text-center mt-0.5">
               jobs done
             </span>
           </div>
-          <div className="bg-[#0D0D0D] px-3 py-3 flex flex-col items-center">
+          <div className="bg-bg-inset px-3 py-3 flex flex-col items-center">
             <span className="text-accent-yellow text-xl font-bold">
               {xpEarnedThisWeek}
             </span>
-            <span className="text-[#555555] text-[11px] text-center mt-0.5">
+            <span className="text-text-muted text-[11px] text-center mt-0.5">
               XP earned
             </span>
           </div>
@@ -364,25 +364,25 @@ export default function LogsPage() {
 
         {/* Week label */}
         <div className="flex-shrink-0 px-4 py-2 flex items-center gap-1.5">
-          <CalendarDays size={11} className="text-[#444444]" />
-          <span className="text-[#444444] text-[11px]">This week</span>
+          <CalendarDays size={11} className="text-text-faint" />
+          <span className="text-text-faint text-[11px]">This week</span>
         </div>
 
         {/* Session list */}
         <div className="flex-1 min-h-0 overflow-y-auto">
           {isLoading ? (
             <div className="flex items-center justify-center py-16">
-              <p className="text-[#555555] text-sm">Loading...</p>
+              <p className="text-text-muted text-sm">Loading...</p>
             </div>
           ) : sessions.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 px-4">
-              <div className="w-14 h-14 bg-[#1A1A1A] rounded-full flex items-center justify-center mb-3">
-                <CalendarDays size={22} className="text-[#333333]" />
+              <div className="w-14 h-14 bg-tab-bg rounded-full flex items-center justify-center mb-3">
+                <CalendarDays size={22} className="text-border-card" />
               </div>
-              <p className="text-white text-base font-medium mb-1">
+              <p className="text-text-primary text-base font-medium mb-1">
                 No runs yet
               </p>
-              <p className="text-[#555555] text-sm text-center">
+              <p className="text-text-muted text-sm text-center">
                 Your completed runs will appear here.
               </p>
             </div>

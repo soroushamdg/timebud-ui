@@ -62,7 +62,7 @@ export function LearningOpportunity({
         <button
           onClick={() => handleFeedback(true)}
           disabled={isSubmitting}
-          className="flex items-center gap-1 px-3 py-1.5 bg-bg-primary border border-border-card rounded-lg text-white hover:bg-accent-green/20 hover:border-accent-green transition-colors disabled:opacity-50"
+          className="flex items-center gap-1 px-3 py-1.5 bg-bg-primary border border-border-card rounded-lg text-text-primary hover:bg-accent-green/20 hover:border-accent-green transition-colors disabled:opacity-50"
         >
           <ThumbsUp className="w-4 h-4" />
           <span className="text-sm">Yes</span>
@@ -70,7 +70,7 @@ export function LearningOpportunity({
         <button
           onClick={() => handleFeedback(false)}
           disabled={isSubmitting}
-          className="flex items-center gap-1 px-3 py-1.5 bg-bg-primary border border-border-card rounded-lg text-white hover:bg-accent-pink/20 hover:border-accent-pink transition-colors disabled:opacity-50"
+          className="flex items-center gap-1 px-3 py-1.5 bg-bg-primary border border-border-card rounded-lg text-text-primary hover:bg-accent-pink/20 hover:border-accent-pink transition-colors disabled:opacity-50"
         >
           <ThumbsDown className="w-4 h-4" />
           <span className="text-sm">No</span>

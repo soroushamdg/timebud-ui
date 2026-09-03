@@ -48,16 +48,16 @@ export function InstallPwaPrompt() {
         <div className="flex items-start justify-between gap-2 mb-3">
           <div className="flex items-center gap-2">
             <div className="w-9 h-9 rounded-xl bg-accent-yellow flex items-center justify-center flex-shrink-0">
-              <Smartphone className="w-5 h-5 text-black" />
+              <Smartphone className="w-5 h-5 text-on-light-accent" />
             </div>
             <div>
-              <p className="text-white font-semibold text-sm">Install TimeBud</p>
+              <p className="text-text-primary font-semibold text-sm">Install TimeBud</p>
               <p className="text-text-sec text-xs">Faster, full-screen, works offline</p>
             </div>
           </div>
           <button
             onClick={dismissInstallPrompt}
-            className="text-text-sec hover:text-white transition-colors flex-shrink-0"
+            className="text-text-sec hover:text-text-primary transition-colors flex-shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
@@ -66,7 +66,7 @@ export function InstallPwaPrompt() {
         {platform === 'android' && canPromptNatively ? (
           <button
             onClick={handleInstallClick}
-            className="w-full bg-accent-yellow text-black font-bold py-2.5 rounded-xl hover:bg-yellow-400 transition-colors"
+            className="w-full bg-accent-yellow text-on-light-accent font-bold py-2.5 rounded-xl hover:bg-accent-yellow-hover transition-colors"
           >
             Install app
           </button>
@@ -74,11 +74,11 @@ export function InstallPwaPrompt() {
           <ol className="space-y-2">
             {steps.map((step, index) => (
               <li key={index} className="flex items-center gap-3">
-                <div className="w-6 h-6 rounded-full bg-black/40 flex items-center justify-center text-text-sec text-xs font-semibold flex-shrink-0">
+                <div className="w-6 h-6 rounded-full bg-secondary-surface flex items-center justify-center text-text-sec text-xs font-semibold flex-shrink-0">
                   {index + 1}
                 </div>
                 <step.icon className="w-4 h-4 text-accent-yellow flex-shrink-0" />
-                <span className="text-white text-sm">{step.text}</span>
+                <span className="text-text-primary text-sm">{step.text}</span>
               </li>
             ))}
           </ol>

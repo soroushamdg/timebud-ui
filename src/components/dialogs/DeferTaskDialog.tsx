@@ -71,32 +71,32 @@ export function DeferTaskDialog({
 
   return (
     <>
-      <div className="fixed inset-0 bg-black/70 z-[100]" onClick={onClose} />
-      
-      <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-sm mx-4 bg-[#1A1A1A] rounded-lg z-[100]">
-        <div className="flex items-center justify-between p-4 border-b border-[#333333]">
+      <div className="fixed inset-0 bg-scrim/70 z-[100]" onClick={onClose} />
+
+      <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-sm mx-4 bg-tab-bg rounded-lg z-[100]">
+        <div className="flex items-center justify-between p-4 border-b border-border-card">
           <div className="flex items-center gap-3">
             <Calendar className="w-5 h-5 text-accent-yellow" />
-            <h2 className="text-white font-bold text-lg">Defer Job</h2>
+            <h2 className="text-text-primary font-bold text-lg">Defer Job</h2>
           </div>
-          <button 
+          <button
             onClick={onClose}
-            className="text-[#666666] hover:text-white transition-colors"
+            className="text-text-tertiary hover:text-text-primary transition-colors"
           >
             <X className="w-6 h-6" />
           </button>
         </div>
-        
+
         <div className="p-4 space-y-4">
           <div>
             <p className="text-text-sec text-sm mb-1">Job</p>
-            <p className="text-white font-medium">{taskTitle}</p>
+            <p className="text-text-primary font-medium">{taskTitle}</p>
           </div>
 
           {currentDeadline && (
             <div>
               <p className="text-text-sec text-sm mb-1">Current Deadline</p>
-              <p className="text-white">{formatLocal(currentDeadline)}</p>
+              <p className="text-text-primary">{formatLocal(currentDeadline)}</p>
             </div>
           )}
 
@@ -111,28 +111,28 @@ export function DeferTaskDialog({
                 setSelectedDate(e.target.value)
                 setError('')
               }}
-              className="w-full bg-[#2A2A2A] text-white border border-[#333333] rounded-lg px-3 py-2 focus:outline-none focus:border-accent-yellow"
+              className="w-full bg-secondary-surface text-text-primary border border-border-card rounded-lg px-3 py-2 focus:outline-none focus:border-accent-yellow"
               min={formatDateLocal(new Date())}
             />
           </div>
 
           {error && (
-            <div className="bg-red-500/10 border border-red-500 rounded-lg px-3 py-2">
-              <p className="text-red-500 text-sm">{error}</p>
+            <div className="bg-status-negative/10 border border-status-negative rounded-lg px-3 py-2">
+              <p className="text-status-negative text-sm">{error}</p>
             </div>
           )}
 
           <div className="flex gap-3 pt-2">
             <button
               onClick={onClose}
-              className="flex-1 bg-[#2A2A2A] text-white rounded-lg px-4 py-2 font-medium hover:bg-[#333333] transition-colors"
+              className="flex-1 bg-secondary-surface text-text-primary rounded-lg px-4 py-2 font-medium hover:bg-bg-card-hover transition-colors"
             >
               Cancel
             </button>
             <button
               onClick={handleDefer}
               disabled={isLoading || !selectedDate}
-              className="flex-1 bg-accent-yellow text-black rounded-lg px-4 py-2 font-bold hover:bg-yellow-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 bg-accent-yellow text-on-light-accent rounded-lg px-4 py-2 font-bold hover:bg-accent-yellow-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? 'Deferring...' : 'Defer'}
             </button>

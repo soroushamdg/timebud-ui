@@ -24,14 +24,14 @@ export function SignOutDialog({ isOpen, onClose, onConfirm }: SignOutDialogProps
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+    <div className="fixed inset-0 bg-scrim/50 flex items-center justify-center p-4 z-50">
       <div className="bg-bg-card rounded-none w-full max-w-sm">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-border-card">
-          <h2 className="text-white font-bold text-lg">Sign Out</h2>
+          <h2 className="text-text-primary font-bold text-lg">Sign Out</h2>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-lg bg-bg-card-hover flex items-center justify-center text-text-sec hover:text-white transition-colors"
+            className="w-8 h-8 rounded-lg bg-bg-card-hover flex items-center justify-center text-text-sec hover:text-text-primary transition-colors"
           >
             <X size={16} />
           </button>
@@ -55,18 +55,18 @@ export function SignOutDialog({ isOpen, onClose, onConfirm }: SignOutDialogProps
           <button
             onClick={onClose}
             disabled={isSigningOut}
-            className="flex-1 bg-bg-primary border border-border-card text-white font-semibold py-3 rounded-lg hover:bg-bg-card-hover transition-colors disabled:opacity-50"
+            className="flex-1 bg-bg-primary border border-border-card text-text-primary font-semibold py-3 rounded-lg hover:bg-bg-card-hover transition-colors disabled:opacity-50"
           >
             Cancel
           </button>
           <button
             onClick={handleConfirm}
             disabled={isSigningOut}
-            className="flex-1 bg-accent-pink text-white font-semibold py-3 rounded-lg hover:bg-accent-pink/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="flex-1 bg-accent-pink text-on-dark-accent font-semibold py-3 rounded-lg hover:bg-accent-pink/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {isSigningOut ? (
               <>
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                <div className="w-4 h-4 border-2 border-on-dark-accent border-t-transparent rounded-full animate-spin"></div>
                 Signing Out...
               </>
             ) : (

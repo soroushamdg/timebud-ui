@@ -19,15 +19,15 @@ export function TaskOverviewDialog({ isOpen, onClose, task, onMarkPartial }: Tas
   return (
     <>
       {/* Dark overlay */}
-      <div className="fixed inset-0 bg-black/70 z-[100]" onClick={onClose} />
-      
+      <div className="fixed inset-0 bg-scrim/70 z-[100]" onClick={onClose} />
+
       {/* Panel */}
-      <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-black rounded-t-3xl pb-8 z-[100] max-h-[80vh] overflow-y-auto">
+      <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-bg-primary rounded-t-3xl pb-8 z-[100] max-h-[80vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-6 pb-4">
           <div className="flex items-center gap-3">
             <Info className="w-5 h-5 text-text-sec" />
-            <h2 className="text-white font-bold text-lg">Job Overview</h2>
+            <h2 className="text-text-primary font-bold text-lg">Job Overview</h2>
           </div>
           <button 
             onClick={onClose}
@@ -55,7 +55,7 @@ export function TaskOverviewDialog({ isOpen, onClose, task, onMarkPartial }: Tas
               />
               <div>
                 <p className="text-text-sec text-sm">Mission</p>
-                <p className="text-white font-medium">{task.projectName || 'Unknown Mission'}</p>
+                <p className="text-text-primary font-medium">{task.projectName || 'Unknown Mission'}</p>
               </div>
             </div>
           )}
@@ -63,7 +63,7 @@ export function TaskOverviewDialog({ isOpen, onClose, task, onMarkPartial }: Tas
           {/* Job Title */}
           <div>
             <p className="text-text-sec text-sm mb-1">Job</p>
-            <h3 className="text-white text-lg font-semibold">{task.title}</h3>
+            <h3 className="text-text-primary text-lg font-semibold">{task.title}</h3>
           </div>
 
           {/* Task Details Grid */}
@@ -74,7 +74,7 @@ export function TaskOverviewDialog({ isOpen, onClose, task, onMarkPartial }: Tas
                 <Flag className="w-4 h-4 text-text-sec" />
                 <p className="text-text-sec text-sm">Priority</p>
               </div>
-              <p className="text-white font-medium">
+              <p className="text-text-primary font-medium">
                 {task.priority ? 'High Priority' : 'Normal Priority'}
               </p>
             </div>
@@ -85,7 +85,7 @@ export function TaskOverviewDialog({ isOpen, onClose, task, onMarkPartial }: Tas
                 <Clock className="w-4 h-4 text-text-sec" />
                 <p className="text-text-sec text-sm">Time Estimate</p>
               </div>
-              <p className="text-white font-medium">
+              <p className="text-text-primary font-medium">
                 {task.estimatedMinutes !== undefined ? (
                   task.partial && task.scheduledMinutes !== task.estimatedMinutes ? (
                     `${task.scheduledMinutes}min / ${task.estimatedMinutes}min total`
@@ -101,7 +101,7 @@ export function TaskOverviewDialog({ isOpen, onClose, task, onMarkPartial }: Tas
             {/* Status */}
             <div className="bg-bg-card rounded-lg p-3 border border-border-card">
               <p className="text-text-sec text-sm mb-1">Status</p>
-              <p className="text-white font-medium">
+              <p className="text-text-primary font-medium">
                 {task.done ? 'Completed' : 'Pending'}
               </p>
             </div>
@@ -109,7 +109,7 @@ export function TaskOverviewDialog({ isOpen, onClose, task, onMarkPartial }: Tas
             {/* Job Type */}
             <div className="bg-bg-card rounded-lg p-3 border border-border-card">
               <p className="text-text-sec text-sm mb-1">Type</p>
-              <p className="text-white font-medium">
+              <p className="text-text-primary font-medium">
                 {task.isSolo ? 'Solo Job' : 'Mission Job'}
               </p>
             </div>
@@ -119,7 +119,7 @@ export function TaskOverviewDialog({ isOpen, onClose, task, onMarkPartial }: Tas
           {task.partial && (
             <div className="bg-bg-card rounded-lg p-3 border border-border-card">
               <p className="text-text-sec text-sm mb-1">Run Info</p>
-              <p className="text-white font-medium">
+              <p className="text-text-primary font-medium">
                 Partial job - {task.scheduledMinutes} minutes allocated for this run
               </p>
             </div>
@@ -130,7 +130,7 @@ export function TaskOverviewDialog({ isOpen, onClose, task, onMarkPartial }: Tas
           {onMarkPartial && (
             <button
               onClick={onMarkPartial}
-              className="w-full px-4 py-3 bg-accent-pink text-white font-bold rounded-lg hover:bg-accent-pink/90 transition-colors"
+              className="w-full px-4 py-3 bg-accent-pink text-on-dark-accent font-bold rounded-lg hover:bg-accent-pink/90 transition-colors"
             >
               Mark as done partially
             </button>

@@ -49,18 +49,18 @@ export function PartialTaskCompletionDialog({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100]">
+    <div className="fixed inset-0 bg-scrim/50 flex items-center justify-center z-[100]">
       <div className="bg-bg-card rounded-2xl p-6 max-w-sm w-full mx-4">
         <h2 className="text-xl font-semibold mb-2">Job Progress</h2>
-        <p className="text-gray-400 mb-6">
+        <p className="text-text-sec mb-6">
           {task.partial
             ? `You scheduled ${task.scheduledMinutes}min for this job. What is your new estimate for the remaining work?`
             : `You're marking this job as partially complete. What is your new estimate for the remaining work?`
           }
         </p>
-        
+
         <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-300 mb-2">
+          <label className="block text-sm font-medium text-text-sec mb-2">
             Estimated time remaining (minutes)
           </label>
           <input
@@ -69,7 +69,7 @@ export function PartialTaskCompletionDialog({
             value={remainingMinutes}
             onChange={(e) => setRemainingMinutes(e.target.value)}
             placeholder="Enter minutes"
-            className="w-full px-3 py-2 bg-bg-card-hover border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-accent-pink"
+            className="w-full px-3 py-2 bg-bg-card-hover border border-form-border rounded-lg text-text-primary placeholder-disabled-icon focus:outline-none focus:border-accent-pink"
             disabled={isSubmitting}
           />
         </div>
@@ -78,23 +78,23 @@ export function PartialTaskCompletionDialog({
           <button
             onClick={handleSubmit}
             disabled={!remainingMinutes.trim() || isSubmitting}
-            className="w-full px-4 py-2 bg-accent-pink text-white font-bold rounded-lg hover:bg-accent-pink/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full px-4 py-2 bg-accent-pink text-on-dark-accent font-bold rounded-lg hover:bg-accent-pink/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Update Estimated Time
           </button>
-          
+
           <button
             onClick={handleMarkComplete}
             disabled={isSubmitting}
-            className="w-full px-4 py-2 bg-accent-green text-white font-bold rounded-lg hover:bg-accent-green/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full px-4 py-2 bg-accent-green text-on-dark-accent font-bold rounded-lg hover:bg-accent-green/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             I've finished the job
           </button>
-          
+
           <button
             onClick={onClose}
             disabled={isSubmitting}
-            className="w-full px-4 py-2 border border-gray-600 rounded-lg text-gray-300 hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full px-4 py-2 border border-border-card rounded-lg text-text-sec hover:bg-bg-card-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Cancel
           </button>

@@ -204,10 +204,10 @@ export default function PlannerPage() {
         <div className="flex-shrink-0 h-[2vh]" />
 
         <div className="flex-shrink-0 px-6 pt-4 mb-6 flex items-center gap-3">
-          <button onClick={() => router.back()} className="text-white">
+          <button onClick={() => router.back()} className="text-text-primary">
             <ChevronLeft className="w-6 h-6" />
           </button>
-          <h1 className="text-white text-xl font-bold">Week Ahead</h1>
+          <h1 className="text-text-primary text-xl font-bold">Week Ahead</h1>
         </div>
 
         <div className="flex-1 min-h-0 overflow-y-auto pb-24">
@@ -234,7 +234,7 @@ export default function PlannerPage() {
             <div className="space-y-8">
               {plan.days.map((day, index) => (
                 <div key={day.date.toISOString()} id={`planner-day-${format(day.date, 'yyyy-MM-dd')}`}>
-                  <h2 className="text-white text-lg font-semibold px-6 mb-2">{dayHeading(day.date, index)}</h2>
+                  <h2 className="text-text-primary text-lg font-semibold px-6 mb-2">{dayHeading(day.date, index)}</h2>
                   <BudgetMeter usedMinutes={day.totalUsedMinutes} budgetMinutes={day.budgetMinutes} />
                   <div className="px-6 space-y-3">
                     {day.tasks.length === 0 ? (

@@ -417,7 +417,7 @@ export default function ChatPage() {
               className="w-9 h-9 rounded-full flex-shrink-0 border-[1.5px] border-accent-yellow object-cover"
             />
             <div>
-              <h1 className="text-white font-bold text-lg leading-tight">Bud</h1>
+              <h1 className="text-text-primary font-bold text-lg leading-tight">Bud</h1>
               <p className="text-accent-green text-[11px] leading-tight">&#9679; your run manager</p>
             </div>
           </div>
@@ -438,7 +438,7 @@ export default function ChatPage() {
             {messages.length > 0 && (
               <button
                 onClick={handleClearChat}
-                className="text-text-sec hover:text-white transition-colors p-2"
+                className="text-text-sec hover:text-text-primary transition-colors p-2"
                 title="Clear chat"
               >
                 <RotateCcw className="w-5 h-5" />
@@ -476,7 +476,7 @@ export default function ChatPage() {
             <div className="flex flex-col items-center justify-center h-full text-center px-6">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/bud/bud-avatar.png" alt="Bud" className="w-20 h-20 rounded-full border-2 border-accent-yellow mb-4 object-cover" />
-              <h2 className="text-white text-2xl font-bold mb-2">
+              <h2 className="text-text-primary text-2xl font-bold mb-2">
                 Hey {(user as any)?.first_name || "there"}, I&apos;m Bud
               </h2>
               <p className="text-text-sec mb-6">
@@ -487,7 +487,7 @@ export default function ChatPage() {
                   <button
                     key={idx}
                     onClick={() => handleSendMessage(suggestion)}
-                    className="bg-bg-card border border-border-card text-white px-4 py-2 rounded-full hover:bg-bg-card-hover transition-colors"
+                    className="bg-bg-card border border-border-card text-text-primary px-4 py-2 rounded-full hover:bg-bg-card-hover transition-colors"
                   >
                     {suggestion}
                   </button>

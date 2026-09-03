@@ -13,7 +13,7 @@ export function CalendarSettingsRow() {
       onClick={() => router.push('/profile/calendar')}
       className="w-full bg-bg-card rounded-none px-4 py-4 mb-2 flex justify-between items-center hover:bg-bg-card/80 transition-colors"
     >
-      <span className="text-white">Calendar</span>
+      <span className="text-text-primary">Calendar</span>
       <div className="flex items-center gap-2">
         {isLoading ? (
           <div className="h-4 w-20 bg-border-card rounded animate-pulse"></div>

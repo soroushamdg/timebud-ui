@@ -16,7 +16,7 @@ export function TypingIndicator({ message = 'AI is thinking...' }: TypingIndicat
       exit={{ opacity: 0, scale: 0.85, transition: { duration: 0.15 } }}
       transition={{ type: 'spring', stiffness: 500, damping: 35, mass: 0.8 }}
     >
-      <div className="bg-bg-card text-white px-4 py-3 rounded-2xl rounded-bl-md">
+      <div className="bg-bg-card text-text-primary px-4 py-3 rounded-2xl rounded-bl-md">
         <div className="flex items-center gap-2">
           <div className="flex gap-1">
             <div className="w-2 h-2 bg-text-sec rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />

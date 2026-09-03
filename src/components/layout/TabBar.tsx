@@ -45,8 +45,8 @@ export function TabBar() {
                     onClick={onClick}
                     className="relative flex items-center justify-center"
                   >
-                    <div className="w-14 h-14 rounded-full bg-[#FFD233] flex items-center justify-center transition-all">
-                      <Icon className="w-6 h-6 text-[#060606]" />
+                    <div className="w-14 h-14 rounded-full bg-accent-yellow flex items-center justify-center transition-all">
+                      <Icon className="w-6 h-6 text-on-light-accent" />
                     </div>
                   </button>
                 ) : (
@@ -54,11 +54,11 @@ export function TabBar() {
                     href={href}
                     className="relative flex items-center justify-center"
                   >
-                    <div className="w-14 h-14 rounded-full bg-[#2A2A2A] flex items-center justify-center transition-all">
-                      <Icon 
+                    <div className="w-14 h-14 rounded-full bg-secondary-surface flex items-center justify-center transition-all">
+                      <Icon
                         className={`w-6 h-6 transition-colors ${
-                          isActive ? 'text-[#FFD233]' : 'text-[#666666]'
-                        }`} 
+                          isActive ? 'text-accent-yellow' : 'text-text-tertiary'
+                        }`}
                       />
                     </div>
                   </Link>

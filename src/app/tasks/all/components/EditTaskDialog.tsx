@@ -109,14 +109,14 @@ export function EditTaskDialog({
     : 'Solo task';
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4">
+    <div className="fixed inset-0 bg-scrim/50 flex items-center justify-center z-[100] p-4">
       <div className="bg-bg-primary rounded-2xl border border-border-card w-full max-w-md max-h-[85vh] overflow-y-auto shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
         <div className="p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-white text-lg font-semibold">Edit Job</h3>
+            <h3 className="text-text-primary text-lg font-semibold">Edit Job</h3>
             <button
               onClick={onClose}
-              className="w-8 h-8 rounded-full flex items-center justify-center text-text-sec hover:text-white hover:bg-bg-card transition-colors"
+              className="w-8 h-8 rounded-full flex items-center justify-center text-text-sec hover:text-text-primary hover:bg-bg-card transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
@@ -150,7 +150,7 @@ export function EditTaskDialog({
                 <select
                   value={formData.project_id || ''}
                   onChange={(e) => handleInputChange('project_id', e.target.value || null)}
-                  className="w-full bg-bg-card border border-border-card rounded-2xl px-5 py-3.5 text-white focus:outline-none focus:border-[#FFD233] appearance-none"
+                  className="w-full bg-bg-card border border-border-card rounded-2xl px-5 py-3.5 text-text-primary focus:outline-none focus:border-accent-yellow appearance-none"
                 >
                   <option value="">No mission (solo job)</option>
                   {projects.map((project) => (
@@ -163,7 +163,7 @@ export function EditTaskDialog({
                   <button
                     type="button"
                     onClick={handleClearProject}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-text-sec hover:text-white transition-colors"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-text-sec hover:text-text-primary transition-colors"
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -181,7 +181,7 @@ export function EditTaskDialog({
                   type="text"
                   value={formData.title}
                   onChange={(e) => handleInputChange('title', e.target.value)}
-                  className="w-full bg-bg-card border border-border-card rounded-2xl px-5 py-3.5 pr-10 text-white focus:outline-none focus:border-[#FFD233] transition-colors"
+                  className="w-full bg-bg-card border border-border-card rounded-2xl px-5 py-3.5 pr-10 text-text-primary focus:outline-none focus:border-accent-yellow transition-colors"
                   placeholder="Job title"
                   required
                 />
@@ -189,7 +189,7 @@ export function EditTaskDialog({
                   <button
                     type="button"
                     onClick={() => handleClearField('title')}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-text-sec hover:text-white transition-colors"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-text-sec hover:text-text-primary transition-colors"
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -206,7 +206,7 @@ export function EditTaskDialog({
                 <textarea
                   value={formData.description}
                   onChange={(e) => handleInputChange('description', e.target.value)}
-                  className="w-full bg-bg-card border border-border-card rounded-2xl px-5 py-3.5 pr-10 text-white focus:outline-none focus:border-[#FFD233] resize-none transition-colors"
+                  className="w-full bg-bg-card border border-border-card rounded-2xl px-5 py-3.5 pr-10 text-text-primary focus:outline-none focus:border-accent-yellow resize-none transition-colors"
                   placeholder="Job description (optional)"
                   rows={3}
                 />
@@ -214,7 +214,7 @@ export function EditTaskDialog({
                   <button
                     type="button"
                     onClick={() => handleClearField('description')}
-                    className="absolute right-4 top-3 text-text-sec hover:text-white transition-colors"
+                    className="absolute right-4 top-3 text-text-sec hover:text-text-primary transition-colors"
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -233,7 +233,7 @@ export function EditTaskDialog({
                   type="number"
                   value={formData.estimated_minutes}
                   onChange={(e) => handleInputChange('estimated_minutes', e.target.value)}
-                  className="w-full bg-bg-card border border-border-card rounded-2xl px-5 py-3.5 pr-10 text-white focus:outline-none focus:border-[#FFD233] transition-colors"
+                  className="w-full bg-bg-card border border-border-card rounded-2xl px-5 py-3.5 pr-10 text-text-primary focus:outline-none focus:border-accent-yellow transition-colors"
                   placeholder="60"
                   min="1"
                 />
@@ -241,7 +241,7 @@ export function EditTaskDialog({
                   <button
                     type="button"
                     onClick={() => handleClearField('estimated_minutes')}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-text-sec hover:text-white transition-colors"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-text-sec hover:text-text-primary transition-colors"
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -260,13 +260,13 @@ export function EditTaskDialog({
                   type="date"
                   value={formData.due_date}
                   onChange={(e) => handleInputChange('due_date', e.target.value)}
-                  className="w-full bg-bg-card border border-border-card rounded-2xl px-5 py-3.5 pr-10 text-white focus:outline-none focus:border-[#FFD233] transition-colors [&::-webkit-calendar-picker-indicator]:filter [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-70"
+                  className="w-full bg-bg-card border border-border-card rounded-2xl px-5 py-3.5 pr-10 text-text-primary focus:outline-none focus:border-accent-yellow transition-colors [&::-webkit-calendar-picker-indicator]:filter [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-70"
                 />
                 {formData.due_date && (
                   <button
                     type="button"
                     onClick={() => handleClearField('due_date')}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-text-sec hover:text-white transition-colors"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-text-sec hover:text-text-primary transition-colors"
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -276,16 +276,16 @@ export function EditTaskDialog({
 
             {/* Priority */}
             <div className="flex items-center justify-between bg-bg-card border border-border-card rounded-2xl px-5 py-4">
-              <span className="text-white font-medium">High priority</span>
+              <span className="text-text-primary font-medium">High priority</span>
               <button
                 type="button"
                 onClick={() => handleInputChange('priority', !formData.priority)}
                 className={`w-14 h-7 rounded-full transition-all duration-200 relative border-2 ${
-                  formData.priority ? 'bg-[#FFD233] border-[#FFD233]' : 'bg-border-card border-border-card'
+                  formData.priority ? 'bg-accent-yellow border-accent-yellow' : 'bg-border-card border-border-card'
                 }`}
               >
                 <div
-                  className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-transform duration-200 shadow-sm ${
+                  className={`absolute top-0.5 w-5 h-5 bg-toggle-thumb rounded-full transition-transform duration-200 shadow-sm ${
                     formData.priority ? 'translate-x-7' : 'translate-x-0.5'
                   }`}
                 />
@@ -304,14 +304,14 @@ export function EditTaskDialog({
               <button
                 type="submit"
                 disabled={isSubmitting || !formData.title.trim()}
-                className="flex-1 bg-[#FFD233] text-black font-bold py-3 rounded-xl hover:bg-[#FFD233]/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_16px_rgba(255,210,51,0.35)]"
+                className="flex-1 bg-accent-yellow text-on-light-accent font-bold py-3 rounded-xl hover:bg-accent-yellow/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_16px_rgba(255,210,51,0.35)]"
               >
                 {isSubmitting ? 'Saving...' : 'Save changes'}
               </button>
               <button
                 type="button"
                 onClick={onClose}
-                className="flex-1 bg-[#2A2A2A] text-white font-medium py-3 rounded-xl hover:bg-[#2A2A2A]/80 transition-colors"
+                className="flex-1 bg-secondary-surface text-text-primary font-medium py-3 rounded-xl hover:bg-bg-card-hover transition-colors"
               >
                 Cancel
               </button>

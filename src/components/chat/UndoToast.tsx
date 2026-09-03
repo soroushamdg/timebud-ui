@@ -50,7 +50,7 @@ export function UndoToast({
 
   return (
     <div className="fixed bottom-24 left-4 right-4 max-w-md mx-auto z-[100]">
-      <div className="bg-accent-yellow text-black rounded-lg shadow-lg overflow-hidden">
+      <div className="bg-accent-yellow text-on-light-accent rounded-lg shadow-lg overflow-hidden">
         <div className="flex items-center justify-between p-4">
           <div className="flex items-center gap-3">
             <RotateCcw className="w-5 h-5" />
@@ -61,14 +61,14 @@ export function UndoToast({
               onUndo()
               onDismiss()
             }}
-            className="bg-black text-accent-yellow font-semibold px-4 py-2 rounded-lg hover:opacity-90 transition-opacity"
+            className="bg-on-light-accent text-accent-yellow font-semibold px-4 py-2 rounded-lg hover:opacity-90 transition-opacity"
           >
             Undo
           </button>
         </div>
-        <div className="h-1 bg-black/20">
-          <div 
-            className="h-full bg-black transition-all duration-100 ease-linear"
+        <div className="h-1 bg-on-light-accent/20">
+          <div
+            className="h-full bg-on-light-accent transition-all duration-100 ease-linear"
             style={{ width: `${progress}%` }}
           />
         </div>

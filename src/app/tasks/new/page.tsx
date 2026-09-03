@@ -21,10 +21,10 @@ const PRIORITY_OPTIONS = [
 function SectionHeader({ icon: Icon, label }: { icon: ElementType; label: string }) {
   return (
     <div className="flex items-center gap-2 px-1 mb-3">
-      <div className="w-7 h-7 rounded-full bg-[#FFD233]/15 flex items-center justify-center flex-shrink-0">
-        <Icon className="w-3.5 h-3.5 text-[#FFD233]" />
+      <div className="w-7 h-7 rounded-full bg-accent-yellow/15 flex items-center justify-center flex-shrink-0">
+        <Icon className="w-3.5 h-3.5 text-accent-yellow" />
       </div>
-      <h2 className="text-white text-sm font-bold uppercase tracking-wide">{label}</h2>
+      <h2 className="text-text-primary text-sm font-bold uppercase tracking-wide">{label}</h2>
     </div>
   )
 }
@@ -310,11 +310,11 @@ export default function NewTaskPage(props: { searchParams: Promise<{ projectId?:
       <div className="flex items-center justify-between px-6 pt-6 pb-4">
         <button 
           onClick={() => router.back()} 
-          className="w-10 h-10 rounded-xl bg-bg-card border border-border-card flex items-center justify-center text-white hover:bg-opacity-80 transition-colors"
+          className="w-10 h-10 rounded-xl bg-bg-card border border-border-card flex items-center justify-center text-text-primary hover:bg-opacity-80 transition-colors"
         >
           <ChevronLeft size={20} />
         </button>
-        <h1 className="text-2xl font-bold text-white">
+        <h1 className="text-2xl font-bold text-text-primary">
           New {itemLabel}
         </h1>
         <div className="w-10" />
@@ -336,7 +336,7 @@ export default function NewTaskPage(props: { searchParams: Promise<{ projectId?:
             onClick={() => setItemType('task')}
             className={`flex-1 text-center py-2 text-base rounded-xl transition-colors ${
               itemType === 'task'
-                ? 'bg-accent-yellow text-black font-bold'
+                ? 'bg-accent-yellow text-on-light-accent font-bold'
                 : 'text-text-sec'
             }`}
           >
@@ -347,7 +347,7 @@ export default function NewTaskPage(props: { searchParams: Promise<{ projectId?:
             onClick={() => setItemType('milestone')}
             className={`flex-1 text-center py-2 text-base rounded-xl transition-colors ${
               itemType === 'milestone'
-                ? 'bg-accent-yellow text-black font-bold'
+                ? 'bg-accent-yellow text-on-light-accent font-bold'
                 : 'text-text-sec'
             }`}
           >
@@ -369,7 +369,7 @@ export default function NewTaskPage(props: { searchParams: Promise<{ projectId?:
                 placeholder={itemType === 'milestone' ? 'e.g. Beta release, Design handoff' : 'Enter job title'}
                 value={formData.title}
                 onChange={(e) => handleInputChange('title', e.target.value)}
-                className="w-full bg-bg-card border border-border-card rounded-2xl px-5 py-3.5 text-white placeholder-text-sec focus:outline-none focus:border-accent-yellow transition-colors"
+                className="w-full bg-bg-card border border-border-card rounded-2xl px-5 py-3.5 text-text-primary placeholder-text-sec focus:outline-none focus:border-accent-yellow transition-colors"
                 required
               />
               {titleError && (
@@ -388,7 +388,7 @@ export default function NewTaskPage(props: { searchParams: Promise<{ projectId?:
                   rows={4}
                   value={formData.description}
                   onChange={(e) => handleInputChange('description', e.target.value)}
-                  className="w-full bg-bg-card border border-border-card rounded-2xl px-5 py-3.5 text-white placeholder-text-sec focus:outline-none focus:border-accent-yellow resize-none transition-colors"
+                  className="w-full bg-bg-card border border-border-card rounded-2xl px-5 py-3.5 text-text-primary placeholder-text-sec focus:outline-none focus:border-accent-yellow resize-none transition-colors"
                 />
               </div>
             )}
@@ -401,7 +401,7 @@ export default function NewTaskPage(props: { searchParams: Promise<{ projectId?:
               <select
                 value={formData.project_id}
                 onChange={(e) => handleInputChange('project_id', e.target.value)}
-                className="w-full bg-bg-card border border-border-card rounded-2xl px-5 py-3.5 text-white focus:outline-none focus:border-accent-yellow transition-colors"
+                className="w-full bg-bg-card border border-border-card rounded-2xl px-5 py-3.5 text-text-primary focus:outline-none focus:border-accent-yellow transition-colors"
                 required={itemType === 'milestone'}
               >
                 {itemType === 'task' && <option value="">No mission (general job)</option>}
@@ -436,7 +436,7 @@ export default function NewTaskPage(props: { searchParams: Promise<{ projectId?:
                   step="5"
                   value={formData.estimated_minutes}
                   onChange={(e) => handleInputChange('estimated_minutes', parseInt(e.target.value) || 25)}
-                  className="w-full bg-bg-card border border-border-card rounded-2xl px-5 py-3.5 text-white focus:outline-none focus:border-accent-yellow transition-colors"
+                  className="w-full bg-bg-card border border-border-card rounded-2xl px-5 py-3.5 text-text-primary focus:outline-none focus:border-accent-yellow transition-colors"
                 />
               </div>
             )}
@@ -451,7 +451,7 @@ export default function NewTaskPage(props: { searchParams: Promise<{ projectId?:
                   type="date"
                   value={formData.due_date}
                   onChange={(e) => handleInputChange('due_date', e.target.value)}
-                  className={`w-full bg-bg-card border rounded-2xl px-5 py-3.5 text-white focus:outline-none transition-colors [&::-webkit-calendar-picker-indicator]:filter [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-70 [&::-webkit-calendar-picker-indicator]:hover:opacity-100 ${
+                  className={`w-full bg-bg-card border rounded-2xl px-5 py-3.5 text-text-primary focus:outline-none transition-colors [&::-webkit-calendar-picker-indicator]:filter [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-70 [&::-webkit-calendar-picker-indicator]:hover:opacity-100 ${
                     deadlineError ? 'border-accent-pink' : 'border-border-card focus:border-accent-yellow'
                   }`}
                 />
@@ -467,7 +467,7 @@ export default function NewTaskPage(props: { searchParams: Promise<{ projectId?:
                 <div className="flex items-center gap-2">
                   <ChevronDoubleUpIcon className="w-4 h-4 text-accent-yellow" />
                   <div>
-                    <span className="text-white font-medium">High Priority</span>
+                    <span className="text-text-primary font-medium">High Priority</span>
                     <p className="text-text-sec text-sm mt-0.5">Mark as high priority job</p>
                   </div>
                 </div>
@@ -481,7 +481,7 @@ export default function NewTaskPage(props: { searchParams: Promise<{ projectId?:
                   }`}
                 >
                   <div
-                    className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-transform duration-200 shadow-sm ${
+                    className={`absolute top-0.5 w-5 h-5 bg-toggle-thumb rounded-full transition-transform duration-200 shadow-sm ${
                       formData.priority ? 'translate-x-7' : 'translate-x-0.5'
                     }`}
                   />
@@ -512,7 +512,7 @@ export default function NewTaskPage(props: { searchParams: Promise<{ projectId?:
                   const depTask = projectTasks.find(t => t.id === depId)
                   return (
                     <div key={depId} className="flex items-center justify-between gap-2 px-4 py-2 bg-bg-card border border-border-card rounded-2xl">
-                      <span className="text-white text-sm truncate">{depTask?.title ?? depId}</span>
+                      <span className="text-text-primary text-sm truncate">{depTask?.title ?? depId}</span>
                       <button
                         type="button"
                         onClick={() => setPendingDeps(prev => prev.filter(id => id !== depId))}
@@ -531,7 +531,7 @@ export default function NewTaskPage(props: { searchParams: Promise<{ projectId?:
                 <button
                   type="button"
                   onClick={() => { setShowDepPicker(true); setDepSearch('') }}
-                  className="flex items-center gap-1.5 text-sm text-text-sec hover:text-white transition-colors py-1"
+                  className="flex items-center gap-1.5 text-sm text-text-sec hover:text-text-primary transition-colors py-1"
                 >
                   <Plus size={14} />
                   Add dependency
@@ -546,9 +546,9 @@ export default function NewTaskPage(props: { searchParams: Promise<{ projectId?:
                       value={depSearch}
                       onChange={e => setDepSearch(e.target.value)}
                       placeholder="Search jobs..."
-                      className="flex-1 bg-transparent text-white text-sm outline-none placeholder-text-sec"
+                      className="flex-1 bg-transparent text-text-primary text-sm outline-none placeholder-text-sec"
                     />
-                    <button type="button" onClick={() => setShowDepPicker(false)} className="text-text-sec hover:text-white">
+                    <button type="button" onClick={() => setShowDepPicker(false)} className="text-text-sec hover:text-text-primary">
                       <X size={14} />
                     </button>
                   </div>
@@ -564,7 +564,7 @@ export default function NewTaskPage(props: { searchParams: Promise<{ projectId?:
                           key={t.id}
                           type="button"
                           onClick={() => { setPendingDeps(prev => [...prev, t.id]); setShowDepPicker(false); setDepSearch('') }}
-                          className="w-full text-left px-4 py-2.5 text-sm text-white hover:bg-bg-card transition-colors"
+                          className="w-full text-left px-4 py-2.5 text-sm text-text-primary hover:bg-bg-card transition-colors"
                         >
                           {t.title}
                         </button>
@@ -585,7 +585,7 @@ export default function NewTaskPage(props: { searchParams: Promise<{ projectId?:
           <button
             type="submit"
             disabled={createTask.isPending}
-            className="w-full bg-[#FFD233] text-black font-bold text-lg py-4 rounded-2xl hover:bg-[#FFD233]/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_24px_rgba(255,210,51,0.35)]"
+            className="w-full bg-accent-yellow text-on-light-accent font-bold text-lg py-4 rounded-2xl hover:bg-accent-yellow/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_24px_rgba(255,210,51,0.35)]"
           >
             {createTask.isPending ? 'Creating...' : `Create ${itemLabel}`}
           </button>

@@ -429,11 +429,11 @@ export default function FocusSession() {
 
   return (
     <AppShell showTabBar={false}>
-    <div className="flex flex-col h-[calc(100vh-5rem)] bg-black relative">
+    <div className="flex flex-col h-[calc(100vh-5rem)] bg-bg-primary relative">
       {/* Floating X button - Top left corner */}
       <button
         onClick={() => setShowConfirmDialog(true)}
-        className="fixed top-4 left-4 w-12 h-12 bg-black/50 backdrop-blur-sm rounded-full flex items-center justify-center text-accent-pink hover:bg-black/70 hover:opacity-80 transition-all z-50 border border-accent-pink/20"
+        className="fixed top-4 left-4 w-12 h-12 bg-bg-primary/50 backdrop-blur-sm rounded-full flex items-center justify-center text-accent-pink hover:bg-bg-primary/70 hover:opacity-80 transition-all z-50 border border-accent-pink/20"
       >
         <X size={20} />
       </button>
@@ -442,7 +442,7 @@ export default function FocusSession() {
       <button
         onClick={handleTogglePause}
         disabled={isTogglingPause}
-        className="fixed top-4 right-4 w-12 h-12 bg-black/50 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-black/70 hover:opacity-80 transition-all z-50 border border-white/20 disabled:opacity-40"
+        className="fixed top-4 right-4 w-12 h-12 bg-bg-primary/50 backdrop-blur-sm rounded-full flex items-center justify-center text-text-primary hover:bg-bg-primary/70 hover:opacity-80 transition-all z-50 border border-cta-outline/20 disabled:opacity-40"
       >
         {isPaused ? <Play size={18} fill="currentColor" /> : <Pause size={18} fill="currentColor" />}
       </button>
@@ -454,7 +454,7 @@ export default function FocusSession() {
         </div>
         <div className="flex items-center gap-2">
           <div className={`w-2.5 h-2.5 rounded-full ${isPaused ? 'bg-text-sec' : 'bg-accent-pink animate-pulse'}`}></div>
-          <div className="text-white text-5xl font-bold">
+          <div className="text-text-primary text-5xl font-bold">
             {formatTime(elapsedSeconds)}
           </div>
         </div>
@@ -531,27 +531,27 @@ export default function FocusSession() {
       {/* Stop button */}
       <button
         onClick={handleStopClick}
-        className="fixed bottom-8 left-1/2 -translate-x-1/2 w-[72px] h-[72px] bg-accent-pink rounded-none flex items-center justify-center text-white border border-[#ffffff]"
+        className="fixed bottom-8 left-1/2 -translate-x-1/2 w-[72px] h-[72px] bg-accent-pink rounded-none flex items-center justify-center text-on-dark-accent border border-cta-outline"
       >
         <Square size={32} fill="currentColor" />
       </button>
 
       {/* Stop confirmation dialog */}
       {showStopConfirmDialog && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100]">
+        <div className="fixed inset-0 bg-scrim/50 flex items-center justify-center z-[100]">
           <div className="bg-bg-card rounded-2xl p-6 max-w-sm w-full mx-4">
             <h2 className="text-xl font-semibold mb-2">Finish this run?</h2>
-            <p className="text-gray-400 mb-6">This run will be saved and completed.</p>
+            <p className="text-disabled-text mb-6">This run will be saved and completed.</p>
             <div className="flex gap-3">
               <button
                 onClick={() => setShowStopConfirmDialog(false)}
-                className="flex-1 px-4 py-2 border border-gray-600 rounded-lg text-gray-300 hover:bg-gray-800 transition-colors"
+                className="flex-1 px-4 py-2 border border-border-card rounded-lg text-text-sec hover:bg-bg-card-hover transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleStopConfirm}
-                className="flex-1 px-4 py-2 bg-accent-pink text-white font-bold rounded-lg hover:bg-accent-pink/90 transition-colors"
+                className="flex-1 px-4 py-2 bg-accent-pink text-on-dark-accent font-bold rounded-lg hover:bg-accent-pink/90 transition-colors"
               >
                 Finish Run
               </button>
@@ -562,20 +562,20 @@ export default function FocusSession() {
 
       {/* Confirm dialog */}
       {showConfirmDialog && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100]">
+        <div className="fixed inset-0 bg-scrim/50 flex items-center justify-center z-[100]">
           <div className="bg-bg-card rounded-2xl p-6 max-w-sm w-full mx-4">
             <h2 className="text-xl font-semibold mb-2">End this run?</h2>
-            <p className="text-gray-400 mb-6">This run won't be saved.</p>
+            <p className="text-disabled-text mb-6">This run won't be saved.</p>
             <div className="flex gap-3">
               <button
                 onClick={() => setShowConfirmDialog(false)}
-                className="flex-1 px-4 py-2 border border-gray-600 rounded-lg text-gray-300 hover:bg-gray-800 transition-colors"
+                className="flex-1 px-4 py-2 border border-border-card rounded-lg text-text-sec hover:bg-bg-card-hover transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleEndWithoutSaving}
-                className="flex-1 px-4 py-2 bg-accent-pink text-white font-bold rounded-lg hover:bg-accent-pink/90 transition-colors"
+                className="flex-1 px-4 py-2 bg-accent-pink text-on-dark-accent font-bold rounded-lg hover:bg-accent-pink/90 transition-colors"
               >
                 End without saving
               </button>

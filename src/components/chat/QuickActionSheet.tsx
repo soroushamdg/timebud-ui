@@ -26,13 +26,13 @@ export function QuickActionSheet({
   return (
     <>
       {/* Dark overlay */}
-      <div className="fixed inset-0 bg-black/70 z-[100]" onClick={onClose} />
+      <div className="fixed inset-0 bg-scrim/70 z-[100]" onClick={onClose} />
       
       {/* Bottom sheet */}
       <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-bg-primary rounded-t-3xl pb-8 z-[100]">
         {/* Header */}
         <div className="flex items-center justify-between p-6 pb-4">
-          <h2 className="text-white font-bold text-lg">Quick Actions</h2>
+          <h2 className="text-text-primary font-bold text-lg">Quick Actions</h2>
           <button 
             onClick={onClose}
             className="text-accent-pink hover:opacity-80 transition-opacity"
@@ -54,7 +54,7 @@ export function QuickActionSheet({
             className="w-full bg-bg-card border border-border-card rounded-lg p-4 flex items-center gap-4 hover:bg-bg-card-hover transition-colors"
           >
             <Copy className="w-5 h-5 text-accent-yellow" />
-            <span className="text-white font-medium">Copy message</span>
+            <span className="text-text-primary font-medium">Copy message</span>
           </button>
 
           <button
@@ -65,7 +65,7 @@ export function QuickActionSheet({
             className="w-full bg-bg-card border border-border-card rounded-lg p-4 flex items-center gap-4 hover:bg-bg-card-hover transition-colors"
           >
             <RotateCcw className="w-5 h-5 text-accent-yellow" />
-            <span className="text-white font-medium">Retry</span>
+            <span className="text-text-primary font-medium">Retry</span>
           </button>
 
           <button
@@ -76,7 +76,7 @@ export function QuickActionSheet({
             className="w-full bg-bg-card border border-border-card rounded-lg p-4 flex items-center gap-4 hover:bg-bg-card-hover transition-colors"
           >
             <MessageSquare className="w-5 h-5 text-accent-yellow" />
-            <span className="text-white font-medium">Explain more</span>
+            <span className="text-text-primary font-medium">Explain more</span>
           </button>
 
           <button
@@ -89,12 +89,12 @@ export function QuickActionSheet({
             {isPinned ? (
               <>
                 <PinOff className="w-5 h-5 text-accent-yellow" />
-                <span className="text-white font-medium">Unpin message</span>
+                <span className="text-text-primary font-medium">Unpin message</span>
               </>
             ) : (
               <>
                 <Pin className="w-5 h-5 text-accent-yellow" />
-                <span className="text-white font-medium">Pin message</span>
+                <span className="text-text-primary font-medium">Pin message</span>
               </>
             )}
           </button>

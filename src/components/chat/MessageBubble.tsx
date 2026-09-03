@@ -95,7 +95,7 @@ export function MessageBubble({
             </div>
           )}
           <div
-            className={`bg-accent-yellow text-black px-4 py-3 rounded-2xl rounded-br-md ${
+            className={`bg-accent-yellow text-on-light-accent px-4 py-3 rounded-2xl rounded-br-md ${
               message.isOptimistic ? 'opacity-70' : ''
             }`}
             onTouchStart={handleTouchStart}
@@ -129,7 +129,7 @@ export function MessageBubble({
         )}
         <motion.div
           layout
-          className="bg-bg-card text-white px-4 py-3 rounded-2xl rounded-bl-md"
+          className="bg-bg-card text-text-primary px-4 py-3 rounded-2xl rounded-bl-md"
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
           onMouseDown={handleTouchStart}
@@ -178,13 +178,13 @@ export function MessageBubble({
                   <div className="flex gap-2">
                     <button
                       onClick={() => onConfirm?.(message.confirmationPayload!.tools)}
-                      className="flex-1 bg-accent-pink text-white font-semibold py-2 px-4 rounded-lg hover:opacity-90 transition-opacity"
+                      className="flex-1 bg-accent-pink text-on-dark-accent font-semibold py-2 px-4 rounded-lg hover:opacity-90 transition-opacity"
                     >
                       Delete
                     </button>
                     <button
                       onClick={onCancel}
-                      className="flex-1 bg-transparent border border-border-card text-white font-semibold py-2 px-4 rounded-lg hover:bg-bg-card transition-colors"
+                      className="flex-1 bg-transparent border border-border-card text-text-primary font-semibold py-2 px-4 rounded-lg hover:bg-bg-card transition-colors"
                     >
                       Cancel
                     </button>
@@ -199,7 +199,7 @@ export function MessageBubble({
                   </p>
                   {message.confirmationPayload.preview && (
                     <div className="mb-3">
-                      <p className="font-semibold text-white mb-2">
+                      <p className="font-semibold text-text-primary mb-2">
                         {message.confirmationPayload.preview.name}
                       </p>
                       {message.confirmationPayload.preview.tasks && message.confirmationPayload.preview.tasks.length > 0 && (
@@ -222,13 +222,13 @@ export function MessageBubble({
                   <div className="flex gap-2">
                     <button
                       onClick={() => onConfirm?.(message.confirmationPayload!.tools)}
-                      className="flex-1 bg-accent-yellow text-black font-semibold py-2 px-4 rounded-lg hover:opacity-90 transition-opacity"
+                      className="flex-1 bg-accent-yellow text-on-light-accent font-semibold py-2 px-4 rounded-lg hover:opacity-90 transition-opacity"
                     >
                       Create everything
                     </button>
                     <button
                       onClick={onCancel}
-                      className="flex-1 bg-transparent border border-border-card text-white font-semibold py-2 px-4 rounded-lg hover:bg-bg-card transition-colors"
+                      className="flex-1 bg-transparent border border-border-card text-text-primary font-semibold py-2 px-4 rounded-lg hover:bg-bg-card transition-colors"
                     >
                       Cancel
                     </button>
@@ -244,13 +244,13 @@ export function MessageBubble({
                   <div className="flex gap-2">
                     <button
                       onClick={() => onConfirm?.(message.confirmationPayload!.tools)}
-                      className="flex-1 bg-accent-yellow text-black font-semibold py-2 px-4 rounded-lg hover:opacity-90 transition-opacity"
+                      className="flex-1 bg-accent-yellow text-on-light-accent font-semibold py-2 px-4 rounded-lg hover:opacity-90 transition-opacity"
                     >
                       Confirm
                     </button>
                     <button
                       onClick={onCancel}
-                      className="flex-1 bg-transparent border border-border-card text-white font-semibold py-2 px-4 rounded-lg hover:bg-bg-card transition-colors"
+                      className="flex-1 bg-transparent border border-border-card text-text-primary font-semibold py-2 px-4 rounded-lg hover:bg-bg-card transition-colors"
                     >
                       Cancel
                     </button>
@@ -298,7 +298,7 @@ export function MessageBubble({
               <button
                 key={idx}
                 onClick={() => onSuggestionClick?.(suggestion)}
-                className="bg-bg-card border border-border-card text-white text-sm px-4 py-2 rounded-full hover:bg-bg-card-hover transition-colors whitespace-nowrap flex-shrink-0"
+                className="bg-bg-card border border-border-card text-text-primary text-sm px-4 py-2 rounded-full hover:bg-bg-card-hover transition-colors whitespace-nowrap flex-shrink-0"
               >
                 {suggestion}
               </button>

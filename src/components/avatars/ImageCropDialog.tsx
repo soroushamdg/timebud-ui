@@ -52,21 +52,21 @@ export function ImageCropDialog({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[170] p-4">
+    <div className="fixed inset-0 bg-scrim/80 flex items-center justify-center z-[170] p-4">
       <div className="bg-bg-card rounded-2xl w-full max-w-lg overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-border-card">
-          <h2 className="text-white font-bold text-lg">Crop Image</h2>
+          <h2 className="text-text-primary font-bold text-lg">Crop Image</h2>
           <button
             onClick={onCancel}
-            className="w-8 h-8 rounded-lg bg-bg-primary flex items-center justify-center text-text-sec hover:text-white transition-colors"
+            className="w-8 h-8 rounded-lg bg-bg-primary flex items-center justify-center text-text-sec hover:text-text-primary transition-colors"
           >
             <X size={16} />
           </button>
         </div>
 
         {/* Crop Area */}
-        <div className="relative w-full h-96 bg-black">
+        <div className="relative w-full h-96 bg-bg-primary">
           <Cropper
             image={imageSrc}
             crop={crop}
@@ -78,10 +78,10 @@ export function ImageCropDialog({
             showGrid={true}
             style={{
               containerStyle: {
-                backgroundColor: '#000000',
+                backgroundColor: 'var(--color-bg-primary)',
               },
               cropAreaStyle: {
-                border: '2px solid #F5C518',
+                border: '2px solid var(--color-accent-yellow)',
               },
             }}
           />
@@ -122,14 +122,14 @@ export function ImageCropDialog({
           <button
             onClick={onCancel}
             disabled={isProcessing}
-            className="flex-1 bg-bg-primary border border-border-card text-white font-semibold py-3 rounded-2xl hover:bg-opacity-80 transition-colors disabled:opacity-50"
+            className="flex-1 bg-bg-primary border border-border-card text-text-primary font-semibold py-3 rounded-2xl hover:bg-opacity-80 transition-colors disabled:opacity-50"
           >
             Cancel
           </button>
           <button
             onClick={handleCropConfirm}
             disabled={isProcessing}
-            className="flex-1 bg-accent-yellow text-black font-semibold py-3 rounded-2xl hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 bg-accent-yellow text-on-light-accent font-semibold py-3 rounded-2xl hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isProcessing ? 'Processing...' : 'Crop & Continue'}
           </button>

@@ -64,7 +64,7 @@ export function TaskCard({ task, onClick, xpReward }: TaskCardProps) {
     <div className="flex items-center gap-3 min-w-0 relative">
       {/* Connection line for chain tasks */}
       {task.isPartOfChain && task.chainPosition && task.chainPosition > 0 && (
-        <div className="absolute left-0 -top-3 w-px h-6 bg-gray-600" />
+        <div className="absolute left-0 -top-3 w-px h-6 bg-form-border" />
       )}
       
       {/* Task Card */}
@@ -74,7 +74,7 @@ export function TaskCard({ task, onClick, xpReward }: TaskCardProps) {
           paddingLeft: task.isPartOfChain && task.chainPosition && task.chainPosition > 0 ? '28px' : '16px',
           opacity: isLocked ? 0.6 : 1,
         }}
-        className={`flex-1 min-w-0 bg-bg-card rounded-2xl py-3 pr-4 flex items-center gap-3 border border-[#ffffff] cursor-pointer transition-all hover:bg-bg-card-hover relative overflow-hidden shadow-[0_4px_16px_rgba(0,0,0,0.35)] ${
+        className={`flex-1 min-w-0 bg-bg-card rounded-2xl py-3 pr-4 flex items-center gap-3 border border-card-border-strong cursor-pointer transition-all hover:bg-bg-card-hover relative overflow-hidden shadow-[0_4px_16px_rgba(0,0,0,0.35)] ${
           task.done ? 'bg-bg-card-done border-accent-green/30' : ''
         }`}
       >
@@ -88,7 +88,7 @@ export function TaskCard({ task, onClick, xpReward }: TaskCardProps) {
         {/* Lock icon for locked tasks */}
         {isLocked && (
           <div className="absolute top-2 right-2">
-            <LockClosedIcon className="w-4 h-4 text-gray-500" />
+            <LockClosedIcon className="w-4 h-4 text-disabled-icon" />
           </div>
         )}
         {/* Avatar */}
@@ -100,7 +100,7 @@ export function TaskCard({ task, onClick, xpReward }: TaskCardProps) {
             fallbackColor={task.projectColor || '#F5C518'}
             projectId={task.projectId}
             size={40}
-            className="flex-shrink-0 border-3 border-white"
+            className="flex-shrink-0 border-3 border-avatar-ring"
           />
         )}
 
@@ -114,7 +114,7 @@ export function TaskCard({ task, onClick, xpReward }: TaskCardProps) {
               <ChevronDoubleUpIcon className="w-4 h-4 text-accent-yellow flex-shrink-0" />
             )}
             <h4 className={`text-base font-semibold truncate min-w-0 ${
-              isLocked ? 'text-gray-400' : 'text-white'
+              isLocked ? 'text-disabled-text' : 'text-text-primary'
             }`}>
               {task.title}
             </h4>
@@ -132,17 +132,17 @@ export function TaskCard({ task, onClick, xpReward }: TaskCardProps) {
           <div className="flex items-center gap-2 mt-1">
             {task.deadline && (
               <>
-                <CalendarIcon className={`w-3 h-3 flex-shrink-0 ${taskIsOverdue && !task.done ? 'text-red-500' : taskIsToday && !task.done ? 'text-blue-500' : 'text-text-sec'}`} />
-                <span className={`text-sm truncate ${taskIsOverdue && !task.done ? 'text-red-500 font-semibold' : taskIsToday && !task.done ? 'text-blue-500 font-semibold' : 'text-text-sec'}`}>
+                <CalendarIcon className={`w-3 h-3 flex-shrink-0 ${taskIsOverdue && !task.done ? 'text-status-overdue' : taskIsToday && !task.done ? 'text-status-today' : 'text-text-sec'}`} />
+                <span className={`text-sm truncate ${taskIsOverdue && !task.done ? 'text-status-overdue font-semibold' : taskIsToday && !task.done ? 'text-status-today font-semibold' : 'text-text-sec'}`}>
                   {formatLocalSmart(task.deadline)}
                 </span>
                 {taskIsOverdue && !task.done && (
-                  <span className="px-1.5 py-0.5 bg-red-500 text-white text-xs font-bold rounded flex-shrink-0">
+                  <span className="px-1.5 py-0.5 bg-status-overdue text-on-dark-accent text-xs font-bold rounded flex-shrink-0">
                     OVERDUE
                   </span>
                 )}
                 {!taskIsOverdue && taskIsToday && !task.done && (
-                  <span className="px-1.5 py-0.5 bg-blue-500 text-white text-xs font-bold rounded flex-shrink-0">
+                  <span className="px-1.5 py-0.5 bg-status-today text-on-dark-accent text-xs font-bold rounded flex-shrink-0">
                     TODAY
                   </span>
                 )}
@@ -174,7 +174,7 @@ export function TaskCard({ task, onClick, xpReward }: TaskCardProps) {
             </div>
           )}
           {xpReward !== undefined && !task.done && (
-            <span className="text-[10px] font-bold text-black bg-accent-yellow px-2 py-0.5 rounded-full shadow-[0_0_8px_rgba(245,197,24,0.45)]">
+            <span className="text-[10px] font-bold text-on-light-accent bg-accent-yellow px-2 py-0.5 rounded-full shadow-[0_0_8px_rgba(245,197,24,0.45)]">
               +{xpReward} XP
             </span>
           )}

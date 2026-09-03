@@ -23,11 +23,11 @@ export default function GanttPage() {
         <div className="flex-shrink-0 flex items-center gap-3 px-4 py-3 border-b border-border-card bg-bg-primary">
           <button
             onClick={() => router.back()}
-            className="w-9 h-9 rounded-xl bg-bg-card border border-border-card flex items-center justify-center text-white hover:bg-bg-card-hover transition-colors"
+            className="w-9 h-9 rounded-xl bg-bg-card border border-border-card flex items-center justify-center text-text-primary hover:bg-bg-card-hover transition-colors"
           >
             <ChevronLeft size={18} />
           </button>
-          <h1 className="text-white text-lg font-bold">Timeline</h1>
+          <h1 className="text-text-primary text-lg font-bold">Timeline</h1>
         </div>
 
         {/* Content */}
@@ -41,7 +41,7 @@ export default function GanttPage() {
             <div className="w-14 h-14 bg-accent-yellow/10 border border-accent-yellow/30 rounded-full flex items-center justify-center mb-4 shadow-[0_0_16px_rgba(245,197,24,0.25)]">
               <span className="text-accent-yellow text-xl">◆</span>
             </div>
-            <p className="text-white text-base font-semibold mb-1">No jobs yet</p>
+            <p className="text-text-primary text-base font-semibold mb-1">No jobs yet</p>
             <p className="text-text-sec text-sm text-center">
               Add jobs with due dates to see them on the timeline.
             </p>

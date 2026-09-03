@@ -51,7 +51,7 @@ export function TimezoneSettingsRow() {
       <div className="bg-bg-card rounded-none px-4 py-4 mb-2">
         <div className="flex justify-between items-center">
           <div>
-            <span className="text-white">Timezone</span>
+            <span className="text-text-primary">Timezone</span>
             <p className="text-text-sec text-xs mt-0.5">
               {timezone.replace(/_/g, ' ')} ({formatOffset(timezone)})
             </p>
@@ -64,7 +64,7 @@ export function TimezoneSettingsRow() {
             }`}
           >
             <div
-              className={`w-5 h-5 rounded-full bg-white transition-transform ${
+              className={`w-5 h-5 rounded-full bg-toggle-thumb transition-transform ${
                 autoDetect ? 'translate-x-6' : 'translate-x-1'
               }`}
             />
@@ -79,7 +79,7 @@ export function TimezoneSettingsRow() {
         {!autoDetect && (
           <button
             onClick={() => setShowPicker(true)}
-            className="mt-3 w-full bg-bg-card-hover border border-border-card text-white py-2 rounded-lg text-sm hover:border-accent-yellow transition-colors"
+            className="mt-3 w-full bg-bg-card-hover border border-border-card text-text-primary py-2 rounded-lg text-sm hover:border-accent-yellow transition-colors"
           >
             Change timezone
           </button>
@@ -87,13 +87,13 @@ export function TimezoneSettingsRow() {
       </div>
 
       {showPicker && (
-        <div className="fixed inset-0 bg-black/70 z-[100] flex items-end" onClick={() => setShowPicker(false)}>
+        <div className="fixed inset-0 bg-scrim/70 z-[100] flex items-end" onClick={() => setShowPicker(false)}>
           <div
-            className="w-full max-w-md mx-auto bg-black rounded-t-3xl p-6 pb-8 max-h-[80vh] flex flex-col"
+            className="w-full max-w-md mx-auto bg-bg-primary rounded-t-3xl p-6 pb-8 max-h-[80vh] flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-white text-xl font-bold">Choose timezone</h2>
+              <h2 className="text-text-primary text-xl font-bold">Choose timezone</h2>
               <button onClick={() => setShowPicker(false)} className="text-text-sec">
                 <X className="w-6 h-6" />
               </button>
@@ -107,7 +107,7 @@ export function TimezoneSettingsRow() {
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search city or region"
                 autoFocus
-                className="w-full bg-bg-card border border-border-card rounded-xl pl-9 pr-3 py-2.5 text-white placeholder-text-sec focus:outline-none focus:border-accent-yellow"
+                className="w-full bg-bg-card border border-border-card rounded-xl pl-9 pr-3 py-2.5 text-text-primary placeholder-text-sec focus:outline-none focus:border-accent-yellow"
               />
             </div>
 
@@ -117,7 +117,7 @@ export function TimezoneSettingsRow() {
                   key={tz}
                   onClick={() => handlePick(tz)}
                   className={`w-full text-left px-2 py-3 rounded-lg flex items-center justify-between hover:bg-bg-card-hover transition-colors ${
-                    tz === timezone ? 'text-accent-yellow' : 'text-white'
+                    tz === timezone ? 'text-accent-yellow' : 'text-text-primary'
                   }`}
                 >
                   <span className="text-sm">{tz.replace(/_/g, ' ')}</span>

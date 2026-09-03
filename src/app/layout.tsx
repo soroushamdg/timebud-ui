@@ -30,8 +30,25 @@ export default async function RootLayout({
     data: { session },
   } = await supabase.auth.getSession();
 
+  // Rendering the right data-theme attribute server-side (rather than a client-only
+  // localStorage read) means the very first byte of HTML is already correctly
+  // themed — no flash-of-wrong-theme, no inline bootstrap script needed. 'dark' (the
+  // default) and logged-out visitors render no attribute at all, matching how
+  // applyThemeAttribute treats 'dark' as the implicit case everywhere else.
+  let themeAttribute: string | undefined;
+  if (session?.user) {
+    const { data: aiSettings } = await supabase
+      .from("user_ai_settings")
+      .select("theme_preference")
+      .eq("user_id", session.user.id)
+      .maybeSingle();
+    if (aiSettings?.theme_preference && aiSettings.theme_preference !== "dark") {
+      themeAttribute = aiSettings.theme_preference;
+    }
+  }
+
   return (
-    <html lang="en" className={`dark ${inter.variable}`}>
+    <html lang="en" className={`dark ${inter.variable}`} data-theme={themeAttribute}>
       <body
         className={`${inter.variable} antialiased`}
         suppressHydrationWarning

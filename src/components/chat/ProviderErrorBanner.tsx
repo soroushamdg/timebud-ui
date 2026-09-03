@@ -16,7 +16,7 @@ export function ProviderErrorBanner({ errorCode, errorMessage, onRetry }: Provid
 
   return (
     <div className="flex justify-start mb-4">
-      <div className="max-w-[85%] bg-bg-card border-l-4 border-accent-pink text-white px-4 py-3 rounded-lg">
+      <div className="max-w-[85%] bg-bg-card border-l-4 border-accent-pink text-text-primary px-4 py-3 rounded-lg">
         <div className="flex items-start gap-3">
           <AlertCircle className="w-5 h-5 text-accent-pink flex-shrink-0 mt-0.5" />
           <div className="flex-1">
@@ -26,7 +26,7 @@ export function ProviderErrorBanner({ errorCode, errorMessage, onRetry }: Provid
               {showSettingsButton && (
                 <button
                   onClick={() => router.push('/profile')}
-                  className="bg-accent-yellow text-black text-sm font-semibold px-4 py-2 rounded-lg hover:opacity-90 transition-opacity"
+                  className="bg-accent-yellow text-on-light-accent text-sm font-semibold px-4 py-2 rounded-lg hover:opacity-90 transition-opacity"
                 >
                   Go to Settings
                 </button>
@@ -34,7 +34,7 @@ export function ProviderErrorBanner({ errorCode, errorMessage, onRetry }: Provid
               {onRetry && (
                 <button
                   onClick={onRetry}
-                  className="bg-transparent border border-border-card text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-bg-card transition-colors"
+                  className="bg-transparent border border-border-card text-text-primary text-sm font-semibold px-4 py-2 rounded-lg hover:bg-bg-card transition-colors"
                 >
                   Retry
                 </button>

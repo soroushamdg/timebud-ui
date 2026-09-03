@@ -37,14 +37,14 @@ function MissionPicker({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/70 z-[100] flex items-end" onClick={onClose}>
+    <div className="fixed inset-0 bg-scrim/70 z-[100] flex items-end" onClick={onClose}>
       <div
-        className="w-full max-w-md mx-auto bg-black rounded-t-3xl p-6 pb-8"
+        className="w-full max-w-md mx-auto bg-bg-primary rounded-t-3xl p-6 pb-8"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-1">
-          <h2 className="text-white text-lg font-bold">&ldquo;{mapping.event_title}&rdquo;</h2>
-          <button onClick={onClose} className="text-text-sec hover:text-white">
+          <h2 className="text-text-primary text-lg font-bold">&ldquo;{mapping.event_title}&rdquo;</h2>
+          <button onClick={onClose} className="text-text-sec hover:text-text-primary">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -57,13 +57,13 @@ function MissionPicker({
               onClick={() => toggle(project.id)}
               className="w-full flex items-center justify-between gap-3 px-4 py-3 bg-bg-card rounded-2xl border border-border-card"
             >
-              <span className="text-white truncate">{project.name}</span>
+              <span className="text-text-primary truncate">{project.name}</span>
               <div
                 className={`w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0 ${
                   selected.includes(project.id) ? 'bg-accent-yellow' : 'border border-border-card'
                 }`}
               >
-                {selected.includes(project.id) && <Check className="w-3.5 h-3.5 text-black" strokeWidth={3} />}
+                {selected.includes(project.id) && <Check className="w-3.5 h-3.5 text-on-light-accent" strokeWidth={3} />}
               </div>
             </button>
           ))}
@@ -72,7 +72,7 @@ function MissionPicker({
         <button
           onClick={handleSave}
           disabled={selected.length === 0 || confirmMapping.isPending}
-          className="w-full mt-4 bg-accent-yellow text-black font-bold py-3 rounded-2xl disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_16px_rgba(245,197,24,0.35)]"
+          className="w-full mt-4 bg-accent-yellow text-on-light-accent font-bold py-3 rounded-2xl disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_16px_rgba(245,197,24,0.35)]"
         >
           {confirmMapping.isPending ? 'Saving...' : 'Confirm'}
         </button>
@@ -108,10 +108,10 @@ export default function CalendarSettingsPage() {
     <AppShell showTabBar={false}>
       <div className="flex flex-col h-[calc(100vh-5rem)] pb-5">
       <div className="px-6 pt-4 mb-6 flex items-center gap-3 flex-shrink-0">
-        <button onClick={() => router.back()} className="text-white">
+        <button onClick={() => router.back()} className="text-text-primary">
           <ChevronLeft className="w-6 h-6" />
         </button>
-        <h1 className="text-white text-xl font-bold">Calendar</h1>
+        <h1 className="text-text-primary text-xl font-bold">Calendar</h1>
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-8">
@@ -133,7 +133,7 @@ export default function CalendarSettingsPage() {
               <Calendar className="w-5 h-5 text-accent-yellow" />
             </div>
             <div className="min-w-0">
-              <p className="text-white font-semibold">Google Calendar</p>
+              <p className="text-text-primary font-semibold">Google Calendar</p>
               {isLoading ? (
                 <div className="h-3.5 w-32 bg-border-card rounded animate-pulse mt-1"></div>
               ) : (
@@ -151,14 +151,14 @@ export default function CalendarSettingsPage() {
             <button
               onClick={handleDisconnect}
               disabled={isDisconnecting}
-              className="w-full bg-bg-card-hover border border-border-card text-white font-medium py-3 rounded-xl disabled:opacity-50"
+              className="w-full bg-bg-card-hover border border-border-card text-text-primary font-medium py-3 rounded-xl disabled:opacity-50"
             >
               {isDisconnecting ? 'Disconnecting...' : 'Disconnect'}
             </button>
           ) : (
             <button
               onClick={connect}
-              className="w-full bg-accent-yellow text-black font-bold py-3 rounded-xl shadow-[0_0_16px_rgba(245,197,24,0.35)]"
+              className="w-full bg-accent-yellow text-on-light-accent font-bold py-3 rounded-xl shadow-[0_0_16px_rgba(245,197,24,0.35)]"
             >
               Connect Google Calendar
             </button>
@@ -167,7 +167,7 @@ export default function CalendarSettingsPage() {
 
         {isConnected && unconfirmedMappings.length > 0 && (
           <>
-            <h2 className="text-white text-sm font-semibold mb-2 px-1">New blocks detected</h2>
+            <h2 className="text-text-primary text-sm font-semibold mb-2 px-1">New blocks detected</h2>
             <div className="space-y-2 mb-6">
               {unconfirmedMappings.map((mapping) => (
                 <button
@@ -175,7 +175,7 @@ export default function CalendarSettingsPage() {
                   onClick={() => setEditingMapping(mapping)}
                   className="w-full flex items-center justify-between gap-3 bg-bg-card border border-accent-yellow/30 rounded-2xl px-4 py-3"
                 >
-                  <span className="text-white truncate">&ldquo;{mapping.event_title}&rdquo;</span>
+                  <span className="text-text-primary truncate">&ldquo;{mapping.event_title}&rdquo;</span>
                   <span className="text-accent-yellow text-sm font-semibold flex-shrink-0">Set up →</span>
                 </button>
               ))}
@@ -185,17 +185,17 @@ export default function CalendarSettingsPage() {
 
         {isConnected && confirmedMappings.length > 0 && (
           <>
-            <h2 className="text-white text-sm font-semibold mb-2 px-1">Your block mappings</h2>
+            <h2 className="text-text-primary text-sm font-semibold mb-2 px-1">Your block mappings</h2>
             <div className="space-y-2">
               {confirmedMappings.map((mapping) => (
                 <div
                   key={mapping.id}
                   className="flex items-center justify-between gap-3 bg-bg-card border border-border-card rounded-2xl px-4 py-3"
                 >
-                  <span className="text-white truncate">&ldquo;{mapping.event_title}&rdquo;</span>
+                  <span className="text-text-primary truncate">&ldquo;{mapping.event_title}&rdquo;</span>
                   <button
                     onClick={() => setEditingMapping(mapping)}
-                    className="text-text-sec hover:text-white flex-shrink-0"
+                    className="text-text-sec hover:text-text-primary flex-shrink-0"
                   >
                     <Pencil className="w-4 h-4" />
                   </button>

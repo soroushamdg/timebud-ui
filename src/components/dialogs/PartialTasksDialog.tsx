@@ -22,15 +22,15 @@ export function PartialTasksDialog({ isOpen, onClose }: PartialTasksDialogProps)
   return (
     <>
       {/* Dark overlay */}
-      <div className="fixed inset-0 bg-black/70 z-[100]" onClick={onClose} />
-      
+      <div className="fixed inset-0 bg-scrim/70 z-[100]" onClick={onClose} />
+
       {/* Panel */}
-      <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-black rounded-t-3xl pb-8 z-[100]">
+      <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-bg-primary rounded-t-3xl pb-8 z-[100]">
         {/* Header */}
         <div className="flex items-center justify-between p-6 pb-4">
           <div className="flex items-center gap-3">
             <HelpCircle className="w-5 h-5 text-text-sec" />
-            <h2 className="text-white font-bold text-lg">Partial jobs</h2>
+            <h2 className="text-text-primary font-bold text-lg">Partial jobs</h2>
           </div>
           <button 
             onClick={onClose}
@@ -59,7 +59,7 @@ export function PartialTasksDialog({ isOpen, onClose }: PartialTasksDialogProps)
             }`}
           >
             <div className="flex flex-col items-start">
-              <span className="text-white text-base">Enabled</span>
+              <span className="text-text-primary text-base">Enabled</span>
               <span className="text-text-sec text-xs mt-1">Jobs can be split if time is insufficient</span>
             </div>
             
@@ -80,7 +80,7 @@ export function PartialTasksDialog({ isOpen, onClose }: PartialTasksDialogProps)
             }`}
           >
             <div className="flex flex-col items-start">
-              <span className="text-white text-base">Disabled</span>
+              <span className="text-text-primary text-base">Disabled</span>
               <span className="text-text-sec text-xs mt-1">Only schedule jobs that can be completed fully</span>
             </div>
             

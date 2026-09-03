@@ -17,10 +17,10 @@ export function UnfinishedSessionModal({ session, onContinue, onStartFresh }: Un
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] px-4">
+    <div className="fixed inset-0 bg-scrim/50 flex items-center justify-center z-[100] px-4">
       <div className="bg-bg-card border border-border-card rounded-2xl p-6 w-full max-w-sm">
-        <h2 className="text-white text-xl font-bold mb-2">Unfinished run</h2>
-        
+        <h2 className="text-text-primary text-xl font-bold mb-2">Unfinished run</h2>
+
         <p className="text-text-sec mb-6">
           Started at {formatStartTime(session.start_time)}
         </p>
@@ -28,13 +28,13 @@ export function UnfinishedSessionModal({ session, onContinue, onStartFresh }: Un
         <div className="flex gap-3">
           <button
             onClick={onStartFresh}
-            className="flex-1 bg-bg-card border border-border-card text-white py-3 px-4 rounded-lg hover:bg-bg-card-hover transition-colors"
+            className="flex-1 bg-bg-card border border-border-card text-text-primary py-3 px-4 rounded-lg hover:bg-bg-card-hover transition-colors"
           >
             Start fresh
           </button>
           <button
             onClick={onContinue}
-            className="flex-1 bg-accent-yellow text-black font-bold py-3 px-4 rounded-lg hover:bg-yellow-400 transition-colors"
+            className="flex-1 bg-accent-yellow text-on-light-accent font-bold py-3 px-4 rounded-lg hover:bg-accent-yellow-hover transition-colors"
           >
             Continue
           </button>

@@ -169,7 +169,7 @@ function TimelineView({ tasks, projects }: GanttChartProps) {
               {ticks.map(tk => (
                 <span
                   key={tk.x}
-                  className={`absolute bottom-1.5 text-[10px] select-none ${tk.bold ? 'text-white font-semibold' : 'text-text-sec'}`}
+                  className={`absolute bottom-1.5 text-[10px] select-none ${tk.bold ? 'text-text-primary font-semibold' : 'text-text-sec'}`}
                   style={{ left: tk.x + 2 }}
                 >
                   {tk.label}
@@ -197,7 +197,7 @@ function TimelineView({ tasks, projects }: GanttChartProps) {
                     style={{ width: LABEL_WIDTH, minWidth: LABEL_WIDTH }}
                   >
                     <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: color, boxShadow: `0 0 6px ${color}99` }} />
-                    <span className="text-white text-xs font-bold truncate">{project.name}</span>
+                    <span className="text-text-primary text-xs font-bold truncate">{project.name}</span>
                   </div>
                   <div
                     className="relative flex-shrink-0"
@@ -257,7 +257,7 @@ function TimelineView({ tasks, projects }: GanttChartProps) {
                         className="sticky left-0 z-20 bg-bg-primary border-r border-border-card flex items-center px-2 flex-shrink-0"
                         style={{ width: LABEL_WIDTH, minWidth: LABEL_WIDTH }}
                       >
-                        <span className={`text-xs truncate ${isCompleted ? 'line-through text-text-sec' : onHold ? 'text-text-sec italic' : 'text-white'}`}>
+                        <span className={`text-xs truncate ${isCompleted ? 'line-through text-text-sec' : onHold ? 'text-text-sec italic' : 'text-text-primary'}`}>
                           {task.title}
                         </span>
                       </div>
@@ -311,7 +311,7 @@ function TimelineView({ tasks, projects }: GanttChartProps) {
             maxWidth: 200,
           }}
         >
-          <p className="text-white font-bold mb-1.5 leading-snug">{popover.task.title}</p>
+          <p className="text-text-primary font-bold mb-1.5 leading-snug">{popover.task.title}</p>
           {popover.projName && <p className="text-text-sec mb-1">{popover.projName}</p>}
           {popover.task.due_date && <p className="text-text-sec mb-1">Due: {fmtFull(parseDateLocal(popover.task.due_date))}</p>}
           {popover.task.estimated_minutes != null && (
@@ -364,7 +364,7 @@ function ListView({ tasks, projects }: GanttChartProps) {
         ) : (
           <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: color }} />
         )}
-        <span className={`flex-1 text-sm min-w-0 truncate ${isCompleted ? 'line-through text-text-sec' : onHold ? 'text-text-sec italic' : 'text-white font-medium'}`}>
+        <span className={`flex-1 text-sm min-w-0 truncate ${isCompleted ? 'line-through text-text-sec' : onHold ? 'text-text-sec italic' : 'text-text-primary font-medium'}`}>
           {task.title}
         </span>
         {onHold && <Clock size={12} className="text-text-sec flex-shrink-0" />}
@@ -382,7 +382,7 @@ function ListView({ tasks, projects }: GanttChartProps) {
           </span>
         )}
         {!isMilestone && !isCompleted && (
-          <span className="text-[10px] font-bold text-black bg-accent-yellow px-1.5 py-0.5 rounded-full flex-shrink-0">
+          <span className="text-[10px] font-bold text-on-light-accent bg-accent-yellow px-1.5 py-0.5 rounded-full flex-shrink-0">
             +{getJobXpPreview(proj?.difficulty || 'medium')} XP
           </span>
         )}
@@ -433,13 +433,13 @@ export function GanttChart({ tasks, projects }: GanttChartProps) {
     <div className="flex flex-col w-full">
       {/* View toggle bar */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border-card bg-bg-primary sticky top-0 z-10">
-        <span className="text-white text-sm font-bold">
+        <span className="text-text-primary text-sm font-bold">
           {viewMode === 'timeline' ? 'Timeline' : 'List'}
         </span>
         <div className="bg-bg-card rounded-2xl p-1 flex gap-1">
           <button
             onClick={() => setViewMode('timeline')}
-            className={`p-1.5 rounded-xl transition-colors ${viewMode === 'timeline' ? 'bg-accent-yellow text-black' : 'text-text-sec hover:text-white'}`}
+            className={`p-1.5 rounded-xl transition-colors ${viewMode === 'timeline' ? 'bg-accent-yellow text-on-light-accent' : 'text-text-sec hover:text-text-primary'}`}
             title="Timeline view"
             aria-label="Switch to timeline view"
           >
@@ -447,7 +447,7 @@ export function GanttChart({ tasks, projects }: GanttChartProps) {
           </button>
           <button
             onClick={() => setViewMode('list')}
-            className={`p-1.5 rounded-xl transition-colors ${viewMode === 'list' ? 'bg-accent-yellow text-black' : 'text-text-sec hover:text-white'}`}
+            className={`p-1.5 rounded-xl transition-colors ${viewMode === 'list' ? 'bg-accent-yellow text-on-light-accent' : 'text-text-sec hover:text-text-primary'}`}
             title="List view"
             aria-label="Switch to list view"
           >
