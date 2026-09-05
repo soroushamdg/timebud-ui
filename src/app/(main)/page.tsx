@@ -253,6 +253,19 @@ export default function Home() {
   ).size
 
   const [showAllJobs, setShowAllJobs] = useState(false)
+  const startButtonRef = useRef<HTMLDivElement>(null)
+
+  // Smart scroll: when the jobs list expands (or its contents change while
+  // expanded), make sure the Start Run button is actually reachable instead
+  // of silently sitting below the fold. `block: 'nearest'` is a no-op if
+  // it's already visible, so this never scrolls unnecessarily.
+  useEffect(() => {
+    if (!showAllJobs) return
+    const id = requestAnimationFrame(() => {
+      startButtonRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    })
+    return () => cancelAnimationFrame(id)
+  }, [showAllJobs, plannedTasks.length])
 
   const createFocusSession = useCreateFocusSession();
   const deleteFocusSession = useDeleteFocusSession();
@@ -865,7 +878,7 @@ export default function Home() {
 
   return (
     <>
-      <div className="flex flex-col h-[calc(100vh-5rem)] pb-5 overflow-visible">
+      <div className="flex flex-col h-[calc(100dvh-5rem)] pb-5 overflow-visible">
         {/* Fixed Header Section */}
         <div className="flex-shrink-0">
           {/* 2% top padding */}
@@ -1071,7 +1084,7 @@ export default function Home() {
         )}
 
         {/* Fixed Bottom Section */}
-        <div className="flex-shrink-0">
+        <div ref={startButtonRef} className="flex-shrink-0">
           {/* Start Work Button */}
           <div className="px-6 pt-4 pb-4">
             <button
