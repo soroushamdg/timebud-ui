@@ -1084,7 +1084,13 @@ export default function Home() {
         )}
 
         {/* Fixed Bottom Section */}
-        <div ref={startButtonRef} className="flex-shrink-0">
+        {/* md:mb-24 clears the TabBar: on desktop, .app-box's `contain: layout`
+            makes the (position: fixed) TabBar position relative to the app
+            box's own edges instead of the real viewport, so it renders
+            inside this box's bottom ~100px rather than floating below it
+            the way it does on mobile -- without this margin it sits right
+            on top of the button. */}
+        <div ref={startButtonRef} className="flex-shrink-0 md:mb-24">
           {/* Start Work Button */}
           <div className="px-6 pt-4 pb-4">
             <button
