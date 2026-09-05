@@ -1196,10 +1196,6 @@ export default function ProjectOverviewPage({
     }
   }, [project, deleteProject, router]);
 
-  const handleAddTask = () => {
-    router.push(`/tasks/new?projectId=${projectId}`);
-  };
-
   // Drag and drop handlers for manual sort mode only
   const handleDragStart = (e: React.DragEvent, item: DbTask) => {
     if (sortMode !== "manual") {
@@ -1771,7 +1767,10 @@ export default function ProjectOverviewPage({
               <Camera size={20} />
             </button>
           </div>
-          <div className="absolute inset-0 bg-gradient-to-t from-scrim/90 via-scrim/60 to-transparent" />
+          {/* bg-primary (not scrim) so this legibility fade tracks the theme: identical
+              black in dark mode, but a soft off-white fade in light mode instead of the
+              always-black scrim muddying the avatar's brand color underneath. */}
+          <div className="absolute inset-0 bg-gradient-to-t from-bg-primary/95 via-bg-primary/70 to-transparent" />
 
           {/* Hero content */}
           <div className="absolute bottom-4 left-4 right-4">
@@ -2173,23 +2172,6 @@ export default function ProjectOverviewPage({
           </div>
         )}
       </div>
-
-      {/* Floating Action Button - only show when there are items and not in gantt view.
-          Outer wrapper spans the viewport and centers a max-w-md column (same trick
-          TabBar uses) so the button stays aligned with the content column instead of
-          the raw browser edge on wider screens; the button itself carries the z-index
-          so it stays above the z-10 job rows while scrolling. */}
-      {sortedItems.length > 0 && !showGantt && (
-        <div className="fixed bottom-24 left-0 right-0 max-w-md mx-auto pointer-events-none z-30">
-          <button
-            onClick={handleAddTask}
-            className="absolute right-4 bottom-0 pointer-events-auto bg-accent-yellow text-on-light-accent rounded-full w-12 h-12 text-2xl font-bold flex items-center justify-center shadow-lg"
-          >
-            <Plus size={24} />
-          </button>
-        </div>
-      )}
-
 
       {/* Edit Item Modal */}
       {editingItem && (
