@@ -326,11 +326,14 @@ export default function FocusSession() {
     }
     
     focusSessionStore.clearFocusSession()
-    
+
     // Trigger planner re-run after session ends
     triggerReplan()
-    
-    router.push('/')
+
+    // runEnded=1 tells Home to show a toast confirming how much of today's budget is
+    // left now that this run's actual elapsed time has been subtracted (see the
+    // dynamic-budget effect in src/app/(main)/page.tsx).
+    router.push('/?runEnded=1')
   }
 
   const handleEndWithoutSaving = async () => {
@@ -338,7 +341,7 @@ export default function FocusSession() {
 
     focusSessionStore.clearFocusSession()
     triggerReplan()
-    router.push('/')
+    router.push('/?runEnded=1')
 
     // Mark it abandoned server-side (fire-and-forget, after navigating away) so any
     // other device sees the run actually ended instead of being stuck showing it —

@@ -42,6 +42,8 @@ interface WeekDayChipData {
 }
 import { useAISettings } from '@/hooks/useAISettings'
 import { useFocusSessions } from '@/hooks/useSessions'
+import { getTodayUsedMinutes } from '@/lib/planner/dailyUsage'
+import { formatMinutesLabel } from '@/lib/dates'
 import { getLevelProgress, getJobXpPreview } from '@/lib/gamification/xp'
 import { computeCurrentStreak } from '@/lib/gamification/streak'
 import { buildActivityDates } from '@/lib/gamification/activity'
@@ -225,6 +227,14 @@ export default function Home() {
   // notification producer already validated (src/lib/gamification/streak.ts).
   const { data: aiSettings } = useAISettings()
   const { data: focusSessions } = useFocusSessions()
+  const timezone = aiSettings?.timezone || 'UTC'
+  // Real minutes already spent today across every run that's ended so far (completed
+  // or abandoned) — subtracted from the daily budget below so a run stopped early to
+  // take a break doesn't silently "refill" back to the full budget on the next replan.
+  const usedMinutesToday = useMemo(
+    () => getTodayUsedMinutes(focusSessions ?? [], timezone),
+    [focusSessions, timezone]
+  )
   const levelProgress = useMemo(() => getLevelProgress(aiSettings?.xp_total ?? 0), [aiSettings?.xp_total])
   const currentStreak = useMemo(() => {
     if (!tasks || !focusSessions) return 0
@@ -281,6 +291,10 @@ export default function Home() {
   const { registerReplanFunction } = useReplan();
   const setFocusSession = useFocusSessionStore((state) => state.setFocusSession);
   const markTaskDone = useFocusSessionStore((state) => state.markTaskDone);
+  // What's actually left of the daily budget after subtracting time already spent in
+  // earlier runs today — the number every replan (and the UI below) should treat as
+  // "today's budget" instead of the static, never-shrinking preference.
+  const dailyRemainingMinutes = Math.max(0, preferredBudgetMinutes - usedMinutesToday)
 
   // Project today's plan forward across the next 6 days (days 1-6; today itself is
   // `plannedTasks`, computed below) so the week-ahead strip can show what's coming
@@ -374,12 +388,31 @@ export default function Home() {
       setIsLoading(false);
       setLoadingComplete();
     }
-  }, [latestUnfinished, projects, tasks, projectsLoading, tasksLoading, setLoadingProgress, setLoadingComplete, activeBlock]);
+  }, [latestUnfinished, projects, tasks, projectsLoading, tasksLoading, setLoadingProgress, setLoadingComplete, activeBlock, usedMinutesToday]);
 
   // Register the re-planning function with the context
   useEffect(() => {
     registerReplanFunction(planSessionData);
   }, [registerReplanFunction]);
+
+  // Deep-linked from the run screen (/session/focus) after stopping or abandoning a
+  // run, via /?runEnded=1 — closes the loop on the dynamic-budget feature by
+  // confirming, right when the user lands back home, how much of today's budget is
+  // actually left now that the run's real elapsed time has been subtracted. Waits for
+  // both the plan and focusSessions to finish loading so the number isn't stale.
+  useEffect(() => {
+    if (searchParams.get('runEnded') !== '1') return;
+    if (isLoading || !focusSessions) return;
+
+    setShowToast(true);
+    setToastMessage(
+      dailyRemainingMinutes > 0
+        ? `Run saved — ${formatMinutesLabel(dailyRemainingMinutes)} left in today's budget`
+        : "Today's budget is used up"
+    );
+    setToastType('info');
+    router.replace('/');
+  }, [searchParams, isLoading, focusSessions, dailyRemainingMinutes, router]);
 
   const planSessionData = async () => {
     if (!projects || !tasks) {
@@ -408,10 +441,10 @@ export default function Home() {
     // Calculate time used by pinned and manual tasks
     const pinnedTime = pinnedTasks.reduce((sum, t) => sum + (t.estimated_minutes || 0), 0);
     const manualTime = manualTasks.reduce((sum, t) => sum + (t.estimated_minutes || 0), 0);
-    // An active calendar block overrides the day's preferred budget with its own
+    // An active calendar block overrides the day's remaining budget with its own
     // remaining minutes — pinned/manual tasks (an explicit user override) still count
     // against it the same way they would against the normal daily budget.
-    const effectiveBudgetMinutes = blockRemainingMinutes ?? preferredBudgetMinutes;
+    const effectiveBudgetMinutes = blockRemainingMinutes ?? dailyRemainingMinutes;
     const remainingBudget = effectiveBudgetMinutes - pinnedTime - manualTime;
 
     // Check if there are any pending tasks
@@ -581,7 +614,7 @@ export default function Home() {
           dependsOnTaskId: t.dependsOnTaskId,
           isLocked: t.isLocked,
         })) as any,
-        preferredBudgetMinutes,
+        Math.max(0, remainingBudget),
       );
       setPlannedTasks(tasksWithDone);
       setIsLoading(false);
@@ -691,7 +724,7 @@ export default function Home() {
   };
 
   const handleStartWork = async () => {
-    const { clearFocusSession, applyServerSnapshot } = useFocusSessionStore.getState();
+    const { clearFocusSession, applyServerSnapshot, budgetMinutes: plannedRunBudgetMinutes } = useFocusSessionStore.getState();
 
     // A run is already active — started here earlier, or on another device — so join
     // that one instead of creating a duplicate.
@@ -718,7 +751,11 @@ export default function Home() {
 
     try {
       const created = await createFocusSession.mutateAsync({
-        budget_minutes: preferredBudgetMinutes,
+        // Captured before clearFocusSession() reset the store above — planSessionData's
+        // setFocusSession call already set this to the actual remaining budget for
+        // today, not the static daily preference, so a run started mid-day is tagged
+        // with what was really left, not the full original total.
+        budget_minutes: plannedRunBudgetMinutes,
         end_time: null,
         tasks_list: plannedTasks.map((t) => t.taskId),
         status: 'running',
@@ -1005,7 +1042,8 @@ export default function Home() {
                   ? plannedTasks.reduce((sum, t) => sum + (t.scheduledMinutes || 0), 0)
                   : weekAhead.todayUsedMinutes
               }
-              budgetMinutes={activeBlock && blockRemainingMinutes !== null ? blockRemainingMinutes : preferredBudgetMinutes}
+              budgetMinutes={activeBlock && blockRemainingMinutes !== null ? blockRemainingMinutes : dailyRemainingMinutes}
+              alreadyUsedMinutes={activeBlock ? undefined : usedMinutesToday}
               activeBlock={activeBlock ? { missionLabel: activeBlock.missionLabel, endTime: activeBlock.endTime } : undefined}
               topJobCard={plannedTasks.length > 0 ? renderJobRow(plannedTasks[0]) : null}
               jobCount={plannedTasks.length}
@@ -1057,7 +1095,9 @@ export default function Home() {
                   />
                 </svg>
                 <span className="text-text-primary text-sm font-medium">
-                  {preferredBudgetMinutes}min
+                  {usedMinutesToday > 0
+                    ? `${formatMinutesLabel(dailyRemainingMinutes)} left`
+                    : `${preferredBudgetMinutes}min`}
                 </span>
               </button>
             </div>
@@ -1105,12 +1145,13 @@ export default function Home() {
       </div>
 
       {showTimeDialog && (
-        <ChangeSessionTimeDialog 
+        <ChangeSessionTimeDialog
           onClose={() => setShowTimeDialog(false)}
           onTimeChanged={() => {
             setIsLoading(true);
             planSessionData();
           }}
+          usedMinutesToday={usedMinutesToday}
         />
       )}
 

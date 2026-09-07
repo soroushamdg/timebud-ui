@@ -4,14 +4,18 @@ import { useState } from 'react'
 import { useFocusSessionStore } from '@/stores/sessionStore'
 import { useUIStore } from '@/stores/uiStore'
 import { useUpsertAISettings } from '@/hooks/useAISettings'
+import { formatMinutesLabel } from '@/lib/dates'
 import { Settings } from 'lucide-react'
 
 interface ChangeSessionTimeDialogProps {
   onClose: () => void
   onTimeChanged?: () => void
+  /** Minutes already spent in runs earlier today, for context when reopening this
+   *  mid-day — the value being edited here is still the full daily total, not this. */
+  usedMinutesToday?: number
 }
 
-export function ChangeSessionTimeDialog({ onClose, onTimeChanged }: ChangeSessionTimeDialogProps) {
+export function ChangeSessionTimeDialog({ onClose, onTimeChanged, usedMinutesToday }: ChangeSessionTimeDialogProps) {
   const { preferredBudgetMinutes, customBudgetMinutes, setPreferredBudgetMinutes, setCustomBudgetMinutes } = useUIStore()
   const upsertSettings = useUpsertAISettings()
   const [selectedMinutes, setSelectedMinutes] = useState(preferredBudgetMinutes)
@@ -46,8 +50,12 @@ export function ChangeSessionTimeDialog({ onClose, onTimeChanged }: ChangeSessio
   return (
     <div className="fixed inset-0 bg-scrim/50 flex items-center justify-center z-[100] px-4">
       <div className="bg-bg-card border border-border-card rounded-2xl p-6 w-full max-w-sm">
-        <h2 className="text-text-primary text-xl font-bold mb-4">Daily time budget</h2>
-        
+        <h2 className={`text-text-primary text-xl font-bold ${usedMinutesToday ? 'mb-1' : 'mb-4'}`}>Daily time budget</h2>
+        {!!usedMinutesToday && (
+          <p className="text-text-sec text-sm mb-3">
+            You&apos;ve already used {formatMinutesLabel(usedMinutesToday)} today — this sets the full day&apos;s total, not what&apos;s left.
+          </p>
+        )}
         <div className="grid grid-cols-3 gap-2 mb-4">
           {timeOptions.map((minutes) => (
             <button

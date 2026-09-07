@@ -10,6 +10,9 @@ export interface ActiveBlockInfo {
 interface RightNowCardProps {
   usedMinutes: number
   budgetMinutes: number
+  /** Minutes already spent in earlier runs today — already subtracted out of
+   *  `budgetMinutes`, shown separately so it's clear the smaller number isn't a typo. */
+  alreadyUsedMinutes?: number
   activeBlock?: ActiveBlockInfo
   topJobCard: ReactNode | null
   jobCount: number
@@ -25,6 +28,7 @@ interface RightNowCardProps {
 export function RightNowCard({
   usedMinutes,
   budgetMinutes,
+  alreadyUsedMinutes,
   activeBlock,
   topJobCard,
   jobCount,
@@ -60,7 +64,7 @@ export function RightNowCard({
           </span>
           {isOverBudget && <span className="text-accent-yellow text-xs font-semibold flex-shrink-0">Over budget</span>}
         </div>
-        <div className="h-2 w-full rounded-full bg-progress-track overflow-hidden mb-4">
+        <div className="h-2 w-full rounded-full bg-progress-track overflow-hidden">
           <div
             className="h-full rounded-full transition-all"
             style={{
@@ -69,6 +73,14 @@ export function RightNowCard({
             }}
           />
         </div>
+
+        {!!alreadyUsedMinutes ? (
+          <p className="text-text-sec text-[11px] mt-1.5 mb-4">
+            {formatMinutesLabel(alreadyUsedMinutes)} already used earlier today
+          </p>
+        ) : (
+          <div className="mb-4" />
+        )}
 
         {topJobCard && !isExpanded && <div className="mb-3">{topJobCard}</div>}
 

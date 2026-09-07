@@ -12,9 +12,12 @@ import { useProjects } from '@/hooks/useProjects'
 import { useTasks } from '@/hooks/useTasks'
 import { useUIStore } from '@/stores/uiStore'
 import { planWeek, PlannedTaskResult, PlannerTask } from '@/lib/planner'
+import { getTodayUsedMinutes } from '@/lib/planner/dailyUsage'
 import { DbProject, DbTask, MissionDifficulty } from '@/types/database'
 import { formatMinutesLabel } from '@/lib/dates'
 import { getJobXpPreview } from '@/lib/gamification/xp'
+import { useAISettings } from '@/hooks/useAISettings'
+import { useFocusSessions } from '@/hooks/useSessions'
 
 interface PlannedTask {
   taskId: string
@@ -106,6 +109,13 @@ export default function PlannerPage() {
   const { data: projects, isLoading: projectsLoading } = useProjects()
   const { data: tasks, isLoading: tasksLoading } = useTasks()
   const { preferredBudgetMinutes, allowPartialTasks, pinnedTaskIds, manualTaskIds } = useUIStore()
+  const { data: aiSettings } = useAISettings()
+  const { data: focusSessions } = useFocusSessions()
+  const timezone = aiSettings?.timezone || 'UTC'
+  const usedMinutesToday = useMemo(
+    () => getTodayUsedMinutes(focusSessions ?? [], timezone),
+    [focusSessions, timezone]
+  )
 
   const plan = useMemo(() => {
     if (!tasks || !projects) return null
@@ -123,7 +133,10 @@ export default function PlannerPage() {
     )
     const pinnedTime = pinnedTasks.reduce((sum, t) => sum + (t.estimated_minutes || 0), 0)
     const manualTime = manualTasks.reduce((sum, t) => sum + (t.estimated_minutes || 0), 0)
-    const todayBudget = Math.max(0, preferredBudgetMinutes - pinnedTime - manualTime)
+    // Minutes already spent in earlier runs today shrink what's left of today's column
+    // — otherwise a run stopped early would make this week view look like the full
+    // daily budget is still available for the rest of the day.
+    const todayBudget = Math.max(0, preferredBudgetMinutes - usedMinutesToday - pinnedTime - manualTime)
 
     const pool: PlannerTask[] = tasks
       .filter(
@@ -160,7 +173,7 @@ export default function PlannerPage() {
     }))
 
     return { days, unscheduledCount: week.unscheduledTasks.length }
-  }, [tasks, projects, pinnedTaskIds, manualTaskIds, preferredBudgetMinutes, allowPartialTasks])
+  }, [tasks, projects, pinnedTaskIds, manualTaskIds, preferredBudgetMinutes, allowPartialTasks, usedMinutesToday])
 
   useEffect(() => {
     const targetDay = searchParams.get('day')
