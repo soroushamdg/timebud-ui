@@ -23,6 +23,8 @@ export interface DbProject {
   created_at: string;
   difficulty: MissionDifficulty;
   mission_bonus_awarded: boolean;
+  // Jobs may overflow past this mission's reserved calendar blocks into free planning time.
+  calendar_spillover: boolean;
 }
 export interface DbTask {
   id: string;
@@ -119,6 +121,9 @@ export interface DbUserAISettings {
   xp_total?: number;
   calendar_block_alerts_enabled?: boolean;
   theme_preference?: ThemePreference;
+  planning_start_time?: string; // 'HH:MM', 24h, local — the planner only schedules between these
+  planning_end_time?: string;
+  min_gap_minutes?: number; // free gaps shorter than this are never planned into
 }
 
 export interface DbPushSubscription {
@@ -183,6 +188,27 @@ export interface DbCalendarEventCache {
   start_time: string;
   end_time: string;
   notified_at: string | null;
+  synced_at: string;
+}
+
+// One row per calendar on the connected Google account. The TimeBud calendar's row is
+// always is_busy_source=false — its events come through the events cache instead.
+export interface DbGoogleCalendarSource {
+  user_id: string;
+  calendar_id: string;
+  summary: string | null;
+  is_primary: boolean;
+  is_busy_source: boolean;
+  created_at: string;
+}
+
+// A busy interval from a non-TimeBud calendar — no title, on purpose.
+export interface DbGoogleCalendarBusyCache {
+  id: string;
+  user_id: string;
+  calendar_id: string;
+  start_time: string;
+  end_time: string;
   synced_at: string;
 }
 

@@ -29,6 +29,14 @@ export interface PlannedTask {
   recurrenceType?: 'daily' | 'specific_days' | 'interval' | null;
   recurrenceDays?: number[] | null;
   recurrenceInterval?: number | null;
+  /** Calendar-aware planning (src/lib/planner/planDay.ts): which lane this job was
+   * planned into. Optional so runs saved before lanes existed still parse. */
+  lane?: 'block' | 'free';
+  blockId?: string;
+  blockLabel?: string;
+  blockStartTime?: string;
+  blockEndTime?: string;
+  windowStartTime?: string;
   /** Set only on the one task currently being timed — cleared when its lap is frozen. */
   activeStartedAt?: string | null;
   /** totalPausedSeconds snapshotted when this lap began, so paused time during the lap

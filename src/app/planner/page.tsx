@@ -11,7 +11,9 @@ import { useCurrentUser } from '@/hooks/useAuth'
 import { useProjects } from '@/hooks/useProjects'
 import { useTasks } from '@/hooks/useTasks'
 import { useUIStore } from '@/stores/uiStore'
-import { planWeek, PlannedTaskResult, PlannerTask } from '@/lib/planner'
+import { planWeek, PlannedTaskResult, PlannerTask, DaySegment, BlockSegment, DayCalendar, DEFAULT_PLANNING_HOURS } from '@/lib/planner'
+import { useDayCalendar } from '@/hooks/useDayCalendar'
+import { DayPlanList } from '@/components/planner/DayPlanList'
 import { getTodayUsedMinutes } from '@/lib/planner/dailyUsage'
 import { DbProject, DbTask, MissionDifficulty } from '@/types/database'
 import { formatMinutesLabel } from '@/lib/dates'
@@ -47,6 +49,13 @@ interface DayPlan {
   budgetMinutes: number
   totalUsedMinutes: number
   tasks: PlannedTask[]
+  // Calendar-aware extras (src/lib/planner/planDay.ts); absent in the legacy flat plan.
+  segments?: DaySegment[]
+  reservedMinutes?: number
+  windowMinutes?: number | null
+  freeUsedMinutes?: number
+  freeBudgetMinutes?: number
+  reservedLabel?: string
 }
 
 function fromResult(result: PlannedTaskResult, tasks: DbTask[], projects: DbProject[]): PlannedTask {
@@ -117,6 +126,27 @@ export default function PlannerPage() {
     [focusSessions, timezone]
   )
 
+  // Same calendar inputs Home uses (src/app/(main)/page.tsx): mapped TimeBud blocks
+  // reserve, other calendars' busy time walls off, planning hours bound each day.
+  const weekCalendar = useDayCalendar(7)
+  const calendarConnected = weekCalendar.connected
+  const calendarByDate = useMemo(
+    () => Object.fromEntries((weekCalendar.data?.days ?? []).map((d) => [d.date, d])) as Record<string, DayCalendar>,
+    [weekCalendar.data]
+  )
+  const planningHours = useMemo(
+    () => ({
+      start: aiSettings?.planning_start_time || DEFAULT_PLANNING_HOURS.start,
+      end: aiSettings?.planning_end_time || DEFAULT_PLANNING_HOURS.end,
+      minGapMinutes: aiSettings?.min_gap_minutes ?? DEFAULT_PLANNING_HOURS.minGapMinutes,
+    }),
+    [aiSettings?.planning_start_time, aiSettings?.planning_end_time, aiSettings?.min_gap_minutes]
+  )
+  const spilloverProjectIds = useMemo(
+    () => (projects ?? []).filter((p) => p.calendar_spillover).map((p) => p.id),
+    [projects]
+  )
+
   const plan = useMemo(() => {
     if (!tasks || !projects) return null
 
@@ -155,6 +185,13 @@ export default function PlannerPage() {
       startDate: now,
       days: 7,
       allowPartial: allowPartialTasks,
+      // Calendar mode only once connected — otherwise the legacy flat plan, unchanged.
+      calendarByDate: calendarConnected ? calendarByDate : undefined,
+      timezone,
+      planningHours,
+      calendarConnected,
+      spilloverProjectIds,
+      nowForFirstDay: now,
     })
 
     const pinnedManualPlanned = [
@@ -170,10 +207,18 @@ export default function PlannerPage() {
         ...(i === 0 ? pinnedManualPlanned : []),
         ...d.tasks.map((r) => fromResult(r, tasks, projects)),
       ],
+      segments: d.segments,
+      reservedMinutes: d.reservedMinutes,
+      windowMinutes: d.windowMinutes,
+      freeUsedMinutes: d.freeUsedMinutes,
+      freeBudgetMinutes: d.freeBudgetMinutes,
+      reservedLabel: d.segments
+        ? Array.from(new Set(d.segments.filter((s): s is BlockSegment => s.kind === 'block').map((s) => s.missionLabel))).join(' & ') || undefined
+        : undefined,
     }))
 
     return { days, unscheduledCount: week.unscheduledTasks.length }
-  }, [tasks, projects, pinnedTaskIds, manualTaskIds, preferredBudgetMinutes, allowPartialTasks, usedMinutesToday])
+  }, [tasks, projects, pinnedTaskIds, manualTaskIds, preferredBudgetMinutes, allowPartialTasks, usedMinutesToday, calendarConnected, calendarByDate, timezone, planningHours, spilloverProjectIds])
 
   useEffect(() => {
     const targetDay = searchParams.get('day')
@@ -248,12 +293,16 @@ export default function PlannerPage() {
               {plan.days.map((day, index) => (
                 <div key={day.date.toISOString()} id={`planner-day-${format(day.date, 'yyyy-MM-dd')}`}>
                   <h2 className="text-text-primary text-lg font-semibold px-6 mb-2">{dayHeading(day.date, index)}</h2>
-                  <BudgetMeter usedMinutes={day.totalUsedMinutes} budgetMinutes={day.budgetMinutes} />
+                  <BudgetMeter
+                    usedMinutes={day.totalUsedMinutes}
+                    budgetMinutes={day.budgetMinutes}
+                    reservedMinutes={day.reservedMinutes}
+                    windowMinutes={day.windowMinutes}
+                    reservedLabel={day.reservedLabel}
+                  />
                   <div className="px-6 space-y-3">
-                    {day.tasks.length === 0 ? (
-                      <p className="text-text-sec text-sm py-2">Nothing planned.</p>
-                    ) : (
-                      day.tasks.map((task) => {
+                    {(() => {
+                      const renderCard = (task: PlannedTask) => {
                         const difficulty = (task.projectId ? projects?.find(p => p.id === task.projectId)?.difficulty : undefined) as MissionDifficulty | undefined
                         return (
                           <TaskCard
@@ -263,8 +312,36 @@ export default function PlannerPage() {
                             xpReward={getJobXpPreview(difficulty || 'medium')}
                           />
                         )
-                      })
-                    )}
+                      }
+                      if (day.segments) {
+                        // Calendar mode: pinned/manual picks (today only) above the day's
+                        // windows and block lanes.
+                        const explicit = day.tasks.filter((t) => t.isPinned || t.isManual)
+                        return (
+                          <>
+                            {explicit.map(renderCard)}
+                            <DayPlanList
+                              compact
+                              segments={day.segments}
+                              budgetReached={(day.freeUsedMinutes ?? 0) >= (day.freeBudgetMinutes ?? 0)}
+                              renderJob={(taskId, portion) => {
+                                const task = day.tasks.find((t) => t.taskId === taskId)
+                                if (!task) return null
+                                const shown =
+                                  portion && (portion.continued || portion.continues)
+                                    ? { ...task, scheduledMinutes: portion.minutes, partial: true }
+                                    : task
+                                return renderCard(shown)
+                              }}
+                            />
+                          </>
+                        )
+                      }
+                      if (day.tasks.length === 0) {
+                        return <p className="text-text-sec text-sm py-2">Nothing planned.</p>
+                      }
+                      return day.tasks.map(renderCard)
+                    })()}
                   </div>
                 </div>
               ))}

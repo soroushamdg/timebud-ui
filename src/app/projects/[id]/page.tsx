@@ -2,6 +2,7 @@
 
 import { useState, useCallback, use, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import {
   X,
   ChevronDown,
@@ -23,12 +24,12 @@ import {
 } from "lucide-react";
 import { ChevronDoubleUpIcon } from "@heroicons/react/24/outline";
 import { useTasks, useUpdateTask } from "@/hooks/useTasks";
-import { useProject, useDeleteProject } from "@/hooks/useProjects";
+import { useProject, useDeleteProject, useUpdateProject } from "@/hooks/useProjects";
 import { AppShell } from "@/components/layout/AppShell";
 import { AvatarImage } from "@/components/ui/AvatarImage";
 import { ProjectAvatarPicker } from "@/components/avatars/ProjectAvatarPicker";
-import { formatLocal, formatLocalSmart, parseDateLocal, describeRecurrence } from "@/lib/dates";
-import { DbTask, TaskStatus, MissionDifficulty } from "@/types/database";
+import { formatLocal, formatLocalSmart, parseDateLocal, describeRecurrence, formatMinutesLabel } from "@/lib/dates";
+import { DbTask, TaskStatus, MissionDifficulty, DbCalendarBlockMapping } from "@/types/database";
 import { RecurrenceEditor, RecurrenceValue, defaultRecurrenceValue, recurrenceValueFromTask, recurrenceValueToFields } from "@/components/tasks/RecurrenceEditor";
 import { RecurringBadge } from "@/components/tasks/RecurringBadge";
 import { TaskCardSkeleton } from "@/components/ui/Skeleton";
@@ -41,6 +42,8 @@ import { GanttChart } from "@/components/gantt/GanttChart";
 import { getJobXpPreview, MISSION_COMPLETE_BONUS_XP } from "@/lib/gamification/xp";
 import { useLevelUpWatcher } from "@/hooks/useLevelUpWatcher";
 import { useProjectCalendarLink } from "@/hooks/useProjectCalendarLink";
+import { useCalendarBlockMappings } from "@/hooks/useCalendarBlockMappings";
+import { useDayCalendar } from "@/hooks/useDayCalendar";
 import { LevelUpModal } from "@/components/gamification/LevelUpModal";
 import { MissionCompleteModal } from "@/components/gamification/MissionCompleteModal";
 
@@ -72,6 +75,83 @@ const isToday = (deadline: string | null | undefined): boolean => {
 };
 
 type SortMode = "manual" | "deadline";
+
+// One card for both places it appears — read-only on the detail view, with the fence
+// toggle in the edit sheet — so the two can't drift. Only rendered once the mission
+// has at least one confirmed calendar-block mapping.
+function MissionCalendarCard({
+  mappings,
+  reservedMinutes,
+  fenced,
+  onToggleFence,
+  pending,
+}: {
+  mappings: DbCalendarBlockMapping[];
+  reservedMinutes: number;
+  fenced: boolean;
+  onToggleFence?: () => void;
+  pending?: boolean;
+}) {
+  return (
+    <div className="bg-bg-card rounded-2xl border border-border-card p-4">
+      <div className="text-text-sec text-[11px] font-bold uppercase tracking-wider mb-2">
+        Calendar blocks
+      </div>
+      <div className="space-y-1.5">
+        {mappings.map((m) => (
+          <div key={m.id} className="flex items-center gap-2 text-sm text-text-primary min-w-0">
+            <CalendarIcon className="w-3.5 h-3.5 text-status-today flex-shrink-0" />
+            <span className="truncate">{m.event_title}</span>
+          </div>
+        ))}
+      </div>
+      <div className="flex items-center justify-between mt-3 pt-3 border-t border-border-card text-sm">
+        <span className="text-text-sec">Reserved today</span>
+        <span className="text-text-primary font-mono tabular-nums">
+          {reservedMinutes > 0 ? formatMinutesLabel(reservedMinutes) : "none today"}
+        </span>
+      </div>
+      {onToggleFence ? (
+        <div className="flex items-center justify-between gap-3 mt-3 pt-3 border-t border-border-card">
+          <div className="min-w-0">
+            <div className="text-text-primary text-sm">Only plan inside its blocks</div>
+            <p className="text-text-sec text-xs mt-0.5">
+              {fenced
+                ? "On days with a block, jobs from this mission are planned into the block only."
+                : "Jobs may also fill free time on block days."}
+            </p>
+          </div>
+          {/* 44px hit area around the same 48x24 track the notification toggles use */}
+          <button
+            type="button"
+            role="switch"
+            aria-checked={fenced}
+            aria-label="Only plan inside its blocks"
+            onClick={onToggleFence}
+            disabled={pending}
+            className="flex-shrink-0 flex items-center justify-end min-h-[44px] min-w-[44px] disabled:opacity-50"
+          >
+            <div
+              className={`w-12 h-6 rounded-full flex items-center transition-colors ${
+                fenced ? "bg-accent-yellow" : "bg-border-card"
+              }`}
+            >
+              <div
+                className={`w-5 h-5 rounded-full bg-toggle-thumb transition-transform ${
+                  fenced ? "translate-x-6" : "translate-x-1"
+                }`}
+              />
+            </div>
+          </button>
+        </div>
+      ) : (
+        <div className="text-text-sec text-xs mt-2">
+          {fenced ? "Only planned inside its blocks" : "Also fills free time on block days"}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function ProjectOverviewPage({
   params,
@@ -321,6 +401,9 @@ export default function ProjectOverviewPage({
   const { data: timeStats } = useProjectTimeStats(projectId);
   const { data: memories = [] } = useMemories(projectId);
   const { data: isCalendarLinked } = useProjectCalendarLink(projectId);
+  const { data: blockMappings = [] } = useCalendarBlockMappings();
+  const { today: todayCalendar } = useDayCalendar(1);
+  const updateProject = useUpdateProject();
   const deleteMemory = useDeleteMemory();
   const deleteProject = useDeleteProject();
   const [deletingMemoryId, setDeletingMemoryId] = useState<string | null>(null);
@@ -506,6 +589,29 @@ export default function ProjectOverviewPage({
     ? completedTaskCount * getJobXpPreview(project.difficulty) +
       (project.mission_bonus_awarded ? MISSION_COMPLETE_BONUS_XP : 0)
     : 0;
+
+  // Confirmed TimeBud-calendar blocks this mission is mapped to, and how much of today
+  // they reserve for it (full block length — what the planner fences the mission to).
+  const missionBlockMappings = blockMappings.filter(
+    (m) => m.confirmed && m.project_ids?.includes(projectId),
+  );
+  const reservedTodayMinutes = (todayCalendar?.blocks ?? [])
+    .filter((b) => b.projectIds.includes(projectId))
+    .reduce(
+      (sum, b) =>
+        sum +
+        Math.max(0, Math.round((new Date(b.endTime).getTime() - new Date(b.startTime).getTime()) / 60000)),
+      0,
+    );
+  const calendarFenced = !project?.calendar_spillover;
+  // Saves straight away (unlike the sheet's other fields, which wait for Save): it's a
+  // planner preference, not part of the mission's identity, and the notification
+  // toggles already behave this way.
+  const { mutate: mutateProject, isPending: projectUpdatePending } = updateProject;
+  const handleToggleCalendarFence = useCallback(() => {
+    if (!project) return;
+    mutateProject({ id: project.id, calendar_spillover: !project.calendar_spillover });
+  }, [project, mutateProject]);
 
   // Time invested: real minutes logged from every run this project has appeared in
   // (see useProjectTimeStats) against the plan currently on the board — works the same
@@ -1874,6 +1980,19 @@ export default function ProjectOverviewPage({
         </div>
       )}
 
+      {/* Calendar — read-only here; the fence toggle lives in the edit sheet with the
+       * other mission settings. Hidden entirely for unlinked missions (the hero badge
+       * already says whether one is linked). */}
+      {missionBlockMappings.length > 0 && (
+        <div className="px-4 pt-4">
+          <MissionCalendarCard
+            mappings={missionBlockMappings}
+            reservedMinutes={reservedTodayMinutes}
+            fenced={calendarFenced}
+          />
+        </div>
+      )}
+
       {/* Sort Dialog */}
       {showSortOptions && (
         <div className="fixed inset-x-0 bg-scrim/50 flex items-center justify-center z-[100] p-4"
@@ -2642,6 +2761,33 @@ export default function ProjectOverviewPage({
                     }
                     className="w-full px-5 py-3.5 bg-bg-card border border-border-card rounded-2xl text-text-primary placeholder-text-sec outline-none focus:border-accent-yellow transition-colors [&::-webkit-calendar-picker-indicator]:filter [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-70"
                   />
+                </div>
+
+                {/* Calendar */}
+                <div>
+                  <label className="text-text-sec text-sm mb-2 block">
+                    Calendar
+                  </label>
+                  {missionBlockMappings.length > 0 ? (
+                    <MissionCalendarCard
+                      mappings={missionBlockMappings}
+                      reservedMinutes={reservedTodayMinutes}
+                      fenced={calendarFenced}
+                      onToggleFence={handleToggleCalendarFence}
+                      pending={projectUpdatePending}
+                    />
+                  ) : (
+                    <p className="text-text-sec text-sm">
+                      Not linked to a calendar block — create an event on your TimeBud
+                      calendar and map it in{" "}
+                      <Link
+                        href="/profile/calendar"
+                        className="inline-flex items-center min-h-[44px] text-accent-yellow underline underline-offset-2"
+                      >
+                        Settings › Calendar
+                      </Link>
+                    </p>
+                  )}
                 </div>
 
                 {/* Color */}

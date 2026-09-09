@@ -394,7 +394,7 @@ export const TOOL_SCHEMAS: Record<string, ToolSchema> = {
 
   edit_project: {
     name: 'edit_project',
-    description: "Update fields of an existing mission (name, description, deadline, status, color, priority). Use this for mission-level deadlines — a mission's \"deadline\" is not the same as a job's \"dueDate\".",
+    description: "Update fields of an existing mission (name, description, deadline, status, color, priority, calendar_spillover). Use this for mission-level deadlines — a mission's \"deadline\" is not the same as a job's \"dueDate\".",
     inputSchema: {
       type: 'object',
       properties: {
@@ -409,6 +409,11 @@ export const TOOL_SCHEMAS: Record<string, ToolSchema> = {
             status: { type: 'string', description: 'e.g. active, completed, archived' },
             color: { type: 'string', description: 'Hex color code' },
             priority: { type: 'boolean' },
+            calendar_spillover: {
+              type: 'boolean',
+              description:
+                "Allow this mission's jobs to also fill free time on days it has a calendar block; default false (jobs stay inside the block on those days).",
+            },
           },
         },
       },

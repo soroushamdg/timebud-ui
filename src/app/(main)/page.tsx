@@ -15,7 +15,8 @@ import { useLatestUnfinishedFocusSession, useActiveFocusSession } from '@/hooks/
 import { useProjects } from '@/hooks/useProjects'
 import { useTasks } from '@/hooks/useTasks'
 import { useCreateFocusSession, useDeleteFocusSession } from '@/hooks/useSessions'
-import { planSession, planWeek, PlannerTask } from '@/lib/planner'
+import { planDay, planWeek, PlannerTask, PlanDayOutput, BlockSegment, DayCalendar, DEFAULT_PLANNING_HOURS } from '@/lib/planner'
+import { DayPlanList } from '@/components/planner/DayPlanList'
 import { useFocusSessionStore, PlannedTask as StoreSessionTask } from '@/stores/sessionStore'
 import { useUIStore } from '@/stores/uiStore'
 import { useLoading } from '@/contexts/LoadingContext'
@@ -50,7 +51,8 @@ import { buildActivityDates } from '@/lib/gamification/activity'
 import { useLevelUpWatcher } from '@/hooks/useLevelUpWatcher'
 import { LevelUpModal } from '@/components/gamification/LevelUpModal'
 import { MissionDifficulty } from '@/types/database'
-import { useActiveCalendarBlock } from '@/hooks/useActiveCalendarBlock'
+import { useDayCalendar } from '@/hooks/useDayCalendar'
+import { useGoogleCalendarConnection } from '@/hooks/useGoogleCalendarConnection'
 import { useCalendarBlockMappings } from '@/hooks/useCalendarBlockMappings'
 
 interface PlannedTask {
@@ -77,6 +79,13 @@ interface PlannedTask {
   recurrenceType?: 'daily' | 'specific_days' | 'interval' | null;
   recurrenceDays?: number[] | null;
   recurrenceInterval?: number | null;
+  // Calendar-aware planning: which lane the job landed in (src/lib/planner/planDay.ts).
+  lane?: 'block' | 'free';
+  blockId?: string;
+  blockLabel?: string;
+  blockStartTime?: string;
+  blockEndTime?: string;
+  windowStartTime?: string;
 }
 
 export default function Home() {
@@ -87,6 +96,16 @@ export default function Home() {
     null,
   );
   const [plannedTasks, setPlannedTasks] = useState<PlannedTask[]>([]);
+  // The structured day (windows, walls, block lanes) behind `plannedTasks` — what the
+  // expanded list and the Right Now summary render from.
+  const [dayPlan, setDayPlan] = useState<PlanDayOutput | null>(null);
+  // Windows shrink and blocks start on the clock, not on user action, so the plan is
+  // refreshed once a minute even when nothing else changed.
+  const [minuteTick, setMinuteTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setMinuteTick((t) => t + 1), 60_000);
+    return () => clearInterval(id);
+  }, []);
   const [showTimeDialog, setShowTimeDialog] = useState(false)
   const [isLoading, setIsLoading] = useState(true);
   const { setLoadingProgress, setLoadingComplete } = useLoading();
@@ -123,7 +142,7 @@ export default function Home() {
   const queryClient = useQueryClient();
   useEffect(() => {
     if (searchParams.get('block')) {
-      queryClient.invalidateQueries({ queryKey: ['active-calendar-block'] });
+      queryClient.invalidateQueries({ queryKey: ['day-calendar'] });
       router.replace('/');
     }
   }, [searchParams, router, queryClient]);
@@ -245,13 +264,49 @@ export default function Home() {
 
   const { newLevel, dismiss: dismissLevelUp } = useLevelUpWatcher()
 
-  // A calendar time block, if one is active right now — scopes the plan below to its
-  // budget/mission(s) instead of the day's full preferred budget. See
-  // src/hooks/useActiveCalendarBlock.ts.
-  const { data: activeBlock } = useActiveCalendarBlock()
-  const blockRemainingMinutes = activeBlock
-    ? Math.max(0, Math.round((new Date(activeBlock.endTime).getTime() - Date.now()) / 60000))
-    : null
+  // The calendar's view of the week (src/hooks/useDayCalendar.ts): today's mapped
+  // TimeBud blocks reserve time for their missions, busy time on every other calendar
+  // is a wall, and days 1–6 feed the week-ahead strip. Planning hours come from settings.
+  const weekCalendar = useDayCalendar(7)
+  const todayCalendar = weekCalendar.today
+  const calendarConnected = weekCalendar.connected
+  const calendarByDate = useMemo(
+    () => Object.fromEntries((weekCalendar.data?.days ?? []).map((d) => [d.date, d])) as Record<string, DayCalendar>,
+    [weekCalendar.data]
+  )
+  const planningHours = useMemo(
+    () => ({
+      start: aiSettings?.planning_start_time || DEFAULT_PLANNING_HOURS.start,
+      end: aiSettings?.planning_end_time || DEFAULT_PLANNING_HOURS.end,
+      minGapMinutes: aiSettings?.min_gap_minutes ?? DEFAULT_PLANNING_HOURS.minGapMinutes,
+    }),
+    [aiSettings?.planning_start_time, aiSettings?.planning_end_time, aiSettings?.min_gap_minutes]
+  )
+  const spilloverProjectIds = useMemo(
+    () => (projects ?? []).filter((p) => p.calendar_spillover).map((p) => p.id),
+    [projects]
+  )
+
+  // A stale cache means the cron stopped reaching Google — say so, and try one catch-up
+  // sync per visit (the server throttles repeats).
+  const { isStale: calendarStale, syncNow, isSyncing: calendarSyncing, lastSyncedAt: calendarLastSyncedAt } = useGoogleCalendarConnection()
+  const autoSyncedRef = useRef(false)
+  useEffect(() => {
+    if (!calendarConnected || !calendarStale || calendarSyncing || autoSyncedRef.current) return
+    autoSyncedRef.current = true
+    syncNow().catch(() => {})
+  }, [calendarConnected, calendarStale, calendarSyncing, syncNow])
+
+  // The block that's running right now, if any — drives the Right Now header.
+  const activeBlockSegment = dayPlan?.segments.find(
+    (s): s is BlockSegment => s.kind === 'block' && s.state === 'active'
+  )
+  const activeBlock = activeBlockSegment
+    ? { missionLabel: activeBlockSegment.missionLabel, endTime: activeBlockSegment.endTime }
+    : undefined
+  const reservedLabel = dayPlan
+    ? Array.from(new Set(dayPlan.segments.filter((s): s is BlockSegment => s.kind === 'block').map((s) => s.missionLabel))).join(' & ') || undefined
+    : undefined
 
   // Report-tile data: an unconfirmed block (surfaced as a one-line nudge) and the
   // count of distinct missions with at least one confirmed calendar link (a "This
@@ -324,6 +379,12 @@ export default function Home() {
       startDate: addDays(now, 1),
       days: 6,
       allowPartial: allowPartialTasks,
+      // Calendar mode only once connected — otherwise the legacy flat plan, unchanged.
+      calendarByDate: calendarConnected ? calendarByDate : undefined,
+      timezone,
+      planningHours,
+      calendarConnected,
+      spilloverProjectIds,
     });
 
     const chips: WeekDayChipData[] = [
@@ -342,7 +403,7 @@ export default function Home() {
     ];
 
     return { chips, unscheduledCount: week.unscheduledTasks.length, todayUsedMinutes };
-  }, [tasks, projects, plannedTasks, preferredBudgetMinutes, allowPartialTasks]);
+  }, [tasks, projects, plannedTasks, preferredBudgetMinutes, allowPartialTasks, calendarConnected, calendarByDate, timezone, planningHours, spilloverProjectIds]);
 
   // Show loading state while user is loading
   if (userLoading) {
@@ -388,7 +449,7 @@ export default function Home() {
       setIsLoading(false);
       setLoadingComplete();
     }
-  }, [latestUnfinished, projects, tasks, projectsLoading, tasksLoading, setLoadingProgress, setLoadingComplete, activeBlock, usedMinutesToday]);
+  }, [latestUnfinished, projects, tasks, projectsLoading, tasksLoading, setLoadingProgress, setLoadingComplete, usedMinutesToday, todayCalendar, calendarConnected, planningHours, spilloverProjectIds, minuteTick]);
 
   // Register the re-planning function with the context
   useEffect(() => {
@@ -441,16 +502,16 @@ export default function Home() {
     // Calculate time used by pinned and manual tasks
     const pinnedTime = pinnedTasks.reduce((sum, t) => sum + (t.estimated_minutes || 0), 0);
     const manualTime = manualTasks.reduce((sum, t) => sum + (t.estimated_minutes || 0), 0);
-    // An active calendar block overrides the day's remaining budget with its own
-    // remaining minutes — pinned/manual tasks (an explicit user override) still count
-    // against it the same way they would against the normal daily budget.
-    const effectiveBudgetMinutes = blockRemainingMinutes ?? dailyRemainingMinutes;
-    const remainingBudget = effectiveBudgetMinutes - pinnedTime - manualTime;
+    // Pinned/manual tasks (an explicit user override) come off the top of what's left of
+    // today's budget; planDay then splits the remainder between TimeBud block lanes and
+    // the free windows between busy events.
+    const remainingBudget = dailyRemainingMinutes - pinnedTime - manualTime;
 
     // Check if there are any pending tasks
     const pendingTasks = tasks.filter((task) => task.status === "pending");
     if (pendingTasks.length === 0 && pinnedTasks.length === 0 && manualTasks.length === 0) {
       setPlannedTasks([]);
+      setDayPlan(null);
       setIsLoading(false);
       setLoadingComplete();
       return;
@@ -459,66 +520,68 @@ export default function Home() {
     try {
       let algorithmTasks: PlannedTask[] = [];
 
-      // Only run algorithm if there's remaining budget
-      if (remainingBudget > 0) {
-        // An active block scopes the algorithm to just its linked mission(s) — pinned/
-        // manual picks above stay untouched regardless, but the suggested queue itself
-        // shouldn't pull in unrelated missions while a block is running.
-        const scopedProjects = activeBlock
-          ? projects.filter((p) => activeBlock.projectIds.includes(p.id))
-          : projects;
-        const scopedTasks = activeBlock
-          ? tasks.filter((t) => t.project_id && activeBlock.projectIds.includes(t.project_id))
-          : tasks;
+      // Transform DbTask[] to PlannerTask[] for the planner
+      // Include all tasks (even completed ones) so dependency checks can find them
+      const plannerTasks: PlannerTask[] = tasks.map(task => ({
+        ...task,
+        estimated_minutes: task.estimated_minutes || 0,
+        status: task.status || 'pending',
+      }));
 
-        // Transform DbTask[] to PlannerTask[] for the planner
-        // Include all tasks (even completed ones) so dependency checks can find them
-        const plannerTasks: PlannerTask[] = scopedTasks.map(task => ({
-          ...task,
-          estimated_minutes: task.estimated_minutes || 0,
-          status: task.status || 'pending',
-        }));
+      // Always runs, even with no free budget left: a TimeBud block later today still
+      // reserves its own minutes for its mission, and planDay reports both lanes.
+      const plan = planDay({
+        projects,
+        tasks: plannerTasks,
+        budgetMinutes: Math.max(0, remainingBudget),
+        blocks: todayCalendar?.blocks ?? [],
+        busy: todayCalendar?.busy ?? [],
+        calendarConnected,
+        planningHours,
+        now: new Date(),
+        timezone,
+        allowPartial: allowPartialTasks,
+        spilloverProjectIds,
+      });
+      setDayPlan(plan);
 
-        const plan = planSession({
-          projects: scopedProjects,
-          milestones: [],
-          tasks: plannerTasks,
-          budgetMinutes: remainingBudget,
-          allowPartial: allowPartialTasks,
+      // Convert PlannedDayTask to PlannedTask for TaskCard
+      algorithmTasks = plan.orderedTasks
+        .filter(task => !pinnedTaskIds.includes(task.taskId) && !manualTaskIds.includes(task.taskId))
+        .map((task) => {
+          const dbTask = tasks.find((t) => t.id === task.taskId);
+          const project = task.projectId ? projects?.find((p) => p.id === task.projectId) : undefined;
+          return {
+            taskId: task.taskId,
+            title: task.title,
+            projectId: task.projectId || undefined,
+            projectName: project?.name || undefined,
+            projectColor: project?.color || undefined,
+            projectAvatarUrl: project?.project_avatar_url || undefined,
+            done: false,
+            estimatedMinutes: dbTask?.estimated_minutes || undefined,
+            scheduledMinutes: task.scheduledMinutes,
+            partial: task.partial,
+            priority: dbTask?.priority,
+            deadline: dbTask?.due_date || undefined,
+            description: dbTask?.description || undefined,
+            isPinned: false,
+            isManual: false,
+            recurrenceType: dbTask?.recurrence_type,
+            recurrenceDays: dbTask?.recurrence_days,
+            recurrenceInterval: dbTask?.recurrence_interval,
+            isPartOfChain: task.isPartOfChain,
+            chainPosition: task.chainPosition,
+            dependsOnTaskId: task.dependsOnTaskId,
+            isLocked: task.isLocked,
+            lane: task.lane,
+            blockId: task.blockId,
+            blockLabel: task.blockLabel,
+            blockStartTime: task.blockStartTime,
+            blockEndTime: task.blockEndTime,
+            windowStartTime: task.windowStartTime,
+          };
         });
-
-        // Convert PlannedTaskResult to PlannedTask for TaskCard
-        algorithmTasks = plan.tasks
-          .filter(task => !pinnedTaskIds.includes(task.taskId) && !manualTaskIds.includes(task.taskId))
-          .map((task) => {
-            const dbTask = tasks.find((t) => t.id === task.taskId);
-            const project = task.projectId ? projects?.find((p) => p.id === task.projectId) : undefined;
-            return {
-              taskId: task.taskId,
-              title: task.title,
-              projectId: task.projectId || undefined,
-              projectName: project?.name || undefined,
-              projectColor: project?.color || undefined,
-              projectAvatarUrl: project?.project_avatar_url || undefined,
-              done: false,
-              estimatedMinutes: dbTask?.estimated_minutes || undefined,
-              scheduledMinutes: task.scheduledMinutes,
-              partial: task.partial,
-              priority: dbTask?.priority,
-              deadline: dbTask?.due_date || undefined,
-              description: dbTask?.description || undefined,
-              isPinned: false,
-              isManual: false,
-              recurrenceType: dbTask?.recurrence_type,
-              recurrenceDays: dbTask?.recurrence_days,
-              recurrenceInterval: dbTask?.recurrence_interval,
-              isPartOfChain: task.isPartOfChain,
-              chainPosition: task.chainPosition,
-              dependsOnTaskId: task.dependsOnTaskId,
-              isLocked: task.isLocked,
-            };
-          });
-      }
 
       // Convert pinned tasks to PlannedTask format
       const pinnedPlannedTasks: PlannedTask[] = pinnedTasks.map((task) => {
@@ -613,6 +676,12 @@ export default function Home() {
           chainPosition: t.chainPosition,
           dependsOnTaskId: t.dependsOnTaskId,
           isLocked: t.isLocked,
+          lane: t.lane,
+          blockId: t.blockId,
+          blockLabel: t.blockLabel,
+          blockStartTime: t.blockStartTime,
+          blockEndTime: t.blockEndTime,
+          windowStartTime: t.windowStartTime,
         })) as any,
         Math.max(0, remainingBudget),
       );
@@ -1034,17 +1103,48 @@ export default function Home() {
             </button>
           )}
 
+          {/* Stale-calendar nudge — the sync cron hasn't reached Google in a while, so
+              today's blocks and busy time may be missing. Tap syncs now; if that fails,
+              fall through to the Calendar settings screen. */}
+          {calendarConnected && calendarStale && (
+            <button
+              onClick={() => syncNow().catch(() => router.push('/profile/calendar'))}
+              disabled={calendarSyncing}
+              className="mx-6 mb-4 px-3.5 py-2.5 rounded-2xl bg-accent-pink/[0.08] border border-accent-pink/40 flex items-center gap-2.5 text-left disabled:opacity-70"
+            >
+              <CalendarIcon className="w-4 h-4 text-accent-pink flex-shrink-0" />
+              <span className="flex-1 text-text-primary text-xs">
+                {calendarSyncing
+                  ? 'Syncing your calendar…'
+                  : `Calendar not synced ${
+                      calendarLastSyncedAt
+                        ? `since ${new Date(calendarLastSyncedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+                        : 'yet'
+                    } — today's blocks may be missing`}
+              </span>
+              <span className="text-accent-pink text-xs font-bold flex-shrink-0">{calendarSyncing ? '…' : 'Sync →'}</span>
+            </button>
+          )}
+
           {/* Right Now: status + top job preview, full list tucked behind "Show all" */}
           {weekAhead && (
             <RightNowCard
-              usedMinutes={
-                activeBlock
-                  ? plannedTasks.reduce((sum, t) => sum + (t.scheduledMinutes || 0), 0)
-                  : weekAhead.todayUsedMinutes
+              usedMinutes={activeBlockSegment ? activeBlockSegment.totalUsedMinutes : weekAhead.todayUsedMinutes}
+              budgetMinutes={activeBlockSegment ? activeBlockSegment.budgetMinutes : dailyRemainingMinutes}
+              alreadyUsedMinutes={activeBlockSegment ? undefined : usedMinutesToday}
+              activeBlock={activeBlock}
+              daySummary={
+                dayPlan && calendarConnected
+                  ? {
+                      freePlannedMinutes:
+                        dayPlan.freeUsedMinutes +
+                        plannedTasks.filter((t) => t.isPinned || t.isManual).reduce((sum, t) => sum + (t.scheduledMinutes || 0), 0),
+                      reservedMinutes: dayPlan.reservedMinutes,
+                      windowMinutes: dayPlan.windowMinutes,
+                      reservedLabel,
+                    }
+                  : undefined
               }
-              budgetMinutes={activeBlock && blockRemainingMinutes !== null ? blockRemainingMinutes : dailyRemainingMinutes}
-              alreadyUsedMinutes={activeBlock ? undefined : usedMinutesToday}
-              activeBlock={activeBlock ? { missionLabel: activeBlock.missionLabel, endTime: activeBlock.endTime } : undefined}
               topJobCard={plannedTasks.length > 0 ? renderJobRow(plannedTasks[0]) : null}
               jobCount={plannedTasks.length}
               isExpanded={showAllJobs}
@@ -1116,8 +1216,35 @@ export default function Home() {
                 <p className="text-text-sec text-center">No jobs planned. Adjust your settings or add jobs to get started.</p>
               </div>
             ) : (
-              <div className="space-y-3 pb-4">
-                {plannedTasks.map((task) => renderJobRow(task))}
+              <div className="pb-4">
+                {/* Pinned/manual picks sit above the calendar's structure — they're the
+                    user's explicit choice, not something the planner placed. */}
+                {plannedTasks.some((t) => t.isPinned || t.isManual) && (
+                  <div className="space-y-3">
+                    {plannedTasks.filter((t) => t.isPinned || t.isManual).map((task) => renderJobRow(task))}
+                  </div>
+                )}
+                {dayPlan ? (
+                  <DayPlanList
+                    segments={dayPlan.segments}
+                    showTimes={calendarConnected}
+                    budgetReached={dayPlan.freeUsedMinutes >= dayPlan.freeBudgetMinutes}
+                    renderJob={(taskId, portion) => {
+                      const task = plannedTasks.find((t) => t.taskId === taskId);
+                      if (!task) return null;
+                      // A job split across windows shows just this window's share.
+                      const shown =
+                        portion && (portion.continued || portion.continues)
+                          ? { ...task, scheduledMinutes: portion.minutes, partial: true }
+                          : task;
+                      return renderJobRow(shown);
+                    }}
+                  />
+                ) : (
+                  <div className="space-y-3">
+                    {plannedTasks.filter((t) => !t.isPinned && !t.isManual).map((task) => renderJobRow(task))}
+                  </div>
+                )}
               </div>
             )}
           </div>

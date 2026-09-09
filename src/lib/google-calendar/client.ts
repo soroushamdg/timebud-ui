@@ -1,6 +1,6 @@
 // Thin fetch-based wrapper around the Google OAuth + Calendar REST APIs. No `googleapis`
 // SDK dependency — the surface area needed here (auth, token refresh, list/create
-// calendar, list events) is small enough that raw REST calls stay easy to audit.
+// calendar, list events, freeBusy) is small enough that raw REST calls stay easy to audit.
 
 const GOOGLE_OAUTH_BASE = 'https://accounts.google.com/o/oauth2/v2/auth'
 const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token'
@@ -28,6 +28,12 @@ export interface GoogleTokenResponse {
 export interface GoogleCalendarListEntry {
   id: string
   summary: string
+  primary?: boolean
+}
+
+export interface GoogleFreeBusyInterval {
+  start: string
+  end: string
 }
 
 export interface GoogleCalendarEvent {
@@ -147,4 +153,40 @@ export async function listEvents(
   if (!res.ok) throw new Error(`Failed to list events: ${await res.text()}`)
   const json = await res.json()
   return json.items || []
+}
+
+// Google's auto-added public holiday feeds — a holiday isn't a wall, so these default
+// to not counting as busy (the user can still opt one in from Settings).
+export function isHolidayCalendar(entry: { id: string; summary: string }): boolean {
+  return (
+    entry.id.includes('#holiday@group.v.calendar.google.com') || /holiday/i.test(entry.summary || '')
+  )
+}
+
+// Busy intervals only — no titles, no attendees — for any set of calendars in one call.
+// freeBusy already honours "free" transparency, declined invitations and cancelled
+// events, so nothing on our side has to re-implement those rules or see the events.
+export async function queryFreeBusy(
+  accessToken: string,
+  calendarIds: string[],
+  timeMin: string,
+  timeMax: string
+): Promise<Record<string, GoogleFreeBusyInterval[]>> {
+  const res = await fetch(`${CALENDAR_API_BASE}/freeBusy`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ timeMin, timeMax, items: calendarIds.map((id) => ({ id })) }),
+  })
+  if (!res.ok) throw new Error(`Failed to query freeBusy: ${await res.text()}`)
+  const json = await res.json()
+  const calendars = (json.calendars || {}) as Record<string, { busy?: GoogleFreeBusyInterval[] }>
+
+  // A calendar Google couldn't read (removed, no access) comes back with `errors` and no
+  // `busy` — treat it as free rather than failing the whole sync.
+  const result: Record<string, GoogleFreeBusyInterval[]> = {}
+  for (const id of calendarIds) result[id] = calendars[id]?.busy || []
+  return result
 }

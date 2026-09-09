@@ -161,6 +161,14 @@ export interface SessionPlan {
   slackMinutes: number
   reasoning?: string
   tasks: SessionPlanTask[]
+  // Calendar-aware breakdown from planDay — absent on plans made before the calendar
+  // integration, so every reader must treat them as optional.
+  /** Minutes today's remaining mapped calendar blocks reserve for their missions. */
+  reservedMinutes?: number
+  /** Budget left for free time after blocks, capped by the free windows that really exist. */
+  freeBudgetMinutes?: number
+  /** Free minutes on the calendar today, or null when no calendar is connected. */
+  windowMinutes?: number | null
 }
 
 export interface SessionPlanTask {

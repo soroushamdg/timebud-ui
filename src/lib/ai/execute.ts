@@ -535,6 +535,7 @@ async function editProject(
   if (updates.status !== undefined) updateData.status = updates.status
   if (updates.color !== undefined) updateData.color = updates.color
   if (updates.priority !== undefined) updateData.priority = updates.priority
+  if (updates.calendar_spillover !== undefined) updateData.calendar_spillover = updates.calendar_spillover
 
   const { data, error } = await supabase
     .from('projects')

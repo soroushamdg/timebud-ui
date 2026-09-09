@@ -12,6 +12,7 @@ import { toUtcString } from '@/lib/dates'
 import { createClient } from '@/lib/supabase/client'
 import { PlannedTask } from '@/stores/sessionStore'
 import { FocusTaskCard } from '@/components/tasks/FocusTaskCard'
+import { formatTimeRange } from '@/components/planner/DayPlanList'
 import { PartialTaskCompletionDialog } from '@/components/dialogs/PartialTaskCompletionDialog'
 import { TaskOverviewDialog } from '@/components/dialogs/TaskOverviewDialog'
 import { SimpleToast } from '@/components/ui/SimpleToast'
@@ -508,24 +509,47 @@ export default function FocusSession() {
               ? focusSessionStore.getTaskElapsedSeconds(task.taskId)
               : undefined;
 
+            // Lane divider (calendar-aware plans only): a small header wherever the lane
+            // changes between adjacent rows — live adjacency, like the chain connector,
+            // so it keeps making sense after a drag.
+            const laneKeyOf = (t: PlannedTask | undefined) =>
+              t?.lane === 'block' ? `block:${t.blockId ?? ''}` : t?.lane === 'free' ? 'free' : null;
+            const laneKey = laneKeyOf(task);
+            const laneLabel =
+              laneKey && laneKey !== laneKeyOf(prevTask)
+                ? task.lane === 'block'
+                  ? `${task.blockLabel ?? 'Calendar'} block${
+                      task.blockStartTime && task.blockEndTime
+                        ? ` · ${formatTimeRange(task.blockStartTime, task.blockEndTime)}`
+                        : ''
+                    }`
+                  : 'Free time'
+                : null;
+
             return (
-              <FocusTaskCard
-                key={task.taskId}
-                task={enhancedTask}
-                onCheckmark={() => handleTaskCheckmark(task.taskId)}
-                onClick={() => handleTaskClick(task)}
-                onDragEnd={() => syncTaskProgress()}
-                isLoading={loadingTaskIds.has(task.taskId)}
-                xpReward={xpForTask(task)}
-                showChainConnector={showChainConnector}
-                isActive={isActive}
-                elapsedSeconds={elapsedSeconds}
-                onActivate={
-                  !task.done && !isActive && !enhancedTask.isLocked
-                    ? () => handleActivateTask(task.taskId)
-                    : undefined
-                }
-              />
+              <div key={task.taskId} className="space-y-3">
+                {laneLabel && (
+                  <div className={`px-1 pt-1 text-xs font-bold ${task.lane === 'block' ? 'text-status-today' : 'text-text-sec'}`}>
+                    {laneLabel}
+                  </div>
+                )}
+                <FocusTaskCard
+                  task={enhancedTask}
+                  onCheckmark={() => handleTaskCheckmark(task.taskId)}
+                  onClick={() => handleTaskClick(task)}
+                  onDragEnd={() => syncTaskProgress()}
+                  isLoading={loadingTaskIds.has(task.taskId)}
+                  xpReward={xpForTask(task)}
+                  showChainConnector={showChainConnector}
+                  isActive={isActive}
+                  elapsedSeconds={elapsedSeconds}
+                  onActivate={
+                    !task.done && !isActive && !enhancedTask.isLocked
+                      ? () => handleActivateTask(task.taskId)
+                      : undefined
+                  }
+                />
+              </div>
             );
           })}
         </Reorder.Group>

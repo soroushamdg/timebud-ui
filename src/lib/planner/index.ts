@@ -2,6 +2,22 @@ import { parseDateLocal } from '@/lib/dates';
 
 export { planWeek } from './planWeek';
 export type { PlanWeekInput, PlanWeekOutput, WeekDayPlan } from './planWeek';
+export { planDay, getBlockState, getBlockReservedMinutes } from './planDay';
+export type {
+  PlanDayInput,
+  PlanDayOutput,
+  PlannedDayTask,
+  DaySegment,
+  BlockSegment,
+  WindowSegment,
+  WallSegment,
+  TaskPortion,
+  BlockState,
+} from './planDay';
+export { computeWindows, localTimeToUtc } from './windows';
+export type { Window, WindowsResult } from './windows';
+export { DEFAULT_PLANNING_HOURS } from './calendarTypes';
+export type { DayBlock, BusyInterval, DayCalendar, PlanningHours } from './calendarTypes';
 
 export interface PlannerProject {
   id: string;
@@ -32,6 +48,9 @@ export interface PlannerTask {
   item_type?: string;
   on_hold?: boolean;
   is_recurring_template?: boolean;
+  // A recurring job is bound to its day: once today's occurrence is done and the due
+  // date has rolled forward, it must not re-enter today's plan (see planSession).
+  recurrence_type?: string | null;
 }
 
 export interface PlannerInput {
@@ -272,11 +291,16 @@ export function planSession(input: PlannerInput): PlannerOutput {
     // Filter out completed tasks, on_hold tasks, and recurring templates
     // Keep all tasks (including locked ones and those without estimates) for scoring
     // Tasks without estimates will use DEFAULT_ESTIMATE_MINUTES (60 min) via getEffectiveEstimate()
-    const schedulableTasks = tasksWithDeadlines.filter(t => 
+    const schedulableTasks = tasksWithDeadlines.filter(t =>
       t.status !== 'completed' &&
       t.status !== 'skipped' &&
       !t.on_hold &&
-      !t.is_recurring_template
+      !t.is_recurring_template &&
+      // A recurring job whose next occurrence is on a later day (e.g. a daily habit
+      // completed today and rolled to tomorrow) waits for that day — otherwise it comes
+      // straight back at "due tomorrow" urgency, which is capped identically to "due
+      // today". Overdue occurrences (days < 0) stay in, as "show as overdue" intends.
+      !(t.recurrence_type && t.due_date && daysUntil(t.due_date, today) > 0)
     );
     
     if (schedulableTasks.length === 0) {
