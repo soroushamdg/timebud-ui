@@ -39,8 +39,13 @@ export function useGoogleCalendarConnection() {
   const sync = useMutation({
     mutationFn: async () => {
       const res = await fetch('/api/integrations/google-calendar/sync', { method: 'POST' })
-      if (!res.ok) throw new Error('Failed to sync Google Calendar')
-      return res.json() as Promise<{ skipped?: boolean; lastSyncedAt: string }>
+      if (!res.ok) {
+        // Surface the server's reason (Google refused the token, a missing table, …)
+        // instead of a generic "couldn't reach" — the fixes are different.
+        const body = (await res.json().catch(() => ({}))) as { message?: string; error?: string }
+        throw new Error(body.message || body.error || 'Failed to sync Google Calendar')
+      }
+      return res.json() as Promise<{ skipped?: boolean; lastSyncedAt: string; warnings?: string[] }>
     },
     onSuccess: async () => {
       await Promise.all([

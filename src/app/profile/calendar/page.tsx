@@ -111,16 +111,23 @@ function SyncStatus({
   lastSyncedAt: string | null
   isStale: boolean
   isSyncing: boolean
-  onSync: () => Promise<unknown>
+  onSync: () => Promise<{ warnings?: string[] } | unknown>
 }) {
   const [syncError, setSyncError] = useState<string | null>(null)
+  const [syncWarnings, setSyncWarnings] = useState<string[]>([])
 
   const handleSync = async () => {
     setSyncError(null)
+    setSyncWarnings([])
     try {
-      await onSync()
-    } catch {
-      setSyncError("Couldn't reach Google Calendar. Please try again.")
+      const result = (await onSync()) as { warnings?: string[] } | undefined
+      // The sync finished but couldn't write everything (typically a table that a
+      // pending migration would create) — show what it skipped rather than pretend.
+      if (result?.warnings?.length) setSyncWarnings(result.warnings)
+    } catch (err) {
+      // The server says which side failed (Google refusing the token vs. a local
+      // failure); a generic "try again" would hide the actual fix.
+      setSyncError(err instanceof Error && err.message ? err.message : "Couldn't reach Google Calendar. Please try again.")
     }
   }
 
@@ -139,7 +146,17 @@ function SyncStatus({
       )}
       {syncError && (
         <div className="bg-accent-pink/10 border border-accent-pink rounded-2xl px-4 py-3 mb-3">
-          <p className="text-accent-pink text-sm">{syncError}</p>
+          <p className="text-accent-pink text-sm break-words">{syncError}</p>
+        </div>
+      )}
+      {syncWarnings.length > 0 && (
+        <div className="bg-status-onhold-surface/10 border border-status-onhold-surface rounded-2xl px-4 py-3 mb-3">
+          <p className="text-status-onhold-text text-sm font-medium mb-1">Synced, but some data could not be saved:</p>
+          <ul className="text-status-onhold-text text-xs space-y-1 list-disc pl-4 break-words">
+            {syncWarnings.map((w) => (
+              <li key={w}>{w}</li>
+            ))}
+          </ul>
         </div>
       )}
       <p className="text-text-sec text-sm mb-2">

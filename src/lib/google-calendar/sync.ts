@@ -13,6 +13,9 @@ export interface CalendarSyncResult {
   mappingsCreated: number
   busyIntervals: number
   sourcesSeen: number
+  /** Non-fatal problems (e.g. a cache table missing because a migration hasn't been
+   *  applied) — the sync still completes what it can, and Settings shows these. */
+  warnings: string[]
 }
 
 export function getSyncWindow(now: Date): { timeMin: string; timeMax: string } {
@@ -41,13 +44,17 @@ export async function syncUserCalendar(
   const { accessToken, calendarId: timebudCalendarId } = tokenInfo
   const { timeMin, timeMax } = getSyncWindow(now)
   const syncedAt = now.toISOString()
+  const warnings: string[] = []
+  const warn = (what: string, error: { message: string } | null) => {
+    if (error) warnings.push(`${what}: ${error.message}`)
+  }
 
   // Sources: remember every calendar on the account so Settings can offer the toggle.
   // ignoreDuplicates keeps the user's existing choices — only brand-new rows take the
   // default (everything counts except the TimeBud calendar and holiday feeds).
   const calendars = await listCalendars(accessToken)
   if (calendars.length > 0) {
-    await supabase.from('google_calendar_sources').upsert(
+    const { error: sourcesError } = await supabase.from('google_calendar_sources').upsert(
       calendars.map((c) => ({
         user_id: userId,
         calendar_id: c.id,
@@ -57,18 +64,22 @@ export async function syncUserCalendar(
       })),
       { onConflict: 'user_id,calendar_id', ignoreDuplicates: true }
     )
-    // A calendar removed from the Google account shouldn't linger in the toggle list.
-    await supabase
-      .from('google_calendar_sources')
-      .delete()
-      .eq('user_id', userId)
-      .not('calendar_id', 'in', toInList(calendars.map((c) => c.id)))
+    warn('Saving calendar list', sourcesError)
+    if (!sourcesError) {
+      // A calendar removed from the Google account shouldn't linger in the toggle list.
+      await supabase
+        .from('google_calendar_sources')
+        .delete()
+        .eq('user_id', userId)
+        .not('calendar_id', 'in', toInList(calendars.map((c) => c.id)))
+    }
   }
 
-  const { data: sources } = await supabase
+  const { data: sources, error: sourcesReadError } = await supabase
     .from('google_calendar_sources')
     .select('calendar_id, is_busy_source')
     .eq('user_id', userId)
+  warn('Reading calendar list', sourcesReadError)
   // The TimeBud calendar is never a freeBusy source — its events arrive titled, below.
   const busySourceIds = (sources || [])
     .filter((s) => s.is_busy_source && s.calendar_id !== timebudCalendarId)
@@ -155,9 +166,11 @@ export async function syncUserCalendar(
   // The busy cache is only ever a snapshot of the sync window (no per-row state like
   // notified_at), so replace it wholesale — freeBusy clips long events to timeMin,
   // which a start_time-bounded delete would leave behind as duplicates.
-  await supabase.from('google_calendar_busy_cache').delete().eq('user_id', userId)
-  if (busyRows.length > 0) {
-    await supabase.from('google_calendar_busy_cache').insert(busyRows)
+  const { error: busyDeleteError } = await supabase.from('google_calendar_busy_cache').delete().eq('user_id', userId)
+  warn('Clearing busy time', busyDeleteError)
+  if (busyRows.length > 0 && !busyDeleteError) {
+    const { error: busyInsertError } = await supabase.from('google_calendar_busy_cache').insert(busyRows)
+    warn('Saving busy time', busyInsertError)
   }
 
   await supabase
@@ -170,5 +183,6 @@ export async function syncUserCalendar(
     mappingsCreated,
     busyIntervals: busyRows.length,
     sourcesSeen: calendars.length,
+    warnings,
   }
 }

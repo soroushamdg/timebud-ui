@@ -37,6 +37,20 @@ export async function POST() {
     return NextResponse.json({ ...counts, lastSyncedAt: now.toISOString() })
   } catch (err) {
     console.error(`[google-calendar/sync] Failed for user ${user.id}:`, err)
-    return NextResponse.json({ error: 'Sync failed' }, { status: 500 })
+    // Say which side failed. A refresh failure means Google rejected the server's OAuth
+    // credentials or the saved token — the fix is in the deployment's env or a
+    // reconnect, not "try again"; Google's error bodies carry no secrets.
+    const message = err instanceof Error ? err.message : 'Sync failed'
+    const isRefresh = /token refresh failed/i.test(message)
+    const isGoogle = isRefresh || /^(Failed to (list|fetch)|Google )/i.test(message)
+    return NextResponse.json(
+      {
+        error: isRefresh ? 'google_refresh_failed' : isGoogle ? 'google_error' : 'sync_failed',
+        message: isRefresh
+          ? `Google refused to renew the connection (${message.replace(/^Google token refresh failed:\s*/i, '').slice(0, 200)}). Check GOOGLE_CALENDAR_CLIENT_ID / GOOGLE_CALENDAR_CLIENT_SECRET on this server, or disconnect and reconnect.`
+          : message.slice(0, 300),
+      },
+      { status: isGoogle ? 502 : 500 }
+    )
   }
 }
