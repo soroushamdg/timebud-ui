@@ -50,7 +50,10 @@ export function ChangeSessionTimeDialog({ onClose, onTimeChanged, usedMinutesTod
   return (
     <div className="fixed inset-0 bg-scrim/50 flex items-center justify-center z-[100] px-4">
       <div className="bg-bg-card border border-border-card rounded-2xl p-6 w-full max-w-sm">
-        <h2 className={`text-text-primary text-xl font-bold ${usedMinutesToday ? 'mb-1' : 'mb-4'}`}>Daily time budget</h2>
+        <h2 className="text-text-primary text-xl font-bold mb-1">Daily time budget</h2>
+        <p className="text-text-sec text-xs mb-3">
+          For free time between calendar events. Time inside your calendar blocks is on top of this.
+        </p>
         {!!usedMinutesToday && (
           <p className="text-text-sec text-sm mb-3">
             You&apos;ve already used {formatMinutesLabel(usedMinutesToday)} today — this sets the full day&apos;s total, not what&apos;s left.

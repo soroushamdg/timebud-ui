@@ -111,7 +111,7 @@ A task/time-management PWA. "Projects" are called Missions, "tasks" are Jobs, "m
 145. A mapped TimeBud block reserves its minutes for its mission(s) for the whole day, not just while it is active — upcoming blocks are planned ahead of time and their minutes come out of the daily budget.
 146. Every other Google calendar is read as busy time via the free/busy API and is never planned into; TimeBud-calendar events that are not yet mapped count as busy too.
 147. Free windows are the user's configurable planning hours (start, end, minimum gap) minus busy events and blocks, and free-lane jobs are poured into those windows in order.
-148. The daily budget acts as a ceiling — the free lane gets whatever is left after reserved block minutes, further capped by the free time that actually exists on the calendar.
+148. The daily budget applies to free time only — calendar blocks are on top of it, so a block can never crowd the other missions out — and it is capped by the free time that actually exists on the calendar.
 149. A per-mission "Only plan inside its blocks" toggle (`calendar_spillover`) fences a mission to its blocks on block days by default, or lets its jobs also fill free time when switched off; the AI can set it via `edit_project`.
 150. Settings › Calendar shows how long ago the last sync ran, flags the view as stale after an hour, and offers a "Sync now" button that runs the same sync as the cron job.
 151. A recurring job whose next occurrence is due on a later day waits for that day rather than being pulled into today's free time.

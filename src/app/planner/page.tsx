@@ -55,6 +55,7 @@ interface DayPlan {
   windowMinutes?: number | null
   freeUsedMinutes?: number
   freeBudgetMinutes?: number
+  budgetReached?: boolean
   reservedLabel?: string
 }
 
@@ -121,15 +122,17 @@ export default function PlannerPage() {
   const { data: aiSettings } = useAISettings()
   const { data: focusSessions } = useFocusSessions()
   const timezone = aiSettings?.timezone || 'UTC'
-  const usedMinutesToday = useMemo(
-    () => getTodayUsedMinutes(focusSessions ?? [], timezone),
-    [focusSessions, timezone]
-  )
 
   // Same calendar inputs Home uses (src/app/(main)/page.tsx): mapped TimeBud blocks
   // reserve, other calendars' busy time walls off, planning hours bound each day.
   const weekCalendar = useDayCalendar(7)
   const calendarConnected = weekCalendar.connected
+  // Time already spent today, minus the part inside today's blocks — the budget is for
+  // free time only.
+  const usedMinutesToday = useMemo(
+    () => getTodayUsedMinutes(focusSessions ?? [], timezone, new Date(), weekCalendar.today?.blocks ?? []),
+    [focusSessions, timezone, weekCalendar.today]
+  )
   const calendarByDate = useMemo(
     () => Object.fromEntries((weekCalendar.data?.days ?? []).map((d) => [d.date, d])) as Record<string, DayCalendar>,
     [weekCalendar.data]
@@ -210,8 +213,11 @@ export default function PlannerPage() {
       segments: d.segments,
       reservedMinutes: d.reservedMinutes,
       windowMinutes: d.windowMinutes,
-      freeUsedMinutes: d.freeUsedMinutes,
+      // Free-lane minutes plus today's pinned/manual picks — what counts against the
+      // budget (block minutes are on top of it).
+      freeUsedMinutes: d.freeUsedMinutes === undefined ? undefined : d.freeUsedMinutes + (i === 0 ? pinnedTime + manualTime : 0),
       freeBudgetMinutes: d.freeBudgetMinutes,
+      budgetReached: (d.freeUsedMinutes ?? 0) >= (d.freeBudgetMinutes ?? 0),
       reservedLabel: d.segments
         ? Array.from(new Set(d.segments.filter((s): s is BlockSegment => s.kind === 'block').map((s) => s.missionLabel))).join(' & ') || undefined
         : undefined,
@@ -294,7 +300,7 @@ export default function PlannerPage() {
                 <div key={day.date.toISOString()} id={`planner-day-${format(day.date, 'yyyy-MM-dd')}`}>
                   <h2 className="text-text-primary text-lg font-semibold px-6 mb-2">{dayHeading(day.date, index)}</h2>
                   <BudgetMeter
-                    usedMinutes={day.totalUsedMinutes}
+                    usedMinutes={day.freeUsedMinutes ?? day.totalUsedMinutes}
                     budgetMinutes={day.budgetMinutes}
                     reservedMinutes={day.reservedMinutes}
                     windowMinutes={day.windowMinutes}
@@ -323,7 +329,7 @@ export default function PlannerPage() {
                             <DayPlanList
                               compact
                               segments={day.segments}
-                              budgetReached={(day.freeUsedMinutes ?? 0) >= (day.freeBudgetMinutes ?? 0)}
+                              budgetReached={day.budgetReached ?? false}
                               renderJob={(taskId, portion) => {
                                 const task = day.tasks.find((t) => t.taskId === taskId)
                                 if (!task) return null

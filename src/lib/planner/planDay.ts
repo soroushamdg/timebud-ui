@@ -25,7 +25,10 @@ export interface PlanDayInput {
   allowPartial?: boolean
   /** Missions allowed to also fill free windows on a day they have a block. */
   spilloverProjectIds?: Iterable<string>
-  /** Default true: block minutes come out of the daily budget rather than on top of it. */
+  /** Default false: the daily budget is for free time only, and block minutes come on
+   *  top of it — a calendar block is a commitment the user already made, so a 2h
+   *  French block must never leave the other missions with nothing on a 2h-budget day.
+   *  True makes block minutes count against the budget instead. */
   budgetIncludesBlocks?: boolean
 }
 
@@ -146,7 +149,7 @@ function applyToPool(pool: Map<string, PlannerTask>, planned: PlannedTaskResult[
 export function planDay(input: PlanDayInput): PlanDayOutput {
   const { now, timezone, planningHours, calendarConnected } = input
   const allowPartial = input.allowPartial ?? true
-  const budgetIncludesBlocks = input.budgetIncludesBlocks ?? true
+  const budgetIncludesBlocks = input.budgetIncludesBlocks ?? false
   const spillover = new Set(input.spilloverProjectIds ?? [])
   const activeProjectIds = new Set(input.projects.filter((p) => p.status === 'active').map((p) => p.id))
 
@@ -198,6 +201,8 @@ export function planDay(input: PlanDayInput): PlanDayOutput {
   // --- Free lane ---------------------------------------------------------------------
   const windowsResult = computeWindows({ now, timezone, planningHours, busy: input.busy, blocks, calendarConnected })
 
+  // The budget is spent on free windows only (blocks are on top of it, see the input
+  // comment), and it can't exceed the free time that actually exists today.
   let freeBudgetMinutes = budgetIncludesBlocks
     ? Math.max(0, input.budgetMinutes - reservedMinutes)
     : Math.max(0, input.budgetMinutes)

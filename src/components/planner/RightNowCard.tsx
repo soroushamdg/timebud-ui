@@ -7,15 +7,16 @@ export interface ActiveBlockInfo {
   endTime: string
 }
 
-// Calendar-aware summary for the day (src/lib/planner/planDay.ts): how the remaining
-// budget splits between free windows and TimeBud reservations, and how much free time
-// the calendar actually has. All optional so the card still works without a calendar.
+// Calendar-aware summary for the day (src/lib/planner/planDay.ts). The daily budget is
+// for free time only; calendar blocks are on top of it, so they're reported beside the
+// budget rather than as a share of it. All optional so the card still works without a
+// calendar.
 export interface DaySummaryInfo {
   freePlannedMinutes: number
   reservedMinutes: number
   /** Null when the calendar isn't connected (no cap, nothing to report). */
   windowMinutes: number | null
-  /** "French", or "French & Thesis" — for the reserved sub-line. */
+  /** "French", or "French & Thesis" — for the reserved line. */
   reservedLabel?: string
 }
 
@@ -49,37 +50,39 @@ export function RightNowCard({
   isExpanded,
   onToggleExpanded,
 }: RightNowCardProps) {
-  const isOverBudget = usedMinutes > budgetMinutes
   const endTimeLabel = activeBlock
     ? new Date(activeBlock.endTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
     : null
 
-  // Two-tone track when the day has reservations: free-lane minutes in yellow, reserved
-  // block minutes in blue, both as a share of what's left of today's budget.
-  const showSplit = !activeBlock && !!daySummary && daySummary.reservedMinutes > 0
-  const freePercent = budgetMinutes > 0
-    ? Math.min(100, ((showSplit ? daySummary!.freePlannedMinutes : usedMinutes) / budgetMinutes) * 100)
-    : 0
-  const reservedPercent = showSplit && budgetMinutes > 0
-    ? Math.min(100 - freePercent, (daySummary!.reservedMinutes / budgetMinutes) * 100)
-    : 0
+  // With a calendar, the bar and the headline number are about free time: how much of
+  // the budget landed in real gaps. Block minutes are named beside it, never mixed in.
+  const calendarMode = !activeBlock && !!daySummary && daySummary.windowMinutes !== null
+  const planned = calendarMode ? daySummary!.freePlannedMinutes : usedMinutes
+  const isOverBudget = planned > budgetMinutes
+  const percent = budgetMinutes > 0 ? Math.min(100, (planned / budgetMinutes) * 100) : 0
 
   const statusLine = (() => {
     if (activeBlock) return `${formatMinutesLabel(usedMinutes)} of ${formatMinutesLabel(budgetMinutes)} used`
-    if (showSplit) {
-      const parts = [
-        `${formatMinutesLabel(daySummary!.freePlannedMinutes)} free planned`,
-        `${formatMinutesLabel(daySummary!.reservedMinutes)} reserved${daySummary!.reservedLabel ? ` for ${daySummary!.reservedLabel}` : ''}`,
-      ]
-      return parts.join(' · ')
+    if (calendarMode) {
+      const base = `${formatMinutesLabel(planned)} of ${formatMinutesLabel(budgetMinutes)} free time planned`
+      return daySummary!.reservedMinutes > 0
+        ? `${base} · +${formatMinutesLabel(daySummary!.reservedMinutes)} reserved${daySummary!.reservedLabel ? ` for ${daySummary!.reservedLabel}` : ''}`
+        : base
     }
     return `${formatMinutesLabel(usedMinutes)} of ${formatMinutesLabel(budgetMinutes)} planned`
   })()
 
-  const calendarLine =
-    !activeBlock && daySummary && daySummary.windowMinutes !== null
-      ? `${formatMinutesLabel(daySummary.windowMinutes)} free on your calendar today`
-      : null
+  // Second line: what the calendar actually has free, and a nudge when the budget is
+  // the thing holding the plan back rather than the calendar.
+  const calendarLine = (() => {
+    if (!calendarMode) return null
+    const free = daySummary!.windowMinutes as number
+    const line = `${formatMinutesLabel(free)} free on your calendar today`
+    return free > budgetMinutes && planned >= budgetMinutes ? `${line} · raise your daily budget to plan more` : line
+  })()
+  const usedLine = alreadyUsedMinutes
+    ? `${formatMinutesLabel(alreadyUsedMinutes)} ${calendarMode ? 'of free time ' : ''}already used today`
+    : null
 
   return (
     <div className="mx-6 mb-6 relative overflow-hidden rounded-2xl border border-subtle-border" style={{ background: 'linear-gradient(135deg, var(--color-bg-card), var(--color-bg-card-locked))' }}>
@@ -92,9 +95,7 @@ export function RightNowCard({
           {activeBlock ? (
             <span className="text-accent-yellow text-xs font-semibold flex-shrink-0">ends {endTimeLabel}</span>
           ) : (
-            <span className="text-text-sec text-xs">
-              {showSplit ? `Today · ${formatMinutesLabel(budgetMinutes)}` : 'Today'}
-            </span>
+            <span className="text-text-sec text-xs">Today</span>
           )}
         </div>
 
@@ -102,24 +103,19 @@ export function RightNowCard({
           <span className="text-text-sec text-xs min-w-0 truncate">{statusLine}</span>
           {isOverBudget && <span className="text-accent-yellow text-xs font-semibold flex-shrink-0">Over budget</span>}
         </div>
-        <div className="h-2 w-full rounded-full bg-progress-track overflow-hidden flex">
+        <div className="h-2 w-full rounded-full bg-progress-track overflow-hidden">
           <div
-            className="h-full transition-all"
+            className="h-full rounded-full transition-all"
             style={{
-              width: `${freePercent}%`,
+              width: `${percent}%`,
               background: isOverBudget ? 'var(--color-accent-pink)' : 'linear-gradient(90deg, var(--color-accent-yellow), var(--color-accent-yellow-light))',
             }}
           />
-          {reservedPercent > 0 && (
-            <div className="h-full transition-all bg-status-today" style={{ width: `${reservedPercent}%` }} />
-          )}
         </div>
 
-        {calendarLine || alreadyUsedMinutes ? (
+        {calendarLine || usedLine ? (
           <p className="text-text-sec text-[11px] mt-1.5 mb-4">
-            {[calendarLine, alreadyUsedMinutes ? `${formatMinutesLabel(alreadyUsedMinutes)} already used earlier today` : null]
-              .filter(Boolean)
-              .join(' · ')}
+            {[calendarLine, usedLine].filter(Boolean).join(' · ')}
           </p>
         ) : (
           <div className="mb-4" />

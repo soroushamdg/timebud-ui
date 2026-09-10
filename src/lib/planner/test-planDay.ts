@@ -86,10 +86,11 @@ console.log('\n# planDay: Thursday 6:05 AM, 240 budget, 2h French block, walls f
   const day = planDay({ projects, tasks, budgetMinutes: 240, blocks: [frenchBlock], busy, calendarConnected: true, planningHours, now, timezone: TZ })
 
   check('reserved = 120', day.reservedMinutes === 120, day.reservedMinutes)
-  check('free budget = 120 (240 − 120)', day.freeBudgetMinutes === 120, day.freeBudgetMinutes)
+  // Blocks are on top of the budget: the whole 240 goes to free windows.
+  check('free budget = 240 (blocks do not eat the budget)', day.freeBudgetMinutes === 240, day.freeBudgetMinutes)
   // 6:05–7 (55), 15–16:30 (90), 18:30–19 (30), 20–20:30 (30), 21–23 (120)
   check('window minutes = 325', day.windowMinutes === 325, day.windowMinutes)
-  check('unplanned window minutes = 205', day.unplannedWindowMinutes === 205, day.unplannedWindowMinutes)
+  check('unplanned window minutes = 85', day.unplannedWindowMinutes === 85, day.unplannedWindowMinutes)
 
   const blockSeg = day.segments.find((s) => s.kind === 'block')
   check('one block segment', !!blockSeg && day.segments.filter((s) => s.kind === 'block').length === 1)
@@ -112,9 +113,10 @@ console.log('\n# planDay: Thursday 6:05 AM, 240 budget, 2h French block, walls f
     check('first window starts at 6:05 (now), 55 min', w0.startTime === now.toISOString() && w0.minutes === 55, [w0.startTime, w0.minutes])
     check('first window fully planned', w0.plannedMinutes === 55, w0.plannedMinutes)
     check('first window is 41 Prompts, continues', w0.portions[0]?.taskId === 'epics' && w0.portions[0]?.continues === true, w0.portions)
-    check('second window (3 PM) picks it up for the remaining 65', w1.portions[0]?.taskId === 'epics' && w1.portions[0]?.continued === true && w1.portions[0]?.minutes === 65, w1.portions)
+    check('second window (3 PM) picks it up, fully used', w1.portions[0]?.taskId === 'epics' && w1.portions[0]?.continued === true && w1.plannedMinutes === 90, w1.portions)
   }
   check('no French in any window', windows.every((w) => w.kind === 'window' && w.portions.every((p) => p.projectId !== 'fr')))
+  check('free lane used the whole budget', day.freeUsedMinutes === 240, day.freeUsedMinutes)
 
   const walls = day.segments.filter((s) => s.kind === 'wall')
   check('walls: work, gym, post (routine is before now)', walls.length === 3, walls.map((w) => [w.startTime, w.endTime]))
@@ -125,10 +127,24 @@ console.log('\n# planDay: Thursday 6:05 AM, 240 budget, 2h French block, walls f
 
   const ids = day.orderedTasks.map((t) => t.taskId)
   check('orderedTasks are unique', new Set(ids).size === ids.length, ids)
-  check('orderedTasks: free job first, then the block jobs', ids[0] === 'epics' && ids.slice(1).every((id) => ['anki', 'grammar'].includes(id)), ids)
-  check('orderedTasks carry lane metadata', day.orderedTasks[0]?.lane === 'free' && day.orderedTasks[1]?.lane === 'block' && day.orderedTasks[1]?.blockLabel === 'French')
+  check('orderedTasks: free job first', ids[0] === 'epics', ids)
+  check('block jobs sit between the 3 PM window and the evening windows', (() => {
+    const blockIdx = ids.indexOf('grammar')
+    const beforeBlock = day.orderedTasks.slice(0, blockIdx)
+    return blockIdx > 0 && beforeBlock.every((t) => t.lane === 'free') && day.orderedTasks[blockIdx]?.lane === 'block' && day.orderedTasks[blockIdx]?.blockLabel === 'French'
+  })(), ids)
   check('positions renumbered 1..n', day.orderedTasks.every((t, i) => t.position === i + 1))
-  check('total used = 240', day.totalUsedMinutes === 240, day.totalUsedMinutes)
+  check('total used = 360 (240 free + 120 block)', day.totalUsedMinutes === 360, day.totalUsedMinutes)
+}
+
+console.log('\n# planDay: a block bigger than the remaining budget still leaves the budget for other missions')
+{
+  const day = planDay({ projects, tasks, budgetMinutes: 81, blocks: [frenchBlock], busy, calendarConnected: true, planningHours, now, timezone: TZ })
+  check('free budget = 81, not 0', day.freeBudgetMinutes === 81, day.freeBudgetMinutes)
+  check('other missions get planned', day.orderedTasks.some((t) => t.lane === 'free' && t.projectId !== 'fr'), day.orderedTasks.map((t) => [t.lane, t.title]))
+  check('French still gets its full 2h block', day.reservedMinutes === 120 && day.blockUsedMinutes === 120, [day.reservedMinutes, day.blockUsedMinutes])
+  const legacy = planDay({ projects, tasks, budgetMinutes: 81, blocks: [frenchBlock], busy, calendarConnected: true, planningHours, now, timezone: TZ, budgetIncludesBlocks: true })
+  check('opt-in inclusive mode still exists (free budget 0)', legacy.freeBudgetMinutes === 0, legacy.freeBudgetMinutes)
 }
 
 console.log('\n# planDay: during the block (4:31 PM) — remaining block minutes only')
@@ -138,7 +154,7 @@ console.log('\n# planDay: during the block (4:31 PM) — remaining block minutes
   const blockSeg = day.segments[0]
   check('active block comes first', blockSeg?.kind === 'block' && blockSeg.state === 'active', blockSeg?.kind)
   check('reserved = 119 (remaining minutes)', day.reservedMinutes === 119, day.reservedMinutes)
-  check('free budget = 61, capped by evening windows (30+30+120)', day.freeBudgetMinutes === 61, day.freeBudgetMinutes)
+  check('free budget = 180, capped by evening windows (30+30+120)', day.freeBudgetMinutes === 180, day.freeBudgetMinutes)
 }
 
 console.log('\n# planDay: spillover lets French use free windows too')
@@ -196,8 +212,9 @@ console.log('\n# planWeek: calendar mode carries the pool across days')
   check('day 1 does not repeat a fully scheduled day-0 job', !d1.includes('grammar'), { d0, d1 })
   check('day 1 picks up Anki, which did not fit day 0\'s block', d1.includes('anki'), { d0, d1 })
   check('day 1 (Friday) is when the rolled daily job finally appears', !d0.includes('vocab') && d1.includes('vocab'), { d0, d1 })
-  check('day 1 continues the partial 41 Prompts job', d1.includes('epics'), d1)
-  check('day 1 plans from planning start (whole day free budget = 120)', week.days[1].freeBudgetMinutes === 120, week.days[1].freeBudgetMinutes)
+  check('day 0 finishes the 240-min 41 Prompts job in its 240 free budget', d0.includes('epics') && !d1.includes('epics'), { d0, d1 })
+  check('day 1 moves on to the remaining missions', d1.includes('story'), d1)
+  check('day 1 plans from planning start (whole day free budget = 240)', week.days[1].freeBudgetMinutes === 240, week.days[1].freeBudgetMinutes)
 }
 
 console.log('\n# planWeek: legacy mode unchanged when no calendar is given')

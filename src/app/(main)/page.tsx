@@ -247,12 +247,20 @@ export default function Home() {
   const { data: aiSettings } = useAISettings()
   const { data: focusSessions } = useFocusSessions()
   const timezone = aiSettings?.timezone || 'UTC'
+  // The calendar's view of the week (src/hooks/useDayCalendar.ts): today's mapped
+  // TimeBud blocks reserve time for their missions, busy time on every other calendar
+  // is a wall, and days 1–6 feed the week-ahead strip.
+  const weekCalendar = useDayCalendar(7)
+  const todayCalendar = weekCalendar.today
+  const calendarConnected = weekCalendar.connected
   // Real minutes already spent today across every run that's ended so far (completed
   // or abandoned) — subtracted from the daily budget below so a run stopped early to
   // take a break doesn't silently "refill" back to the full budget on the next replan.
+  // Time spent inside today's calendar blocks is left out: it belongs to the block's
+  // mission, and the budget is for free time only.
   const usedMinutesToday = useMemo(
-    () => getTodayUsedMinutes(focusSessions ?? [], timezone),
-    [focusSessions, timezone]
+    () => getTodayUsedMinutes(focusSessions ?? [], timezone, new Date(), todayCalendar?.blocks ?? []),
+    [focusSessions, timezone, todayCalendar]
   )
   const levelProgress = useMemo(() => getLevelProgress(aiSettings?.xp_total ?? 0), [aiSettings?.xp_total])
   const currentStreak = useMemo(() => {
@@ -264,12 +272,7 @@ export default function Home() {
 
   const { newLevel, dismiss: dismissLevelUp } = useLevelUpWatcher()
 
-  // The calendar's view of the week (src/hooks/useDayCalendar.ts): today's mapped
-  // TimeBud blocks reserve time for their missions, busy time on every other calendar
-  // is a wall, and days 1–6 feed the week-ahead strip. Planning hours come from settings.
-  const weekCalendar = useDayCalendar(7)
-  const todayCalendar = weekCalendar.today
-  const calendarConnected = weekCalendar.connected
+  // Per-day calendar map for the week-ahead planner, plus planning hours from settings.
   const calendarByDate = useMemo(
     () => Object.fromEntries((weekCalendar.data?.days ?? []).map((d) => [d.date, d])) as Record<string, DayCalendar>,
     [weekCalendar.data]
@@ -683,7 +686,9 @@ export default function Home() {
           blockEndTime: t.blockEndTime,
           windowStartTime: t.windowStartTime,
         })) as any,
-        Math.max(0, remainingBudget),
+        // The run holds both lanes, so its budget is the free budget plus what the
+        // calendar reserves — blocks are on top of the daily budget, not inside it.
+        Math.max(0, remainingBudget) + plan.reservedMinutes,
       );
       setPlannedTasks(tasksWithDone);
       setIsLoading(false);
