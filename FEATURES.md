@@ -115,6 +115,7 @@ A task/time-management PWA. "Projects" are called Missions, "tasks" are Jobs, "m
 149. A per-mission "Only plan inside its blocks" toggle (`calendar_spillover`) fences a mission to its blocks on block days by default, or lets its jobs also fill free time when switched off; the AI can set it via `edit_project`.
 150. Settings › Calendar shows how long ago the last sync ran, flags the view as stale after an hour, and offers a "Sync now" button that runs the same sync as the cron job.
 151. A recurring job whose next occurrence is due on a later day waits for that day rather than being pulled into today's free time.
+152. An optional buffer (Settings › Calendar › Planning hours) keeps free windows a set number of minutes away from every busy event and block, so planned work never starts the second a shift ends or runs straight into a block; blocks keep their full minutes.
 
 ## 7. Notifications (Web Push)
 

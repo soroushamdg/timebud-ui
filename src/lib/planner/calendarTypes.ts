@@ -36,6 +36,9 @@ export interface PlanningHours {
   end: string
   /** Free gaps shorter than this are ignored rather than planned. */
   minGapMinutes: number
+  /** Free windows start this long after a busy event or block ends and stop this long
+   *  before the next one starts. Blocks keep their full minutes; only free time shrinks. */
+  bufferMinutes: number
 }
 
-export const DEFAULT_PLANNING_HOURS: PlanningHours = { start: '06:00', end: '23:00', minGapMinutes: 20 }
+export const DEFAULT_PLANNING_HOURS: PlanningHours = { start: '06:00', end: '23:00', minGapMinutes: 20, bufferMinutes: 0 }

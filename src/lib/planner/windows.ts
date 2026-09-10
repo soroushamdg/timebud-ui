@@ -149,11 +149,26 @@ export function computeWindows(input: ComputeWindowsInput): WindowsResult {
     return { ...base, windows: [], walls: [], windowMinutes: 0 }
   }
 
-  const busy = clipIntervals(input.busy.map(toInterval), from, dayEndMs)
-  const blocks = clipIntervals(input.blocks.map(toInterval), from, dayEndMs)
+  const rawBusy = input.busy.map(toInterval)
+  const rawBlocks = input.blocks.map(toInterval)
+  const busy = clipIntervals(rawBusy, from, dayEndMs)
+  const blocks = clipIntervals(rawBlocks, from, dayEndMs)
+
+  // Breathing room: every event pushes free time away on both sides by the buffer, so a
+  // window never starts the second a shift ends or runs right into a block. Padded
+  // before clipping, so an event that ended just before `from` still holds the first
+  // minutes back. The padded copies are only used to carve windows — walls and blocks
+  // are still shown at their real times, and blocks keep their full minutes for their
+  // own lane.
+  const bufferMs = Math.max(0, planningHours.bufferMinutes ?? 0) * 60000
+  const padded = clipIntervals(
+    [...rawBusy, ...rawBlocks].map((i) => ({ start: i.start - bufferMs, end: i.end + bufferMs })),
+    from,
+    dayEndMs
+  )
 
   const minGapMs = Math.max(0, planningHours.minGapMinutes) * 60000
-  const windows = subtractIntervals(from, dayEndMs, [...busy, ...blocks])
+  const windows = subtractIntervals(from, dayEndMs, padded)
     .filter((g) => g.end - g.start >= minGapMs)
     .map(toWindow)
 

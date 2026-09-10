@@ -124,6 +124,7 @@ export interface DbUserAISettings {
   planning_start_time?: string; // 'HH:MM', 24h, local — the planner only schedules between these
   planning_end_time?: string;
   min_gap_minutes?: number; // free gaps shorter than this are never planned into
+  event_buffer_minutes?: number; // free windows keep this far away from busy events and blocks
 }
 
 export interface DbPushSubscription {

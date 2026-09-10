@@ -142,8 +142,9 @@ export default function PlannerPage() {
       start: aiSettings?.planning_start_time || DEFAULT_PLANNING_HOURS.start,
       end: aiSettings?.planning_end_time || DEFAULT_PLANNING_HOURS.end,
       minGapMinutes: aiSettings?.min_gap_minutes ?? DEFAULT_PLANNING_HOURS.minGapMinutes,
+      bufferMinutes: aiSettings?.event_buffer_minutes ?? DEFAULT_PLANNING_HOURS.bufferMinutes,
     }),
-    [aiSettings?.planning_start_time, aiSettings?.planning_end_time, aiSettings?.min_gap_minutes]
+    [aiSettings?.planning_start_time, aiSettings?.planning_end_time, aiSettings?.min_gap_minutes, aiSettings?.event_buffer_minutes]
   )
   const spilloverProjectIds = useMemo(
     () => (projects ?? []).filter((p) => p.calendar_spillover).map((p) => p.id),

@@ -22,6 +22,7 @@ const ERROR_MESSAGES: Record<string, string> = {
 }
 
 const GAP_OPTIONS = [10, 15, 20, 30, 45, 60]
+const BUFFER_OPTIONS = [0, 5, 10, 15, 20, 30]
 
 // "4:30–6:30 PM" — the meridiem only once when both ends share it.
 function formatTimeRange(start: string, end: string): string {
@@ -266,6 +267,7 @@ function PlanningHoursSettings() {
   const savedStart = settings?.planning_start_time || DEFAULT_PLANNING_HOURS.start
   const savedEnd = settings?.planning_end_time || DEFAULT_PLANNING_HOURS.end
   const savedGap = settings?.min_gap_minutes ?? DEFAULT_PLANNING_HOURS.minGapMinutes
+  const savedBuffer = settings?.event_buffer_minutes ?? DEFAULT_PLANNING_HOURS.bufferMinutes
 
   // Native time inputs fire change per segment while typing, so edits stay local and
   // persist once the field is left. Drafts overlay the saved value rather than being
@@ -273,11 +275,18 @@ function PlanningHoursSettings() {
   const [draftStart, setDraftStart] = useState<string | null>(null)
   const [draftEnd, setDraftEnd] = useState<string | null>(null)
   const [draftGap, setDraftGap] = useState<number | null>(null)
+  const [draftBuffer, setDraftBuffer] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const start = draftStart ?? savedStart
   const end = draftEnd ?? savedEnd
   const gap = draftGap ?? savedGap
+  const buffer = draftBuffer ?? savedBuffer
+
+  const changeBuffer = (value: number) => {
+    setDraftBuffer(value)
+    upsertSettings.mutate({ event_buffer_minutes: value })
+  }
 
   const commitHours = () => {
     if (!start || !end) return
@@ -325,19 +334,34 @@ function PlanningHoursSettings() {
             />
           </label>
         </div>
-        <label className="block">
-          <span className="text-text-sec text-xs mb-1 block">Minimum gap</span>
-          <select value={gap} onChange={(e) => changeGap(Number(e.target.value))} className={inputClass}>
-            {GAP_OPTIONS.map((minutes) => (
-              <option key={minutes} value={minutes}>
-                {minutes} min
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="grid grid-cols-2 gap-3">
+          <label className="block">
+            <span className="text-text-sec text-xs mb-1 block">Minimum gap</span>
+            <select value={gap} onChange={(e) => changeGap(Number(e.target.value))} className={inputClass}>
+              {GAP_OPTIONS.map((minutes) => (
+                <option key={minutes} value={minutes}>
+                  {minutes} min
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block">
+            <span className="text-text-sec text-xs mb-1 block">Buffer around events</span>
+            <select value={buffer} onChange={(e) => changeBuffer(Number(e.target.value))} className={inputClass}>
+              {BUFFER_OPTIONS.map((minutes) => (
+                <option key={minutes} value={minutes}>
+                  {minutes === 0 ? 'None' : `${minutes} min`}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
         {error && <p className="text-accent-pink text-xs">{error}</p>}
       </div>
-      <p className="text-text-sec text-xs px-1 mb-6">TimeBud only plans between these hours.</p>
+      <p className="text-text-sec text-xs px-1 mb-6">
+        TimeBud only plans between these hours. Free windows start the buffer after a calendar event ends and stop the
+        buffer before the next one; gaps shorter than the minimum are skipped. Your calendar blocks keep their full time.
+      </p>
     </>
   )
 }

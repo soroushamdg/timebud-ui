@@ -74,7 +74,7 @@ export async function planSessionFromAI(
   // the client uses.
   const { data: settings } = await supabase
     .from('user_ai_settings')
-    .select('timezone, planning_start_time, planning_end_time, min_gap_minutes')
+    .select('timezone, planning_start_time, planning_end_time, min_gap_minutes, event_buffer_minutes')
     .eq('user_id', userId)
     .maybeSingle()
 
@@ -83,6 +83,7 @@ export async function planSessionFromAI(
     start: settings?.planning_start_time || DEFAULT_PLANNING_HOURS.start,
     end: settings?.planning_end_time || DEFAULT_PLANNING_HOURS.end,
     minGapMinutes: settings?.min_gap_minutes ?? DEFAULT_PLANNING_HOURS.minGapMinutes,
+    bufferMinutes: settings?.event_buffer_minutes ?? DEFAULT_PLANNING_HOURS.bufferMinutes,
   }
 
   // Same calendar view Home and Week Ahead plan against, so the AI's plan puts jobs

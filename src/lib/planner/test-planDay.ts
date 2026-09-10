@@ -69,7 +69,7 @@ const busy: BusyInterval[] = [
   iv(DATE, '20:30', '21:00'), // post
 ]
 
-const planningHours = { start: '04:00', end: '23:00', minGapMinutes: 20 }
+const planningHours = { start: '04:00', end: '23:00', minGapMinutes: 20, bufferMinutes: 0 }
 const now = new Date(at(DATE, '06:05'))
 
 console.log('\n# planSession: recurring jobs wait for their day')
@@ -162,6 +162,32 @@ console.log('\n# planDay: spillover lets French use free windows too')
   const day = planDay({ projects, tasks, budgetMinutes: 240, blocks: [frenchBlock], busy, calendarConnected: true, planningHours, now, timezone: TZ, spilloverProjectIds: ['fr'] })
   const freeIds = day.orderedTasks.filter((t) => t.lane === 'free').map((t) => t.taskId)
   check('with spillover, leftover French can appear in the free lane', freeIds.some((id) => id === 'grammar' || id === 'anki') || day.freeUsedMinutes === 120, freeIds)
+}
+
+console.log('\n# planDay: 15-minute buffer keeps free windows away from events')
+{
+  const day = planDay({ projects, tasks, budgetMinutes: 240, blocks: [frenchBlock], busy, calendarConnected: true, planningHours: { ...planningHours, bufferMinutes: 15 }, now, timezone: TZ })
+  const windows = day.segments.filter((s) => s.kind === 'window')
+  // routine ends 6:00 → 6:15; work 7:00 → 6:45 : 30 min
+  // work ends 15:00 → 15:15; block 16:30 → 16:15 : 60 min
+  // block ends 18:30 → 18:45; gym 19:00 → 18:45 : 0, dropped
+  // gym ends 20:00 → 20:15; post 20:30 → 20:15 : 0, dropped
+  // post ends 21:00 → 21:15; day end 23:00 : 105 min
+  check('three windows survive the buffer', windows.length === 3, windows.map((w) => w.kind === 'window' && [w.startTime, w.minutes]))
+  check('window minutes = 195', day.windowMinutes === 195, day.windowMinutes)
+  const w0 = windows[0]
+  if (w0?.kind === 'window') {
+    check('first window starts 6:15, not 6:05', w0.startTime === at(DATE, '06:15') && w0.minutes === 30, [w0.startTime, w0.minutes])
+  }
+  const w1 = windows[1]
+  if (w1?.kind === 'window') {
+    check('afternoon window is 3:15–4:15 PM', w1.startTime === at(DATE, '15:15') && w1.endTime === at(DATE, '16:15'), [w1.startTime, w1.endTime])
+  }
+  const blockSeg = day.segments.find((s) => s.kind === 'block')
+  check('the block itself keeps its full 2h', blockSeg?.kind === 'block' && blockSeg.budgetMinutes === 120, blockSeg?.kind === 'block' && blockSeg.budgetMinutes)
+  const walls = day.segments.filter((s) => s.kind === 'wall')
+  check('walls are still shown at their real times', walls.some((w) => w.startTime === at(DATE, '07:00') && w.endTime === at(DATE, '15:00')), walls.map((w) => [w.startTime, w.endTime]))
+  check('free budget capped by the smaller windows (195)', day.freeBudgetMinutes === 195, day.freeBudgetMinutes)
 }
 
 console.log('\n# planDay: calendar not connected — behaves like the old flat plan')
